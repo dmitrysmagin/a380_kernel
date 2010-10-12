@@ -312,7 +312,6 @@ static struct spi_board_info qi_lb60_spi_board_info[] = {
 		.chip_select = 0,
 		.bus_num = 1,
 		.max_speed_hz = 30 * 1000,
-		.mode = SPI_3WIRE,
 	},
 };
 
