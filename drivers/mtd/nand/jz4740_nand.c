@@ -57,6 +57,8 @@
 #define JZ_NAND_MEM_CMD_OFFSET 0x08000
 #define JZ_NAND_MEM_ADDR_OFFSET 0x10000
 
+#define JZ_NAND_NUM_BANKS 4
+
 struct jz_nand {
 	struct mtd_info mtd;
 	struct nand_chip chip;
