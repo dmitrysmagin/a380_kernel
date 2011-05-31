@@ -1,0 +1,29 @@
+# device nodes:
+dir	/dev		0755	0 0
+nod	/dev/console	0644	0 0	c 5	1
+nod	/dev/event0	0644	0 0	c 13	64
+nod	/dev/loop0	0660	0 0	b 7	0
+nod	/dev/ccnandb	0644	0 0	b 242	16
+nod	/dev/ccnandb1	0644	0 0	b 242	17
+nod	/dev/ccnandb2	0644	0 0	b 242	18
+nod	/dev/ccnandb3	0644	0 0	b 242	19
+nod	/dev/ccnandb4	0644	0 0	b 242	20
+nod	/dev/ccnandb5	0644	0 0	b 242	21
+nod	/dev/ccnandb6	0644	0 0	b 242	22
+nod	/dev/ccnandb7	0644	0 0	b 242	23
+nod	/dev/mmcblk0	0644	0 0	b 179	0
+nod	/dev/mmcblk0p1	0644	0 0	b 179	1
+nod	/dev/mmcblk0p2	0644	0 0	b 179	2
+nod	/dev/mmcblk0p3	0644	0 0	b 179	3
+nod	/dev/mmcblk0p4	0644	0 0	b 179	4
+nod	/dev/mmcblk0p5	0644	0 0	b 179	5
+nod	/dev/mmcblk0p6	0644	0 0	b 179	6
+nod	/dev/mmcblk0p7	0644	0 0	b 179	7
+# mount points:
+dir	/boot		0755	0 0
+dir	/root		0755	0 0
+dir	/proc		0755	0 0
+dir	/sys		0755	0 0
+# mininit:
+file	/init		initrd/splashkill	0755	0 0
+file	/mininit	initrd/mininit		0755	0 0
