@@ -30,6 +30,12 @@ enum jz4740_fb_lcd_type {
 	JZ_LCD_TYPE_DUAL_COLOR_STN = 10,
 	JZ_LCD_TYPE_DUAL_MONOCHROME_STN = 11,
 	JZ_LCD_TYPE_8BIT_SERIAL = 12,
+	JZ_LCD_TYPE_SMART_PARALLEL_8_BIT = 1 | (1 << 5),
+	JZ_LCD_TYPE_SMART_PARALLEL_16_BIT = 0 | (1 << 5),
+	JZ_LCD_TYPE_SMART_PARALLEL_18_BIT = 2 | (1 << 5),
+	JZ_LCD_TYPE_SMART_SERIAL_8_BIT = 1 | (3 << 5),
+	JZ_LCD_TYPE_SMART_SERIAL_16_BIT = 0 | (3 << 5),
+	JZ_LCD_TYPE_SMART_SERIAL_18_BIT = 2 | (3 << 5),
 };
 
 #define JZ4740_FB_SPECIAL_TFT_CONFIG(start, stop) (((start) << 16) | (stop))
@@ -62,6 +68,8 @@ struct jz4740_fb_platform_data {
 
 	unsigned pixclk_falling_edge:1;
 	unsigned date_enable_active_low:1;
+	unsigned chip_select_active_low:1;
+	unsigned register_select_active_low:1;
 };
 
 #endif

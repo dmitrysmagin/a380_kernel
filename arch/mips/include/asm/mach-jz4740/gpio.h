@@ -252,6 +252,9 @@ uint32_t jz_gpio_port_get_value(int port, uint32_t mask);
 #define JZ_GPIO_MEM_WAIT		JZ_GPIO_PORTC(27)
 #define JZ_GPIO_MEM_FRE			JZ_GPIO_PORTC(28)
 #define JZ_GPIO_MEM_FWE			JZ_GPIO_PORTC(29)
+/* Pins have different assignment in SLCD mode */
+#define JZ_GPIO_SLCD_RS			JZ_GPIO_PORTC(19)
+#define JZ_GPIO_SLCD_CS			JZ_GPIO_PORTC(20)
 
 #define JZ_GPIO_FUNC_LCD_DATA0		JZ_GPIO_FUNC1
 #define JZ_GPIO_FUNC_LCD_DATA1		JZ_GPIO_FUNC1
@@ -283,6 +286,8 @@ uint32_t jz_gpio_port_get_value(int port, uint32_t mask);
 #define JZ_GPIO_FUNC_MEM_WAIT		JZ_GPIO_FUNC1
 #define JZ_GPIO_FUNC_MEM_FRE		JZ_GPIO_FUNC1
 #define JZ_GPIO_FUNC_MEM_FWE		JZ_GPIO_FUNC1
+#define JZ_GPIO_FUNC_SLCD_RS		JZ_GPIO_FUNC1
+#define JZ_GPIO_FUNC_SLCD_CS		JZ_GPIO_FUNC1
 
 
 #define JZ_GPIO_MEM_ADDR19		JZ_GPIO_PORTB(22)
