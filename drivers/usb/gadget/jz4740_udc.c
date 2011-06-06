@@ -243,7 +243,7 @@ static inline int write_packet(struct jz4740_ep *ep,
 				   struct jz4740_request *req, unsigned int count)
 {
 	uint8_t *buf;
-	unsigned int length, nlong, nbyte;
+	unsigned int length;
 	void __iomem *fifo = ep->dev->base + ep->fifo;
 
 	DEBUG("%s:%s[%d]\n", __FILE__, __func__, __LINE__);
@@ -266,7 +266,7 @@ static int read_packet(struct jz4740_ep *ep,
 				  struct jz4740_request *req, unsigned int count)
 {
 	uint8_t *buf;
-	unsigned int length, nlong, nbyte;
+	unsigned int length;
 	void __iomem *fifo = ep->dev->base + ep->fifo;
 	DEBUG("%s:%s[%d]\n", __FILE__, __func__, __LINE__);
 
@@ -524,7 +524,6 @@ static int write_fifo(struct jz4740_ep *ep, struct jz4740_request *req)
 {
 	struct jz4740_udc *dev = ep->dev;
 	uint32_t max, csr;
-	uint32_t physaddr = virt_to_phys((void *)req->req.buf);
 
 	DEBUG("%s:%s[%d]\n", __FILE__, __func__, __LINE__);
 	max = le16_to_cpu(ep->desc->wMaxPacketSize);
@@ -1462,7 +1461,7 @@ static int jz4740_handle_get_status(struct jz4740_udc *dev,
 			return -EOPNOTSUPP;
 		}
 
-		jz_udc_select_ep(ep);
+		jz_udc_select_ep(qep);
 
 		/* Return status on next IN token */
 		switch (qep->type) {
