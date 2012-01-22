@@ -82,4 +82,9 @@ config LOGO_M32R_CLUT224
 	depends on M32R
 	default y
 
++config LOGO_OPENDINGUX_CLUT224
+	bool "224-color OpenDingux logo"
+	depends on JZ4740_A320
+	default y
+
 endif # LOGO
