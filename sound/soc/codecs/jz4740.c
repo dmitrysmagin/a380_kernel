@@ -249,12 +249,15 @@ static int jz4740_codec_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_ON:
 		break;
 	case SND_SOC_BIAS_PREPARE:
-		mask = JZ4740_CODEC_1_VREF_DISABLE |
-				JZ4740_CODEC_1_VREF_AMP_DISABLE |
-				JZ4740_CODEC_1_HEADPHONE_POWERDOWN_M;
+		mask = JZ4740_CODEC_1_HEADPHONE_POWERDOWN_M;
 		value = 0;
 
 		regmap_update_bits(regmap, JZ4740_REG_CODEC_1, mask, value);
+
+		msleep(500);
+		mask = JZ4740_CODEC_1_VREF_DISABLE |
+						JZ4740_CODEC_1_VREF_AMP_DISABLE;
+		regmap_update_bits(regmap, JZ4740_REG_CODEC_1, mask, 0);
 		break;
 	case SND_SOC_BIAS_STANDBY:
 		/* The only way to clear the suspend flag is to reset the codec */
