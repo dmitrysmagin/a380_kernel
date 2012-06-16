@@ -2331,6 +2331,10 @@ static int fbcon_switch(struct vc_data *vc)
 	fbcon_set_palette(vc, color_table); 	
 	fbcon_clear_margins(vc, 0);
 
+/* TODO: Figure out why the logo gets accessed after the init phase ends
+ *       when using the JZ4740 SLCD driver.
+ */
+#ifndef CONFIG_FB_JZ4740_SLCD
 	if (logo_shown == FBCON_LOGO_DRAW) {
 
 		logo_shown = fg_console;
@@ -2342,6 +2346,7 @@ static int fbcon_switch(struct vc_data *vc)
 						 vc->vc_top) / 2);
 		return 0;
 	}
+#endif
 	return 1;
 }
 

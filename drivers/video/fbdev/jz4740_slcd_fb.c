@@ -416,13 +416,13 @@ static int jzfb_set_par(struct fb_info *info)
 
 	mutex_lock(&jzfb->lock);
 	if (!jzfb->is_enabled)
-		clk_enable(jzfb->ldclk);
+		clk_prepare_enable(jzfb->ldclk);
 
 	// TODO(MtH): We should not change config while DMA might be running.
 	writew(slcd_cfg, jzfb->base + JZ_REG_SLCD_CFG);
 
 	if (!jzfb->is_enabled)
-		clk_disable(jzfb->ldclk);
+		clk_disable_unprepare(jzfb->ldclk);
 	mutex_unlock(&jzfb->lock);
 
 	// TODO(MtH): Use maximum transfer speed that panel can handle.
@@ -437,7 +437,7 @@ static void jzfb_enable(struct jzfb *jzfb)
 {
 	uint32_t ctrl;
 
-	clk_enable(jzfb->ldclk);
+	clk_prepare_enable(jzfb->ldclk);
 
 	jz_gpio_bulk_resume(jz_slcd_ctrl_pins, jzfb_num_ctrl_pins(jzfb));
 	if (jzfb->pdata->lcd_type & (1 << 6)) {
@@ -481,7 +481,7 @@ static void jzfb_disable(struct jzfb *jzfb)
 				     jzfb_num_data_pins(jzfb));
 	}
 
-	clk_disable(jzfb->ldclk);
+	clk_disable_unprepare(jzfb->ldclk);
 }
 
 static int jzfb_blank(int blank_mode, struct fb_info *info)
@@ -933,7 +933,7 @@ static int jzfb_probe(struct platform_device *pdev)
 
 	mutex_init(&jzfb->lock);
 
-	clk_enable(jzfb->ldclk);
+	clk_prepare_enable(jzfb->ldclk);
 	jzfb->is_enabled = 1;
 
 	writel(JZ_LCD_CFG_SLCD, jzfb->base + JZ_REG_LCD_CFG);
