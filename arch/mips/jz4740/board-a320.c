@@ -207,14 +207,40 @@ struct pwm_lookup a320_pwm_table[] = {
 	PWM_LOOKUP("jz4740-pwm", 7, "pwm-backlight", 0),
 };
 
+static struct regulator_consumer_supply a320_mmc_regulator_consumer =
+	REGULATOR_SUPPLY("vmmc", "jz4740-mmc.0");
+
+static struct regulator_init_data a320_mmc_regulator_init_data = {
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &a320_mmc_regulator_consumer,
+	.constraints = {
+		.name = "MMC power",
+		.min_uV = 3300000,
+		.max_uV = 3300000,
+		.valid_modes_mask = REGULATOR_MODE_NORMAL,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.always_on = true,
+		.boot_on = 1,
+	},
+};
+
+static struct fixed_voltage_config a320_mmc_regulator_data = {
+	.supply_name = "MMC power",
+	.microvolts = 3300000,
+	.init_data = &a320_mmc_regulator_init_data,
+};
+
+static struct platform_device a320_mmc_regulator_device = {
+	.name = "reg-fixed-voltage",
+	.id = -1,
+	.dev = {
+		.platform_data = &a320_mmc_regulator_data,
+	}
+};
+
 static struct jz4740_mmc_platform_data a320_mmc_pdata = {
 	.gpio_card_detect	= JZ_GPIO_PORTB(29),
 	.gpio_read_only		= -1,
-	.gpio_power		= -1,
-	// TODO(MtH): I don't know which GPIO pin the SD power is connected to.
-	//            Booboo left power alone, but I don't know why.
-	//.gpio_power		= GPIO_SD_VCC_EN_N,
-	//.power_active_low	= 1,
 };
 
 /* Battery */
@@ -381,6 +407,7 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 	&a320_backlight_device,
 	&a320_gpio_keys_device,
 	&a320_audio_device,
+	&a320_mmc_regulator_device,
 };
 
 static void __init board_gpio_setup(void)
@@ -434,6 +461,7 @@ static int __init a320_board_setup(void)
 	panic_blink = a320_panic_blink_callback;
 
 	board_gpio_setup();
+	regulator_has_full_constraints();
 
 	if (a320_init_platform_devices())
 		panic("Failed to initalize platform devices\n");

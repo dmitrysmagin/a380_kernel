@@ -351,11 +351,41 @@ static struct platform_device qi_lb60_gpio_keys = {
 	}
 };
 
+static struct regulator_consumer_supply qi_lb60_mmc_regulator_consumer =
+	REGULATOR_SUPPLY("vmmc", "jz4740-mmc.0");
+
+static struct regulator_init_data qi_lb60_mmc_regulator_init_data = {
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &qi_lb60_mmc_regulator_consumer,
+	.constraints = {
+		.name = "MMC power",
+		.min_uV = 3300000,
+		.max_uV = 3300000,
+		.valid_modes_mask = REGULATOR_MODE_NORMAL,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.always_on = true,
+		.boot_on = 1,
+	},
+};
+
+static struct fixed_voltage_config qi_lb60_mmc_regulator_data = {
+	.supply_name = "MMC power",
+	.microvolts = 3300000,
+	.gpio = QI_LB60_GPIO_SD_VCC_EN_N,
+	.init_data = &qi_lb60_mmc_regulator_init_data,
+};
+
+static struct platform_device qi_lb60_mmc_regulator_device = {
+	.name = "reg-fixed-voltage",
+	.id = -1,
+	.dev = {
+		.platform_data = &qi_lb60_mmc_regulator_data,
+	}
+};
+
 static struct jz4740_mmc_platform_data qi_lb60_mmc_pdata = {
 	.gpio_card_detect	= QI_LB60_GPIO_SD_CD,
 	.gpio_read_only		= -1,
-	.gpio_power		= QI_LB60_GPIO_SD_VCC_EN_N,
-	.power_active_low	= 1,
 };
 
 /* OHCI */
@@ -453,6 +483,7 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 	&qi_lb60_pwm_beeper,
 	&qi_lb60_charger_device,
 	&qi_lb60_audio_device,
+	&qi_lb60_mmc_regulator_device,
 };
 
 static void __init board_gpio_setup(void)
@@ -507,6 +538,7 @@ static int __init qi_lb60_board_setup(void)
 		is_avt2 ? "AVT2" : "LB60");
 
 	board_gpio_setup();
+	regulator_has_full_constraints();
 
 	if (qi_lb60_init_platform_devices())
 		panic("Failed to initialize platform devices");
