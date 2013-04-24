@@ -1,0 +1,17 @@
+Ingenic JZ4740 RTC controller
+
+Required properties:
+- compatible: "ingenic,jz4740-rtc"
+- reg: physical base address of the controller and length of memory mapped
+  region.
+- interrupts: IRQ line for the controller.
+- clocks: Phandle to the parent clock
+
+Example:
+
+	rtc@3000 {
+		compatible = "ingenic,jz4740-rtc";
+		reg = <0x3000 0x1000>;
+		interrupts = <15>;
+		clocks = <&rtc_clk>;
+	};
