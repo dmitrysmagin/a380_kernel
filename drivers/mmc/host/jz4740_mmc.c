@@ -819,9 +819,13 @@ static int jz4740_mmc_probe(struct platform_device* pdev)
 		goto err_cpufreq_unreg;
 	}
 
-	ret = jz4740_mmc_request_gpios(mmc, pdev);
-	if (ret)
-		goto err_gpio_bulk_free;
+	if (pdata) {
+		ret = jz4740_mmc_request_gpios(mmc, pdev);
+		if (ret)
+			goto err_gpio_bulk_free;
+	} else {
+		mmc_of_parse(mmc);
+	}
 
 	ret = mmc_regulator_get_supply(mmc);
 	if (ret)
@@ -929,6 +933,12 @@ static SIMPLE_DEV_PM_OPS(jz4740_mmc_pm_ops, jz4740_mmc_suspend,
 #define JZ4740_MMC_PM_OPS NULL
 #endif
 
+static const struct of_device_id jz4740_mmc_of_match[] = {
+	{ .compatible = "ingenic,jz4740-msc" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, jz4740_mmc_of_match);
+
 static struct platform_driver jz4740_mmc_driver = {
 	.probe = jz4740_mmc_probe,
 	.remove = jz4740_mmc_remove,
@@ -936,6 +946,7 @@ static struct platform_driver jz4740_mmc_driver = {
 		.name = "jz4740-mmc",
 		.owner = THIS_MODULE,
 		.pm = JZ4740_MMC_PM_OPS,
+		.of_match_table = jz4740_mmc_of_match,
 	},
 };
 
