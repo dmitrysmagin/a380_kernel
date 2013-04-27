@@ -79,10 +79,10 @@ static const struct {
 	{ .gpio = (32*4+3)/*GPE3*/,	.actlow = 1,	.ncode = KEY_RIGHT,	.scode = KEY_BRIGHTNESSUP,	.sysrq = 'i'	}, /* D-pad right */
 	{ .gpio = (32*2+31)/*GPC31*/,	.actlow = 1,	.ncode = KEY_LEFTCTRL,							}, /* A button */
 	{ .gpio = (32*3+16)/*GPE11*/,	.actlow = 1,	.ncode = KEY_LEFTALT,							}, /* B button */
-	{ .gpio = (32*4+11)/*GPD16*/,	.actlow = 1,	.ncode = KEY_LEFTSHIFT ,							}, /* X button */
-	{ .gpio = (32*3+17)/*GPD17*/,	.actlow = 1,	.ncode = KEY_SPACE,							}, /* Y button */
-	{ .gpio = (32*4+7)/*GPE7*/,	.actlow = 1,	.ncode = KEY_BACKSPACE,	.scode = KEY_EXIT				}, /* Left shoulder button */
-	{ .gpio = (32*4+10)/*GPE10*/,	.actlow = 1,	.ncode = KEY_TAB ,							}, /* Right shoulder button */
+	{ .gpio = (32*3+17)/*GPD16*/,	.actlow = 1,	.ncode = KEY_SPACE,							}, /* X button */
+	{ .gpio = (32*4+11)/*GPD17*/,	.actlow = 1,	.ncode = KEY_LEFTSHIFT,							}, /* Y button */
+	{ .gpio = (32*4+10) /*GPE7*/,	.actlow = 1,	.ncode = KEY_TAB,	.scode = KEY_EXIT				}, /* Left shoulder button */
+	{ .gpio = (32*4+7)/*GPE10*/,	.actlow = 1,	.ncode = KEY_BACKSPACE ,							}, /* Right shoulder button */
 	{ .gpio = (32*3+21)/*GPD21*/,	.actlow = 1,	.ncode = KEY_ENTER,							}, /* START button(SYSRQ) */
 	{ .gpio = (32*4+8)/*GPE8*/,	.actlow = 1,	.ncode = KEY_ESC,	.scode = KEY_MENU,		.sysrq = 'b'	}, /* SELECT button */
 //	{ .gpio = (32*3+18)/*GPD18*/,	.actlow = 1,	.ncode = KEY_PAUSE,							}, /* HOLD */
