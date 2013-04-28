@@ -675,13 +675,13 @@ static int jz4740_mmc_cpufreq_transition(struct notifier_block *nb,
 
 	if (val == CPUFREQ_PRECHANGE) {
 		mmc_claim_host(cpufreq_host->mmc);
-		clk_disable(cpufreq_host->clk);
+		clk_disable_unprepare(cpufreq_host->clk);
 	} else if (val == CPUFREQ_POSTCHANGE) {
 		struct mmc_ios *ios = &cpufreq_host->mmc->ios;
 		if (ios->clock)
 			jz4740_mmc_set_clock_rate(cpufreq_host, ios->clock);
 		if (ios->power_mode != MMC_POWER_OFF)
-			clk_enable(cpufreq_host->clk);
+			clk_prepare_enable(cpufreq_host->clk);
 		mmc_release_host(cpufreq_host->mmc);
 	}
 	return 0;
