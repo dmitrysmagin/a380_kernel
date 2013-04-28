@@ -224,22 +224,19 @@ static int jzfb_check_var(struct fb_var_screeninfo *var, struct fb_info *fb)
 	return 0;
 }
 
+static void jzfb_refresh_work_complete(void *param)
+{
+	struct jzfb *jzfb = param;
+	complete_all(&jzfb->dma_completion);
+}
+
 static void jzfb_disable_dma(struct jzfb *jzfb)
 {
-	jz4740_dma_disable(jzfb->dma);
+	dmaengine_terminate_all(jzfb->dma);
 	while (readb(jzfb->base + JZ_REG_SLCD_STATE) & SLCD_STATE_BUSY);
 	writeb(readb(jzfb->base + JZ_REG_SLCD_CTRL) & ~SLCD_CTRL_DMA_EN,
 		jzfb->base + JZ_REG_SLCD_CTRL);
 }
-
-static struct jz4740_dma_config jzfb_slcd_dma_config = {
-	.src_width = JZ4740_DMA_WIDTH_32BIT,
-	.dst_width = JZ4740_DMA_WIDTH_16BIT,
-	.transfer_size = JZ4740_DMA_TRANSFER_SIZE_16BYTE,
-	.request_type = JZ4740_DMA_TYPE_SLCD,
-	.flags = JZ4740_DMA_SRC_AUTOINC,
-	.mode = JZ4740_DMA_MODE_BLOCK,
-};
 
 static void jzfb_upload_frame_dma(struct jzfb *jzfb)
 {
@@ -247,20 +244,25 @@ static void jzfb_upload_frame_dma(struct jzfb *jzfb)
 	struct fb_videomode *mode = fb->mode;
 	__u32 offset = fb->fix.line_length * fb->var.yoffset;
 	__u32 size = fb->fix.line_length * mode->yres;
+	struct dma_async_tx_descriptor *desc;
 
 	/* Ensure that the data to be uploaded is in memory. */
 	dma_cache_sync(fb->device, jzfb->vidmem + offset, size,
 		       DMA_TO_DEVICE);
 
-	jz4740_dma_set_src_addr(jzfb->dma, jzfb->vidmem_phys + offset);
-	jz4740_dma_set_dst_addr(jzfb->dma,
-				CPHYSADDR(jzfb->base + JZ_REG_SLCD_FIFO));
-	jz4740_dma_set_transfer_count(jzfb->dma, size);
+	desc = dmaengine_prep_slave_single(jzfb->dma, DMA_MEM_TO_DEV,
+		jzfb->vidmem_phys + offset, size, DMA_PREP_INTERRUPT);
+	if (!desc)
+		return;
+
+	desc->callback = jzfb_refresh_work_complete;
+	desc->callback_param = jzfb;
+	dmaengine_submit(desc);
 
 	while (readb(jzfb->base + JZ_REG_SLCD_STATE) & SLCD_STATE_BUSY);
 	writeb(readb(jzfb->base + JZ_REG_SLCD_CTRL) | SLCD_CTRL_DMA_EN,
 		jzfb->base + JZ_REG_SLCD_CTRL);
-	jz4740_dma_enable(jzfb->dma);
+	dma_async_issue_pending(jzfb->dma);
 }
 
 static void jzfb_upload_frame_cpu(struct jzfb *jzfb)
@@ -847,7 +849,9 @@ static int jzfb_probe(struct platform_device *pdev)
 	struct jzfb *jzfb;
 	struct fb_info *fb;
 	struct jz4740_fb_platform_data *pdata = pdev->dev.platform_data;
+	struct dma_slave_config config;
 	struct resource *mem;
+	dma_cap_mask_t dma_mask;
 
 	if (!pdata) {
 		dev_err(&pdev->dev, "Missing platform data\n");
@@ -881,14 +885,23 @@ static int jzfb_probe(struct platform_device *pdev)
 	init_completion(&jzfb->dma_completion);
 	complete_all(&jzfb->dma_completion);
 
-	jzfb->dma = jz4740_dma_request(&pdev->dev, dev_name(&pdev->dev), 0);
+	dma_cap_zero(dma_mask);
+	dma_cap_set(DMA_SLAVE, dma_mask);
+
+	jzfb->dma = dma_request_channel(dma_mask, NULL, NULL);
 	if (!jzfb->dma) {
 		dev_err(&pdev->dev, "Failed to get DMA channel\n");
 		ret = -EBUSY;
 		goto err_framebuffer_release;
 	}
-	jz4740_dma_configure(jzfb->dma, &jzfb_slcd_dma_config);
-	jz4740_dma_set_complete_cb(jzfb->dma, &jzfb_refresh_work_complete);
+
+	config.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	config.dst_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+	config.dst_maxburst = 16;
+	config.slave_id = JZ4740_DMA_TYPE_SLCD;
+	config.dst_addr = mem->start + JZ_REG_SLCD_FIFO;
+
+	dmaengine_slave_config(jzfb->dma, &config);
 
 	jzfb->ldclk = clk_get(&pdev->dev, "lcd");
 	if (IS_ERR(jzfb->ldclk)) {
@@ -1012,7 +1025,7 @@ err_put_lpclk:
 err_put_ldclk:
 	clk_put(jzfb->ldclk);
 err_free_dma:
-	jz4740_dma_free(jzfb->dma);
+	dma_release_channel(jzfb->dma);
 err_framebuffer_release:
 	framebuffer_release(fb);
 	return ret;
@@ -1037,7 +1050,7 @@ static int jzfb_remove(struct platform_device *pdev)
 
 	jzfb_free_gpio_pins(jzfb);
 
-	jz4740_dma_free(jzfb->dma);
+	dma_release_channel(jzfb->dma);
 
 	fb_dealloc_cmap(&jzfb->fb->cmap);
 	jzfb_free_devmem(jzfb);

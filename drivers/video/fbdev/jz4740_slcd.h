@@ -18,6 +18,7 @@
 #include <linux/gpio.h>
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
+#include <linux/dmaengine.h>
 
 /*************************************************************************
  * SLCD (Smart LCD Controller)
@@ -98,7 +99,7 @@ struct jzfb {
 	struct jzfb_framedesc (*framedesc)[3];
 	dma_addr_t framedesc_phys;
 
-	struct jz4740_dma_chan *dma;
+	struct dma_chan *dma;
 	struct completion dma_completion;
 	unsigned refresh_on_pan:1;
 
