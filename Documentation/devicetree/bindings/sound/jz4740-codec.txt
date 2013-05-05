@@ -1,0 +1,12 @@
+Ingenic JZ4740 audio CODEC
+
+Required properties:
+	- compatible: Must be "ingenic,jz4740-codec"
+	- reg: The CODEC's registers location and length
+
+Example:
+
+	codec: codec@20080 {
+		compatible = "ingenic,jz4740-codec";
+		reg = <0x20080 0xf7f>;
+	};

@@ -390,12 +390,19 @@ static int jz4740_codec_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id jz4740_codec_of_match[] = {
+	{ .compatible = "ingenic,jz4740-codec" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, jz4740_codec_of_match);
+
 static struct platform_driver jz4740_codec_driver = {
 	.probe = jz4740_codec_probe,
 	.remove = jz4740_codec_remove,
 	.driver = {
 		.name = "jz4740-codec",
 		.owner = THIS_MODULE,
+		.of_match_table = jz4740_codec_of_match,
 	},
 };
 
