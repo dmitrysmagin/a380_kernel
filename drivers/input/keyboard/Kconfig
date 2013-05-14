@@ -289,6 +289,18 @@ config KEYBOARD_JZ_GPIO_KEYS
 	  To compile this driver as a module, choose M here: the
 	  module will be called jz_gpio_keys.
 
+config KEYBOARD_A380_GPIO_KEYS
+	tristate "Dingoo A380 GPIO keys support"
+	depends on JZSOC
+	select INPUT_POLLDEV
+	select MAGIC_SYSRQ
+	help
+	  This driver implements support for buttons directly
+	  connected to single GPIO pins in the Ingenic JZ SoC.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called a380_gpio_keys.
+
 config KEYBOARD_GPIO
 	tristate "GPIO Buttons"
 	depends on GENERIC_GPIO

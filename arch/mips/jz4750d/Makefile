@@ -18,8 +18,8 @@ obj-$(CONFIG_JZ4750D_RZX50)	+= board-rzx50.o
 
 # PM support
 
-obj-$(CONFIG_PM_LEGACY)         +=pm.o
+obj-$(CONFIG_PM_LEGACY)         += pm.o
 
 # CPU Frequency scaling support
 
-obj-$(CONFIG_CPU_FREQ_JZ)       +=cpufreq.o
+obj-$(CONFIG_CPU_FREQ_JZ)       += cpufreq.o

@@ -31,7 +31,7 @@
 #include <linux/miscdevice.h>
 #include <linux/proc_fs.h>
 
-#include "elan_wireless_pad.h"
+#include "a380_elan_pad.h"
 
 
 unsigned int elan_key_val = 0;

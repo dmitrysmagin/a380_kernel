@@ -72,7 +72,7 @@ static const struct {
 	{ .gpio = 99,	.actlow = 1,	.ncode = KEY_4 },
 #endif
 
-#ifdef CONFIG_JZ4750D_L009
+#ifdef CONFIG_JZ4750D_A380
 	{ .gpio = (32*4+0)/*GPE0*/,	.actlow = 1,	.ncode = KEY_UP,	.scode = KEY_VOLUMEUP,		.sysrq = 's'	}, /* D-pad up */
 	{ .gpio = (32*4+1)/*GPE1*/,	.actlow = 1, 	.ncode = KEY_DOWN,	.scode = KEY_VOLUMEDOWN,	.sysrq = 'u'	}, /* D-pad down */
 	{ .gpio = (32*4+2)/*GPE2*/,	.actlow = 1,	.ncode = KEY_LEFT,	.scode = KEY_BRIGHTNESSDOWN,	.sysrq = 'e'	}, /* D-pad left */
@@ -172,7 +172,6 @@ extern unsigned int elan_key_val;
 extern unsigned long elan_state_flag;
 extern unsigned int l009_gsensor_flag;
 extern unsigned int l009_gsensor_read();
-extern int poweroff_irq_flag;
 #define HOLD_DETET 32*3+18
 
 static void jz_kbd_poll (struct input_polled_dev *dev)
@@ -197,15 +196,6 @@ static void jz_kbd_poll (struct input_polled_dev *dev)
 		}
 		else if(i == 11)
 		{
-			if (poweroff_irq_flag == 1)
-			{
-				//printk(" %s    %d    ================ \n",__FILE__,__LINE__);
-				poweroff_irq_flag = 0;
-			}
-			else 
-			{
-				if (__gpio_get_pin(jz_button[i].gpio)) s |= m; 
-			}
 		}
 		else
 		{

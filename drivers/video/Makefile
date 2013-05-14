@@ -31,6 +31,7 @@ obj-$(CONFIG_FB_DEFERRED_IO)   += fb_defio.o
 obj-$(CONFIG_FB_JZLCD_4730_4740)  += jzlcd.o
 obj-$(CONFIG_FB_JZ4740_SLCD)      += jz4740_slcd.o
 obj-$(CONFIG_FB_JZ4750_LCD)       += jz4750_lcd.o jz4750_android_ipu.o
+obj-$(CONFIG_FB_JZ4750_LCD_A380)  += jz4750_lcd_a380.o jz4750_android_ipu.o
 obj-$(CONFIG_FB_JZ4750_TVE)       += jz4750_tve.o
 obj-$(CONFIG_FB_AMIGA)            += amifb.o c2p.o
 obj-$(CONFIG_FB_ARC)              += arcfb.o

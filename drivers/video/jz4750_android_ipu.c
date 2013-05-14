@@ -34,7 +34,12 @@
 #include <asm/processor.h>
 #include <asm/jzsoc.h>
 
+#if defined(CONFIG_FB_JZ4750_LCD_A380)
+#include "jz4750_lcd_a380.h"
+#else
 #include "jz4750_lcd.h"
+#endif
+
 #include "jz4750_ipu.h"
 
 

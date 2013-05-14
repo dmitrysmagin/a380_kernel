@@ -53,19 +53,19 @@
 
 #include "console/fbcon.h"
 
-#include "jz4750_lcd.h"
+#include "jz4750_lcd_a380.h"
 #include "jz4750_tve.h"
 
 #ifdef CONFIG_JZ4750_SLCD_KGM701A3_TFT_SPFD5420A
 #include "jz_kgm_spfd5420a.h"
 #endif
 
-#ifdef CONFIG_JZ4750_SLCD_L009_ILI9331  
-#include "umido_slcd_ILI9331.h"
+#ifdef CONFIG_JZ4750_SLCD_A380_ILI9331  
+#include "a380_slcd_ili9331.h"
 #endif
 
-#ifdef CONFIG_JZ4750_SLCD_L009_ILI9325  
-#include "umido_slcd_ILI9331.h"
+#ifdef CONFIG_JZ4750_SLCD_A380_ILI9325  
+#include "a380_slcd_ili9331.h"
 #endif
 
 //maddrone add
@@ -339,7 +339,7 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 		 .fg0 = {32, 0, 0, 320, 240}, /* bpp, x, y, w, h */
 		 .fg1 = {32, 0, 0, 400, 240}, /* bpp, x, y, w, h */
 	 },
-#elif defined(CONFIG_JZ4750_SLCD_L009_ILI9331)  
+#elif defined(CONFIG_JZ4750_SLCD_A380_ILI9331)  
 	.panel = {
 //		 .cfg = LCD_CFG_LCDPIN_SLCD | LCD_CFG_RECOVER | /* Underrun recover*/ 
 		 .cfg = LCD_CFG_LCDPIN_SLCD | /* Underrun recover*/ 

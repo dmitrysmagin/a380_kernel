@@ -745,7 +745,7 @@ do { \
 	__lcd_special_off();	 \
 } while (0)
 
-#elif defined(CONFIG_JZ4750D_L009)/* board L009 */
+#elif defined(CONFIG_JZ4750D_A380)/* board A380 */
 #define __lcd_display_pin_init() \
 do { \
 	__gpio_as_output(GPIO_LCD_VCC_EN_N);	 \

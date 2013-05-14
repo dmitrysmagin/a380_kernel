@@ -55,6 +55,18 @@ config JZ_UDC_HOTPLUG
 	tristate 'JZ UDC hotplug driver support'
 	depends on JZCHAR
 
+config JZ_GSENSOR
+	tristate 'JZ G-sensor driver support'
+	depends on JZCHAR
+
+config JZ_RADIO_RDA5807P
+	tristate 'JZ Radio rda5807p driver support'
+	depends on JZCHAR
+
+config JZ_A380_ELAN
+	tristate 'JZ Dingoo A380 wireless driver support'
+	depends on JZCHAR
+
 config JZ_POWEROFF
 	tristate 'JZ board poweroff support' 
 	depends on JZCHAR

@@ -1,5 +1,5 @@
 /* ****************************************************************
- * @ func   : L009 Game Keypad Driver  
+ * @ func   : A380 Game Keypad Driver  
  * @ author : maddrone@gmail.com
  * ****************************************************************/
 #include <linux/module.h>

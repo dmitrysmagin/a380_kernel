@@ -365,33 +365,38 @@ config FB_JZ4750_LCD
 	   JZ4750 LCD Controller driver.
 	   JZ4750 LCD Controller support OSD function(refer jz4750_lcdc_spec.pdf).JZ4750 LCD OSD implement 2 framebuffer layers: foreground0 and foreground1. JZ4750 LCD driver support only foreground0 default.
 
+config FB_JZ4750_LCD_A380
+	tristate "JZ4750 LCD Controller support for Dingoo A380"
+	depends on FB_JZSOC && (SOC_JZ4750 || SOC_JZ4750D || SOC_JZ4750L)
+	---help---
+	   JZ4750 LCD Controller driver for Dingoo A380.
+
 config FB_JZ4750_LCD_USE_2LAYER_FRAMEBUFFER
 	bool "JZ4750 LCD driver 2 layers framebuffer support."
-	depends on FB_JZ4750_LCD
+	depends on FB_JZ4750_LCD || FB_JZ4750_LCD_A380
 	---help---
 	   JZ4750 LCD driver support only foreground0 by default.
 	   If you need both foreground0 and foreground1, please select this.
 
 config FB_JZ4750_TVE
 	tristate "Jz4750 TV Encode support"
-	depends on FB_JZSOC && FB_JZ4750_LCD
+	depends on FB_JZSOC && (FB_JZ4750_LCD || FB_JZ4750_LCD_A380)
 	default n
 
 config IPU_JZ4750
 	tristate "Jz4750 ipu support (Only for debug)"
-	depends on FB_JZSOC && FB_JZ4750_LCD
+	depends on FB_JZSOC && (FB_JZ4750_LCD || FB_JZ4750_LCD_A380)
 	default n
 	---help---
 	   Test JZ4750 IPU, if not sure, please set it to n.
 
 config FB_JZ4750_SLCD
 	bool
-	depends on FB_JZ4750_LCD
+	depends on FB_JZ4750_LCD || FB_JZ4750_LCD_A380
 	default n
 choice
-	depends on FB_JZ4750_LCD
+	depends on FB_JZ4750_LCD || FB_JZ4750_LCD_A380
 	prompt "JZ4750 LCD Panels Support"
-	default JZ4750_SLCD_L009
 	---help---
 	   Please select the lcd panel in you board
 
@@ -432,11 +437,11 @@ config JZ4750_SLCD_L009_ILI9325
 	---help---
 	Driver for ILI9325 smart LCD panel as connected in Umido L009.
 
-config JZ4750_SLCD_L009_ILI9331
-	bool "Umido L009 ILI9331 smart LCD panel"
+config JZ4750_SLCD_A380_ILI9331
+	bool "Dingoo A380 ILI9331 smart LCD panel"
 	select FB_JZ4750_SLCD
 	---help---
-	Driver for ILI9331 smart LCD panel as connected in Umido L009.
+	Driver for ILI9331 smart LCD panel as connected in Dingoo A380.
 
 config JZ4750D_VGA_DISPLAY
 	depends on SOC_JZ4750D

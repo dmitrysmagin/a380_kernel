@@ -1,5 +1,5 @@
 /*
- *  linux/include/asm-mips/mach-jz4750d/board-cetus.h
+ *  linux/include/asm-mips/mach-jz4750d/board-a380.h
  *
  *  JZ4750D-based CETUS board ver 1.x definition.
  *
@@ -13,8 +13,8 @@
  * published by the Free Software Foundation.
  */
 
-#ifndef __ASM_JZ4750D_L009_H__
-#define __ASM_JZ4750D_L009_H__
+#ifndef __ASM_JZ4750D_A380_H__
+#define __ASM_JZ4750D_A380_H__
 
 /*====================================================================== 
  * Frequencies of on-board oscillators
@@ -256,4 +256,4 @@ do {						\
 })
 #endif /*ACTIVE_LOW_MSC1_CD*/
 
-#endif /* __ASM_JZ4750d_L009_H__ */
+#endif /* __ASM_JZ4750d_A380_H__ */

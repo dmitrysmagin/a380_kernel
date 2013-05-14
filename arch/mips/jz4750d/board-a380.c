@@ -1,7 +1,7 @@
 /*
- * linux/arch/mips/jz4750d/board-l009.c
+ * linux/arch/mips/jz4750d/board-a380.c
  *
- * Umido L009 board setup routines.
+ * Dingoo A380 board setup routines.
  *
  * Copyright (c) 2006-2008  Ingenic Semiconductor Inc.
  * Author: <jlwei@ingenic.cn>
@@ -19,9 +19,6 @@
 #include <linux/console.h>
 #include <linux/delay.h>
 #include <linux/mmc/host.h>
-
-
-
 
 #include <asm/cpu.h>
 #include <asm/bootinfo.h>
@@ -278,7 +275,7 @@ void __init board_msc_init(void)
 
 void __init jz_board_setup(void)
 {
-	printk("Umido L009 board setup %s %s\n",__DATE__,__TIME__);
+	printk("Dingoo A380 board setup %s %s\n",__DATE__,__TIME__);
 
 	board_cpm_setup();
 	board_gpio_setup();

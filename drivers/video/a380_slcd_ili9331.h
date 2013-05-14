@@ -3,10 +3,10 @@
 
 #include <asm/jzsoc.h>
 
-#if defined (CONFIG_JZ4750_SLCD_L009_ILI9331)
+#if defined (CONFIG_JZ4750_SLCD_A380_ILI9331)
 #define WR_GRAM_CMD	0x22
 
-#if defined(CONFIG_JZ4750D_L009)
+#if defined(CONFIG_JZ4750D_A380)
 #if 0
 #define PIN_CS_N 	(32*3+8)		/* GPD22       */
 #define PIN_RESET_N 	(32*3+9)	    /* GPD23       */
