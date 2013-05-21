@@ -169,6 +169,8 @@ static int proc_hp_write_proc(
 	return count;
 
 }
+int is_close_amp_hp = 1;
+
 static int proc_amp_write_proc(
 			struct file *file, const char *buffer,
 			unsigned long count, void *data)
@@ -181,8 +183,10 @@ static int proc_amp_write_proc(
 			//printk("sound on\n");
 			if(hp_in == 0)
 			__gpio_set_pin(GPIO_AMPEN);
-			
-			__gpio_set_pin(GPIO_HP_OFF);
+			__gpio_clear_pin(GPIO_HP_OFF);
+		//	__gpio_set_pin(GPIO_HP_OFF);
+			is_close_amp_hp = 0;
+	
 		}
 		else if(sound_flag == 0)  //mute
 		{
@@ -190,7 +194,11 @@ static int proc_amp_write_proc(
 			//if(hp_in == 0)
 			__gpio_clear_pin(GPIO_AMPEN);
 			
-			__gpio_clear_pin(GPIO_HP_OFF);
+			__gpio_set_pin(GPIO_HP_OFF);
+			__gpio_set_pin(GPIO_HP_OFF);
+		//	__gpio_clear_pin(GPIO_HP_OFF);
+			is_close_amp_hp = 1;
+
 		}
 		else
 			;
@@ -250,6 +258,37 @@ static irqreturn_t hp_pnp_irq(int irq, void *dev_id)
 		return IRQ_HANDLED;
 }
 
+static int procWdtRead(
+		char *page, char **start, off_t off,
+		int count, int *eof, void *data)
+{
+	return sprintf(page, "%lu\n", 0);
+}
+
+static int procWdtWrite(
+		struct file *file, const char *buffer,
+		unsigned long count, void *data)
+{
+	int system_reset = simple_strtoul(buffer, 0, 10);
+//	printk("DEBUG: system_reset is :%d\n",system_reset);
+
+	if(system_reset  == 1)
+	{
+		__wdt_select_extalclk(); 
+		__wdt_select_clk_div1();
+		__wdt_set_count(0);
+		__wdt_set_data(10);
+		__wdt_start();
+		while(1)
+		{
+			msleep(1);
+			printk("wait for reset\n");
+		}
+	}
+
+	return system_reset;
+}
+
 /*
  * Module init and exit
  */
@@ -257,7 +296,7 @@ static irqreturn_t hp_pnp_irq(int irq, void *dev_id)
 static int __init sensor_init(void)
 {
 		int ret;
-		struct proc_dir_entry *res, *res2,*res_hp,*res_medive;
+		struct proc_dir_entry *res, *res2,*res_hp,*res_medive,*res_restart;
 
 		__gpio_as_i2c();
 		udelay(200);
@@ -356,8 +395,15 @@ static int __init sensor_init(void)
 	}
 #endif
 	//end
+	res_restart = create_proc_entry("jz/restart", 0, NULL);
+	if(res_restart)
+	{
+		res_restart->read_proc = procWdtRead;
+		res_restart->write_proc = procWdtWrite;
+		res_restart->data = NULL;
+	}
 
-		return 0;
+	return 0;
 }
 
 static void __exit sensor_exit(void)

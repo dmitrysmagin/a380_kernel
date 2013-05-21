@@ -36,6 +36,8 @@
 
 #if defined(CONFIG_FB_JZ4750_LCD_A380)
 #include "jz4750_lcd_a380.h"
+#elif defined(CONFIG_FB_JZ4750_LCD_RZX50)
+#include "jz4750_lcd_rzx50.h"
 #else
 #include "jz4750_lcd.h"
 #endif

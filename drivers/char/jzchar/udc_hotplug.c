@@ -47,7 +47,11 @@
 #define EVENT_POWER_TO_USB         5
 #define EVENT_USB_SUSPEND_POWER    6
 //alterac add
-#define GPIO_CHANGE_PIN_AL (32*3+14)
+#if defined(CONFIG_JZ4750D_A380)
+#define GPIO_CHANGE_PIN_AL (32*4+14)
+#elif defined(CONFIG_JZ4750D_RZX50)
+#define GPIO_CHANGE_PIN_AL (32*4+19)
+#endif
 
 struct udc_pnp_stat
 {
@@ -250,8 +254,8 @@ static void udc_get_cable(void)
 static void control_change_gpio(int flag)
 {
 	__gpio_as_func0(GPIO_CHANGE_PIN_AL);
-	__gpio_enable_pull(GPIO_CHANGE_PIN_AL);
 	__gpio_as_output(GPIO_CHANGE_PIN_AL);
+	__gpio_enable_pull(GPIO_CHANGE_PIN_AL);
 	if (flag == 0){
 		__gpio_clear_pin(GPIO_CHANGE_PIN_AL);
 	}else if (flag == 1){
@@ -377,23 +381,23 @@ static void udc_pnp_detect(void)
 			cur_pnp_stat.cable_stat = YES_CONNECT;
 			//udc_get_cable();
 			//KJH ADD
-			for (i=0; i<3; i++)
+			for (i=0; i<5; i++)
 			{
 				udc_get_cable();
 				if (cur_pnp_stat.protl_stat == NOT_CONNECT)
 				{
-					continue;
-				}
+                                        msleep(100);
+                                }
 				else
 				{
-					usb_flag++;
-					continue;
+                                        usb_flag++;
+                                        msleep(100);
 				}
 			}
 
 
 			/* Deliver this event to user space in udev model */
-			if (cur_pnp_stat.protl_stat && usb_flag >=2)
+			if (cur_pnp_stat.protl_stat && usb_flag >=5)
 				send_event_udev(EVENT_USB_ADD);
 			else				
 				send_event_udev(EVENT_POWER_ADD);

@@ -301,6 +301,12 @@ config KEYBOARD_A380_GPIO_KEYS
 	  To compile this driver as a module, choose M here: the
 	  module will be called a380_gpio_keys.
 
+config KEYBOARD_RZX50_GPIO_KEYS
+	tristate "Ritmix RZX50 GPIO keys support"
+	depends on JZSOC
+	select INPUT_POLLDEV
+	select MAGIC_SYSRQ
+
 config KEYBOARD_GPIO
 	tristate "GPIO Buttons"
 	depends on GENERIC_GPIO

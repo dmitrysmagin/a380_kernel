@@ -151,7 +151,7 @@ static irqreturn_t elan_wireless_irq_fun(int irq, void *dev_id)
       __gpio_as_func0(PIN_DATA_ELAN);
       __gpio_as_input(PIN_DATA_ELAN);
       senddataelan = 0;
-      printk("e\n");
+      printk("attention !!!!!!!!!!!!!\n");
       elan_mcu_state_flag = 1;
     }
 #endif
@@ -213,22 +213,14 @@ void elanwireless_gpioinit(void)
     __gpio_as_func0(PIN_POWER_ELAN);
     __gpio_enable_pull(PIN_POWER_ELAN);
     __gpio_as_output(PIN_POWER_ELAN);
-    //__gpio_clear_pin(PIN_POWER_ELAN);//turn on wireless moudle
+    __gpio_clear_pin(PIN_POWER_ELAN);//turn on wireless moudle
 
     __gpio_as_func0(PIN_IRQ_ELAN);
     __gpio_as_input(PIN_IRQ_ELAN);
     __gpio_enable_pull(PIN_IRQ_ELAN);
 
-    disable_irq(PIN_IRQ_ELAN_IRQ);
-    mdelay(100);
-    __gpio_set_pin(PIN_POWER_ELAN);//turn on wireless moudle
-    mdelay(500);
-    __gpio_clear_pin(PIN_POWER_ELAN);//turn on wireless moudle
-    mdelay(500);
-    enable_irq(PIN_IRQ_ELAN_IRQ);
-    mdelay(100);
-    //printk("%s %d\n\n\n\n\n",__FILE__,__LINE__);
-    //gpio_intr_init(GITT_F_EDGE, PIN_IRQ_ELAN);
+    printk("%s %d\n\n\n\n\n",__FILE__,__LINE__);
+  //gpio_intr_init(GITT_F_EDGE, PIN_IRQ_ELAN);
 }
 static unsigned char elan_key_pad[8]={
       L009_KEY_Y,
@@ -301,34 +293,25 @@ static int proc_elan_write_proc(
 			struct file *file, const char *buffer,
 			unsigned long count, void *data)
 {
+//	unsigned long old_val;
+//	old_val = elan_state_flag;
 
         elan_state_flag =  simple_strtoul(buffer, 0, 10);
-        printk("%s %d elan_state_flag is %d\n",__FILE__,__LINE__,elan_state_flag);	
+        //printk("%s %d elan_state_flag is %d\n",__FILE__,__LINE__,elan_state_flag);	
         if(elan_state_flag == 1)
         {
-//         __gpio_clear_pin(PIN_POWER_ELAN);//turn on wireless moudle
+          __gpio_clear_pin(PIN_POWER_ELAN);//turn on wireless moudle
           send_data = 0xaa;
           senddataelan = 1;		//duima
         }
         else if(elan_state_flag == 0)
         {
-//          __gpio_clear_pin(PIN_POWER_ELAN);//turn on wireless moudle
+          __gpio_clear_pin(PIN_POWER_ELAN);//turn on wireless moudle
           send_data = 0xbb;
           senddataelan = 1;		//shutdown mcu soft
-          while(senddataelan)
-          {
-            printk("senddataelan is %d\n",senddataelan);
-            mdelay(50);
-          }
         }
         else if(elan_state_flag == 3)
         {
-          //printk("%s %d\n",__FILE__,__LINE__);
-          //extern void elan_hw_off();
-          //elan_hw_off();
-          disable_irq(PIN_IRQ_ELAN_IRQ);
-          mdelay(100);
-#if 1
           __gpio_as_func0(FIFO_W);
           __gpio_as_input(FIFO_W);
           __gpio_as_func0(PTK_W);
@@ -343,15 +326,20 @@ static int proc_elan_write_proc(
           __gpio_as_input(SPI_CLK_W);
           __gpio_as_func0(RESETN_W);
           __gpio_as_input(RESETN_W);
-#endif
+          send_data = 0xbc;
+          senddataelan = 1;		//restart the mcu
           __gpio_set_pin(PIN_POWER_ELAN);//turn on wireless moudle
-          mdelay(500);
+          senddataelan = 0;		//restart the mcu
+#define DELAY_REBOOT 200
+          int i = DELAY_REBOOT;
+          //printk("%s %d\n",__FILE__,__LINE__);
+          while(i--)udelay_jz(100);
           __gpio_clear_pin(PIN_POWER_ELAN);//turn on wireless moudle
-          mdelay(500);
-          enable_irq(PIN_IRQ_ELAN_IRQ);
-          mdelay(100);
+          //printk("%s %d\n",__FILE__,__LINE__);
+          i = DELAY_REBOOT;
+          while(i--)udelay_jz(100);
+          //printk("%s %d\n",__FILE__,__LINE__);
         }
-        //printk("%s %d\n",__FILE__,__LINE__);
 
 #if 0
 	if(old_val == 0 && elan_state_flag == 1)

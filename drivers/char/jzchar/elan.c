@@ -1049,8 +1049,10 @@ static void elan_hw_on()
    // __gpio_enable_pull(PIN_POWER_ELAN);
    // __gpio_as_output(PIN_POWER_ELAN);
    // __gpio_set_pin(PIN_POWER_ELAN);
-        mdelay(250);
-        __gpio_clear_pin(PIN_POWER_ELAN);//turn on wireless moudle
+    __gpio_as_func0(PIN_POWER_ELAN);
+    __gpio_enable_pull(PIN_POWER_ELAN);
+    __gpio_as_output(PIN_POWER_ELAN);
+    __gpio_clear_pin(PIN_POWER_ELAN);//turn on wireless moudle
 
 
 	printk("EM198850 Init...\n");
@@ -1120,12 +1122,11 @@ RF_INIT_AG:
 	__gpio_as_irq_rise_edge(GPIO_PKT_INT);
 }
 
-void elan_hw_off()
+static void elan_hw_off()
 {
 	__gpio_clear_pin(GPIO_RESET);
 	task_run = 0;
-        if(elan_rx_task)
-          wake_up_process(elan_rx_task);
+	wake_up_process(elan_rx_task);
 	//kthread_stop(elan_rx_task);
 	__gpio_as_input(GPIO_PKT_INT);
 
@@ -1491,10 +1492,7 @@ static struct miscdevice elan_dev = {
 static int __init em198850_init()
 {
 	int ret;
-        __gpio_as_func0(PIN_POWER_ELAN);
-        __gpio_enable_pull(PIN_POWER_ELAN);
-        __gpio_as_output(PIN_POWER_ELAN);
-
+	
 	if ((ret = misc_register(&elan_dev)) < 0) {
 		printk("can't register misc device");
 		return ret;
@@ -1562,6 +1560,6 @@ static void __exit em198850_exit()
 	misc_deregister(&elan_dev);
 }
 
-EXPORT_SYMBOL(elan_hw_off);
+
 module_init(em198850_init);
 module_exit(em198850_exit);

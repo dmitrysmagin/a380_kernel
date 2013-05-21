@@ -391,7 +391,6 @@ static int proc_sadc_battery_show(struct seq_file *m, void *v)
 {
 	unsigned int mv = (battery_mv-180)/4;// = (jz4740_read_battery() * 7500 + 2048) / 4096;
 	//maddrone add charge status
-#if 1
 	__gpio_as_input(GPIO_USB_DETE);
 	__gpio_disable_pull(GPIO_USB_DETE);
 
@@ -399,13 +398,11 @@ static int proc_sadc_battery_show(struct seq_file *m, void *v)
 		mv |= 0x80000000;
 	
 	udc_pnp_set_gpio();
-
+#ifdef GPIO_CHARG_STAT_N
 	__gpio_as_input(GPIO_CHARG_STAT_N);
 	__gpio_disable_pull(GPIO_CHARG_STAT_N);
 	if(__gpio_get_pin(GPIO_CHARG_STAT_N))  mv |= 0x40000000;
-
 #endif
-
 	seq_printf(m, "%u\n", mv);
 	return 0;
 }
@@ -588,7 +585,7 @@ int AcquireEvent(struct jz_ts_t *ts, struct ts_event *event)
 static struct task_struct * battery_monitor;
 
 
-#define POWEROFF_VOL 3550
+#define POWEROFF_VOL 3450
 extern int jz_pm_hibernate(void);
 
 static void

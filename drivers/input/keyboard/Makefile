@@ -22,6 +22,7 @@ obj-$(CONFIG_KEYBOARD_PXA27x)		+= pxa27x_keyboard.o
 obj-$(CONFIG_KEYBOARD_JZ_KEYPAD)	+= jz_keypad.o
 obj-$(CONFIG_KEYBOARD_JZ_KEYPAD_5X5)	+= jz_keypad_5x5.o
 obj-$(CONFIG_KEYBOARD_A380_GPIO_KEYS)	+= a380_gpio_keys.o a380_gamepad.o a380_elan_pad.o
+obj-$(CONFIG_KEYBOARD_RZX50_GPIO_KEYS)	+= rzx50_gpio_keys.o rzx50_gamepad.o
 obj-$(CONFIG_KEYBOARD_AAED2000)		+= aaed2000_kbd.o
 obj-$(CONFIG_KEYBOARD_GPIO)		+= gpio_keys.o
 obj-$(CONFIG_KEYBOARD_HP6XX)		+= jornada680_kbd.o

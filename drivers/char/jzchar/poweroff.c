@@ -148,7 +148,8 @@ void run_sbin_poweroff()
     int ret;
 
     i = 0;
-    if (medive_flag == 1){
+    //if (medive_flag == 1){
+   if(1){
 	    argv[i++] = "/boot/local/sbin/ne_inform";
 	    //argv[i++] = "/boot/local/sbin/ne_inform.sh";
 	    //argv[i++] = "/usr/bin/udc_connect.sh";
@@ -299,18 +300,17 @@ static void poweroff_delaytimer_routine(unsigned long dummy)
 /*
  * Poweroff pin interrupt handler
  */
-int poweroff_irq_flag;
 static irqreturn_t poweroff_irq(int irq, void *dev_id)
 {
 	__gpio_ack_irq(POWEROFF_PIN);
 	__gpio_mask_irq(POWEROFF_PIN);
-	__gpio_as_input(POWEROFF_PIN);
+        __gpio_as_input(POWEROFF_PIN);
+
 #ifdef CONFIG_JZ_UDC_HOTPLUG
 	if (__gpio_get_pin(POWEROFF_PIN)==POWEROFF_PIN_DOWN && jz_udc_active == 0){
 #else
 	if (__gpio_get_pin(POWEROFF_PIN)==POWEROFF_PIN_DOWN){
-#endif		
-		poweroff_irq_flag = 1;
+#endif
 		del_timer(&poweroff_delaytimer);
 		init_timer(&poweroff_delaytimer);
 		poweroff_delaytimer.expires = jiffies + POWEROFF_DELAY;
@@ -329,10 +329,25 @@ static irqreturn_t poweroff_irq(int irq, void *dev_id)
 
 #ifdef CONFIG_JZ_UDC_HOTPLUG
 		if (jz_udc_active == 1)
-		printk("\nUSB is working; Operation is denied\n");
+                  printk("\nUSB is working; Operation is denied\n");
+
 #endif
-		SET_POWEROFF_PIN_AS_IRQ;
-		__gpio_unmask_irq(POWEROFF_PIN);
+
+                if(!__gpio_get_pin(GPIO_USB_DETE))
+                {
+                  del_timer(&poweroff_delaytimer);
+                  init_timer(&poweroff_delaytimer);
+                  poweroff_delaytimer.expires = jiffies + POWEROFF_DELAY;
+                  //poweroff_delaytimer.expires = jiffies + 2 * HZ;
+                  poweroff_delaytimer.data = 0;
+                  poweroff_delaytimer.function = poweroff_delaytimer_routine;
+                  add_timer(&poweroff_delaytimer);
+                }
+                else
+                {
+                  SET_POWEROFF_PIN_AS_IRQ;
+                  __gpio_unmask_irq(POWEROFF_PIN);
+                }
 	}
 
 	return IRQ_HANDLED;

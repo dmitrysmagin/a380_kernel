@@ -31,6 +31,7 @@ MODULE_LICENSE("GPL");
 #define FM_POWER_OFF 0x07
 #define SET_MUTE     0x08
 #define SET_THRESHOLD     0x09
+#define SET_AREA 0x0a
 //unsigned char write_data[8] = {0xc0, 0x01, 0x00, 0x10, 0x40, 0x00, 0x88, 0xaf};
 
 unsigned char reset_chip[2] = {0x00, 0x02};
@@ -198,6 +199,7 @@ u16 rda5807p_freq_to_chan(u16 frequency)
 		bottom_band = 760;
 	else if ((set_tune[1] & 0x0c) == 0x08)	
 		bottom_band = 760;	
+#if 0
 	if ((set_tune[1] & 0x03) == 0x00) 
 		channel_spacing = 1;
 	else if ((set_tune[1] & 0x03) == 0x01) 
@@ -207,11 +209,41 @@ u16 rda5807p_freq_to_chan(u16 frequency)
 	channel = (frequency - bottom_band) / channel_spacing;
 
 	return (channel);
+	
+#else
+
+	/* because we can not use float, so channel spacing is 2x */
+	switch(set_tune[1] & 0x03) {
+	case 0x0:
+		channel_spacing = 200;
+		break;
+	case 0x1:
+		channel_spacing = 400;
+		break;
+	case 0x2:
+		channel_spacing = 100;
+		break;
+	case 0x3:
+		channel_spacing = 25;
+
+	}
+
+	channel = ((frequency - bottom_band) * 2 * 100) / channel_spacing;
+
+#if 0
+	printk("bottom_band = %d, 2xchannel_spacing = %d, channel = %d\n",
+	       bottom_band, channel_spacing, channel);
+#endif
+
+	return (channel);
+#endif
 }
 
 /* cur_freq 870~1080 */
+#if 0
 void rda5807p_set_freq(u16 cur_freq)
 {
+
 	u16 cur_chan;
 	cur_chan = rda5807p_freq_to_chan(cur_freq);
 //	printk("cur_chan =%d\n", cur_chan);	
@@ -221,7 +253,67 @@ void rda5807p_set_freq(u16 cur_freq)
 	i2c_write(FM_I2C_ADDR, set_tune, 0x03, 2);
 	//mdelay(50);
 	mdelay(100);
+
 }
+#else
+int rda5807p_set_freq(u16 cur_freq, int wait_true)
+{
+	int i = 0;
+	int wait_time;
+	u16 cur_chan;
+
+	cur_chan = rda5807p_freq_to_chan(cur_freq);
+
+	//printk("set freq cur chan  is  %d\n",cur_chan);
+	
+	set_tune[0] = cur_chan >> 2;
+
+	/* NOTE: lower 4bits of reg03 is set in fm_ioctl, and can NOT change in other place */
+	set_tune[1] |= 0x10;  /* tune enable */
+	set_tune[1] |= ((cur_chan & 0x3) << 6);
+	
+	i2c_write(FM_I2C_ADDR, set_tune, 0x03, 2);
+	//fm5807_i2c_txdata(set_tune,3);
+
+	if (wait_true)
+		wait_time = 25; /* 25ms */
+	else
+		wait_time = 15; /* 15ms */
+
+	for (i = 0; i < wait_time; i++) {
+		memset(read_data, 0, 4);
+		//read_data[0] = 0x0a;
+		//fm5807_i2c_rxdata(read_data, 4);
+		i2c_read(FM_I2C_ADDR, read_data, 0x0a, 4);
+#if 0
+		printk("read_data = %x, %x, %x, %x\n",
+		       read_data[0], read_data[1],
+		       read_data[2], read_data[3]);
+#endif
+
+#define FM_STC		(1 << 6) /* 0x0a, bit14 */
+
+#define FM_TRUE		(1 << 0) /* 0x0b, bit8 */
+#define FM_READY	(1 << 7) /* 0x0b, bit7 */
+
+		if ((read_data[0]) & FM_STC) /* tune complete */
+		{
+			if (!wait_true)
+				return 1;
+
+			if ((read_data[2] & FM_TRUE) &&
+			    (read_data[3] & FM_READY)) {
+				return 1;
+			}
+		}
+
+		/* continue */
+		msleep(1);
+	}
+
+	return 0;
+	}
+#endif
 
 static int fm_open(struct inode *inode, struct file *filp)
 {
@@ -273,6 +365,7 @@ static int fm_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+static unsigned int area_flag = 0;   //2 : japen  1 : other
 static int fm_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int threshold = 2;
@@ -283,13 +376,18 @@ static int fm_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, un
 	int mute = 2;
 	switch (cmd)
 	{
+	case SET_AREA:
+		get_user(area_flag, (int*)arg);
+		printk("cur area flag  is %d\n",area_flag);
+		break;
 	case AUTO_SEEK:
 		get_user(seek, (int*)arg);
 		set_tune[0] = 0x0;
 		set_tune[1] = 0x10;
 		printk("rda5807p set freq = %d\n", seek);
 	
-		rda5807p_set_freq(seek);
+	return rda5807p_set_freq(seek,1);
+#if 0
 		i2c_read(FM_I2C_ADDR, read_data, 0x0a, 4);
 //		printk("read_data = %x, %x, %x, %x\n", read_data[0], read_data[1], read_data[2], read_data[3]);
 		mdelay(50);
@@ -300,12 +398,14 @@ static int fm_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, un
 			return 1;
 		}
 		return 0;
+#endif
 	case AUTO_SEEK_JAPAN:
 		get_user(seek, (int*)arg);
 		set_tune[0] = 0x0;
 		set_tune[1] = 0x14;
 		
-		rda5807p_set_freq(seek);
+		return rda5807p_set_freq(seek,1);
+#if 0
 		i2c_read(FM_I2C_ADDR, read_data, 0x0a, 4);
 //		printk("read_data = %x, %x, %x, %x\n", read_data[0], read_data[1], read_data[2], read_data[3]);
 //		mdelay(50);
@@ -316,10 +416,25 @@ static int fm_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, un
 			return 1;
 		}
 		return 0;
+#endif
 	case SET_FREQ:
 		get_user(set_freq, (int*)arg);
-//		printk("set freq! = %d\n", set_freq);
-		rda5807p_set_freq(set_freq);
+		//printk("medive set freq! = %d  area_flag =  %d\n", set_freq,area_flag);
+
+		//medive change
+		if (area_flag == 1){
+			set_tune[0] = 0x0;
+			set_tune[1] = 0x10;
+		}else if (area_flag == 2){
+			set_tune[0] = 0x0;
+			set_tune[1] = 0x14;
+		}else{
+			set_tune[0] = 0x0;
+			set_tune[1] = 0x10;
+		}
+		//end
+
+		rda5807p_set_freq(set_freq,0);
 		
 //		mdelay(10000);
 		break;
@@ -404,15 +519,15 @@ static int fm_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, un
 	case SET_THRESHOLD:
 		get_user(threshold, (int*)arg);
 		if (threshold == 1){ // 1: use auto seek, 0:use manual seek
-			set_threshold[0] = 0x0b;
+			set_threshold[0] = 0x0d;
 			//set_threshold[0] = 0x08;
 			set_threshold[1] = 0xa8;
 		}else if (threshold == 2){
-			set_threshold[0] = 0x08;
+			set_threshold[0] = 0x0b;
 			set_threshold[1] = 0xa8;
 		}
         else if (threshold == 3){
-          set_threshold[0] = 0x06;
+          set_threshold[0] = 0x08;
           set_threshold[1] = 0xa8;
         }
 

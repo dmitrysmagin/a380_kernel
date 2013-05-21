@@ -16,6 +16,16 @@
 #define	RETRY_TIME	50
 
 #define DETECT_CHANGE_DELAY 20
+#define DEBUG
+//#undef  DEBUG
+#ifdef DEBUG
+#define dprintk(x...)	printk(x)
+#define print_dbg(f, arg...) printk("dbg::" __FILE__ ",LINE(%d): " f "\n", __LINE__, ## arg)
+#else
+#define dprintk(x...)
+#define print_dbg(f, arg...) do {} while (0)
+#endif
+
 
 static void jz_mmc_enable_detect(unsigned long arg) {
 	struct jz_mmc_host *host = (struct jz_mmc_host *)arg;
@@ -81,10 +91,20 @@ stable:
 	/* oldstat: 1 -- eject, 0 -- inserted */
 	/* eject: 1 -- eject, 0 -- inserted */
 //	printk("---oldstat:%d\t eject:%d\ttime_to_try=%d\n",host->oldstat,host->eject,time_to_try);
+        dprintk("%s %d host->oldstat is %d host->eject is %d host->sleeping is %d\n",__FILE__,__LINE__,host->oldstat,host->eject,host->sleeping);
 
 	if ( (0 == host->oldstat) && (0 == host->eject) && host->sleeping) {
 		mmc_resume_host(host->mmc);
 	}
+        if ( (0 == host->oldstat) && (0 == host->eject) ) {
+          mmc_resume_host(host->mmc);
+          mdelay(300);
+        }
+        if ( (1 == host->oldstat) && (1 == host->eject) ) {
+          mmc_resume_host(host->mmc);
+          mdelay(300);
+        }
+        dprintk("%s %d host->oldstat is %d host->eject is %d host->sleeping is %d\n",__FILE__,__LINE__,host->oldstat,host->eject,host->sleeping);
 
 	if ( (0== host->oldstat) && (1 == host->eject) ) {
 		if (host->sleeping) {
@@ -101,14 +121,18 @@ stable:
 
 		wake_up_interruptible(&host->data_wait_queue);
 	}
+        dprintk("%s %d host->oldstat is %d host->eject is %d host->sleeping is %d\n",__FILE__,__LINE__,host->oldstat,host->eject,host->sleeping);
 
 	if ( (1 == host->oldstat) && (0 == host->eject) ) {
 		mmc_detect_change(host->mmc, 50);
 	}
 //	printk("---%d:%s\n",__LINE__,__func__);
+        dprintk("%s %d host->oldstat is %d host->eject is %d host->sleeping is %d\n",__FILE__,__LINE__,host->oldstat,host->eject,host->sleeping);
 
 	host->sleeping = 0;
 	host->oldstat = host->eject;
+        dprintk("%s %d host->oldstat is %d host->eject is %d host->sleeping is %d\n",__FILE__,__LINE__,host->oldstat,host->eject,host->sleeping);
+
 	jz_mmc_enable_card_detect(host);
 }
 
@@ -125,7 +149,7 @@ int jz_mmc_detect(struct jz_mmc_host *host, int from_resuming) {
 	if (from_resuming)
 		schedule_timeout(HZ / 2); /* 500ms, wait for MMC Block module resuming*/
 
-	ret = schedule_delayed_work( &(host->gpio_jiq_work), HZ / 100); /* 10ms, a little time */
+	ret = schedule_delayed_work( &(host->gpio_jiq_work), HZ ); /* 10ms, a little time */
 
 	return ret;
 }

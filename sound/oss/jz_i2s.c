@@ -1353,13 +1353,15 @@ static int jz_i2s_ioctl_mixdev(struct inode *inode, struct file *file, unsigned 
         static int last_val = 0;
         codec->audio_volume = val;
         l009_globle_volume = val;
+        extern int is_close_amp_hp;
         if(val == 0)
         {
           //clear the amp and hp pin 
           __gpio_clear_pin(GPIO_AMPEN);
-          __gpio_clear_pin(GPIO_HP_OFF);
+          //__gpio_clear_pin(GPIO_HP_OFF);
+          __gpio_set_pin(GPIO_HP_OFF);
         }
-        else if(val > 0 && last_val == 0)
+        else if(val > 0 && (last_val == 0 || is_close_amp_hp))
         {
 
           //resume the amp and hp pin
@@ -1368,7 +1370,8 @@ static int jz_i2s_ioctl_mixdev(struct inode *inode, struct file *file, unsigned 
             __gpio_set_pin(GPIO_AMPEN);
 
           }
-          __gpio_set_pin(GPIO_HP_OFF);
+          //__gpio_set_pin(GPIO_HP_OFF);
+          __gpio_clear_pin(GPIO_HP_OFF);
         }
         last_val = val; 
 		codec_ioctrl(codec, CODEC_SET_VOLUME, val);
