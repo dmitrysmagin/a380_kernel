@@ -1,1 +1,0 @@
-../bch4bit_n8_global.c
