@@ -25,16 +25,12 @@
 /*------------------------------------------------------------------
  * Platform definitions
  */
-#ifdef CONFIG_JZ4750D_FUWA1
-#include <asm/mach-jz4750d/board-fuwa1.h>
+#ifdef CONFIG_JZ4750D_A380
+#include <asm/mach-jz4750d/board-a380.h>
 #endif
 
-#ifdef CONFIG_JZ4750D_CETUS
-#include <asm/mach-jz4750d/board-cetus.h>
-#endif
-/* Add other platform definition here ... */
-#ifdef CONFIG_JZ4750D_L009
-#include <asm/mach-jz4750d/board-l009.h>
+#ifdef CONFIG_JZ4750D_RZX50
+#include <asm/mach-jz4750d/board-rzx50.h>
 #endif
 
 

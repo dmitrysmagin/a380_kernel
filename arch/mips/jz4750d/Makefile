@@ -13,9 +13,8 @@ obj-$(CONFIG_PROC_FS)		+= proc.o
 
 # board specific support
 
-obj-$(CONFIG_JZ4750D_FUWA1)	+= board-fuwa1.o
-obj-$(CONFIG_JZ4750D_CETUS)	+= board-cetus.o
-obj-$(CONFIG_JZ4750D_L009)	+= board-l009.o
+obj-$(CONFIG_JZ4750D_A380)	+= board-a380.o
+obj-$(CONFIG_JZ4750D_RZX50)	+= board-rzx50.o
 
 # PM support
 

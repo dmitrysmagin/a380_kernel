@@ -16,93 +16,8 @@ choice
 	prompt "System type"
 	default SGI_IP22
 
-config JZ4730_PMP
-	bool "Ingenic JZ4730 PMP board"
-	select DMA_NONCOHERENT
-	select SYS_HAS_CPU_MIPS32_R1
-	select SYS_SUPPORTS_32BIT_KERNEL
-	select SYS_SUPPORTS_LITTLE_ENDIAN
-	select SOC_JZ4730
-
-config JZ4740_A320
-	bool "Dingoo A320 board"
-	select DMA_NONCOHERENT
-	select SYS_HAS_CPU_MIPS32_R1
-	select SYS_SUPPORTS_32BIT_KERNEL
-	select SYS_SUPPORTS_LITTLE_ENDIAN
-	select SOC_JZ4740
-	select GENERIC_GPIO
-
-config JZ4740_PAVO
-	bool "Ingenic JZ4740 PAVO board"
-	select DMA_NONCOHERENT
-	select SYS_HAS_CPU_MIPS32_R1
-	select SYS_SUPPORTS_32BIT_KERNEL
-	select SYS_SUPPORTS_LITTLE_ENDIAN
-	select SOC_JZ4740
-
-config JZ4740_LEO
-	bool "Ingenic JZ4740 LEO board"
-	select DMA_NONCOHERENT
-	select SYS_HAS_CPU_MIPS32_R1
-	select SYS_SUPPORTS_32BIT_KERNEL
-	select SYS_SUPPORTS_LITTLE_ENDIAN
-	select SOC_JZ4740
-
-config JZ4740_LYRA
-	bool "Ingenic JZ4740 LYRA board"
-	select DMA_NONCOHERENT
-	select SYS_HAS_CPU_MIPS32_R1
-	select SYS_SUPPORTS_32BIT_KERNEL
-	select SYS_SUPPORTS_LITTLE_ENDIAN
-	select SOC_JZ4740
-
-config JZ4725_DIPPER
-	bool "Ingenic JZ4725 DIPPER board"
-	select DMA_NONCOHERENT
-	select SYS_HAS_CPU_MIPS32_R1
-	select SYS_SUPPORTS_32BIT_KERNEL
-	select SYS_SUPPORTS_LITTLE_ENDIAN
-	select SOC_JZ4740
-	select SOC_JZ4725
-
-config JZ4720_VIRGO
-	bool "Ingenic JZ4720 VIRGO board"
-	select DMA_NONCOHERENT
-	select SYS_HAS_CPU_MIPS32_R1
-	select SYS_SUPPORTS_32BIT_KERNEL
-	select SYS_SUPPORTS_LITTLE_ENDIAN
-	select SOC_JZ4740
-	select SOC_JZ4720
-
-config JZ4750_FUWA
-	bool "Ingenic JZ4750 FUWA board"
-	select DMA_NONCOHERENT
-	select SYS_HAS_CPU_MIPS32_R1
-	select SYS_SUPPORTS_32BIT_KERNEL
-	select SYS_SUPPORTS_LITTLE_ENDIAN
-	select SOC_JZ4750
-	select JZ_FPGA
-
-config JZ4750D_FUWA1
-	bool "Ingenic JZ4750d FUWA1 board"
-	select DMA_NONCOHERENT
-	select SYS_HAS_CPU_MIPS32_R1
-	select SYS_SUPPORTS_32BIT_KERNEL
-	select SYS_SUPPORTS_LITTLE_ENDIAN
-	select SOC_JZ4750D
-	select JZ_FPGA
-
-config JZ4750_APUS
-	bool "Ingenic JZ4750 APUS board"
-	select DMA_NONCOHERENT
-	select SYS_HAS_CPU_MIPS32_R1
-	select SYS_SUPPORTS_32BIT_KERNEL
-	select SYS_SUPPORTS_LITTLE_ENDIAN
-	select SOC_JZ4750
-
-config JZ4750D_L009
-	bool "Umido JZ4750d L009 board"
+config JZ4750D_A380
+	bool "Dingoo A380 JZ4750d board"
 	select DMA_NONCOHERENT
 	select SYS_HAS_CPU_MIPS32_R1
 	select SYS_SUPPORTS_32BIT_KERNEL
@@ -110,22 +25,14 @@ config JZ4750D_L009
 	select SOC_JZ4750D
 	select GENERIC_GPIO
 
-config JZ4750D_CETUS
-	bool "Ingenic JZ4750d CETUS board"
+config JZ4750D_RZX50
+	bool "Ritmix RZX50 JZ4750d board"
 	select DMA_NONCOHERENT
 	select SYS_HAS_CPU_MIPS32_R1
 	select SYS_SUPPORTS_32BIT_KERNEL
 	select SYS_SUPPORTS_LITTLE_ENDIAN
 	select SOC_JZ4750D
-
-config JZ4750L_F4750L
-	bool "Ingenic JZ4750L FPGA board"
-	select DMA_NONCOHERENT
-	select SYS_HAS_CPU_MIPS32_R1
-	select SYS_SUPPORTS_32BIT_KERNEL
-	select SYS_SUPPORTS_LITTLE_ENDIAN
-	select SOC_JZ4750L
-	select JZ_FPGA	
+	select GENERIC_GPIO
 
 config MACH_ALCHEMY
 	bool "Alchemy processor based machines"
