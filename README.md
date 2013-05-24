@@ -1,4 +1,2 @@
-a380_kernel
-===========
-
-a380 kernel source
+Kernel for Dingoo A380 and Ritmix RZX50
+=======================================
