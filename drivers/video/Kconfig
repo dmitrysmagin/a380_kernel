@@ -242,6 +242,104 @@ config FB_TILEBLITTING
 comment "Frame buffer hardware drivers"
 	depends on FB
 
+config FB_JZSOC
+	tristate "JZSOC LCD controller support"
+	depends on FB && JZSOC
+	select FB_SYS_FILLRECT
+	select FB_SYS_COPYAREA
+	select FB_SYS_IMAGEBLIT
+	---help---
+	   JZSOC LCD Controller and Smart LCD Controller driver support.
+
+config FB_JZ4750_LCD
+	tristate "JZ4750 LCD Controller support"
+	depends on FB_JZSOC && (SOC_JZ4750 || SOC_JZ4750D || SOC_JZ4750L)
+	---help---
+	   JZ4750 LCD Controller driver.
+	   JZ4750 LCD Controller support OSD function(refer jz4750_lcdc_spec.pdf).JZ4750 LCD OSD implement 2 framebuffer layers: foreground0 and foreground1. JZ4750 LCD driver support only foreground0 default.
+
+config FB_JZ4750_LCD_A380
+	tristate "JZ4750 LCD Controller support for Dingoo A380"
+	depends on FB_JZSOC && (SOC_JZ4750 || SOC_JZ4750D || SOC_JZ4750L)
+	---help---
+	   JZ4750 LCD Controller driver for Dingoo A380.
+
+config FB_JZ4750_LCD_RZX50
+	tristate "JZ4750 LCD Controller support for Ritmix RZX50"
+	depends on FB_JZSOC && (SOC_JZ4750 || SOC_JZ4750D || SOC_JZ4750L)
+	---help---
+	   JZ4750 LCD Controller driver for Dingoo A380.
+
+config FB_JZ4750_LCD_USE_2LAYER_FRAMEBUFFER
+	bool "JZ4750 LCD driver 2 layers framebuffer support."
+	depends on FB_JZ4750_LCD || FB_JZ4750_LCD_A380 || FB_JZ4750_LCD_RZX50
+	---help---
+	   JZ4750 LCD driver support only foreground0 by default.
+	   If you need both foreground0 and foreground1, please select this.
+
+config FB_JZ4750_TVE
+	tristate "Jz4750 TV Encode support"
+	depends on FB_JZSOC && (FB_JZ4750_LCD || FB_JZ4750_LCD_A380 || FB_JZ4750_LCD_RZX50)
+	default n
+
+config IPU_JZ4750
+	tristate "Jz4750 ipu support (Only for debug)"
+	depends on FB_JZSOC && (FB_JZ4750_LCD || FB_JZ4750_LCD_A380 || FB_JZ4750_LCD_RZX50)
+	default n
+	---help---
+	   Test JZ4750 IPU, if not sure, please set it to n.
+
+config FB_JZ4750_SLCD
+	bool
+	depends on FB_JZ4750_LCD || FB_JZ4750_LCD_A380 || FB_JZ4750_LCD_RZX50
+	default n
+choice
+	depends on FB_JZ4750_LCD || FB_JZ4750_LCD_A380 || FB_JZ4750_LCD_RZX50
+	prompt "JZ4750 LCD Panels Support"
+	---help---
+	   Please select the lcd panel in you board
+
+config JZ4750_LCD_SAMSUNG_LTP400WQF01
+	bool "SAMSUNG LTP400WQF01 TFT panel (480x272)(16bits)"
+
+config JZ4750_LCD_SAMSUNG_LTP400WQF02
+	bool "SAMSUNG LTP400WQF02 TFT panel (480x272)(18bits)"
+
+config JZ4750_LCD_AUO_A043FL01V2
+	bool "AUO A043FL01V2 TFT panel (480x272)(24bits)"
+
+config JZ4750_LCD_FOXCONN_PT035TN01
+     	bool "FOXCONN PT035TN01 TFT panel (320x240,3.5in)(18bit-parallel mode)"
+
+config JZ4750_LCD_INNOLUX_PT035TN01_SERIAL
+     	bool "INNOLUX PT035TN01 TFT panel (320x240,3.5in)(8bit-serial mode)"
+
+config JZ4750_LCD_TOPPOLY_TD025THEA7_RGB_DELTA
+	bool "TOPPOLY_TD025THEA7 TFT panel(320x240)(serial RGB delta mode)"
+
+config JZ4750_LCD_TRULY_TFTG320240DTSW_18BIT
+	bool "TRULY_TFTG320240DTSW TFT panel (320x240) (Parallel 18bit mode)"
+
+config JZ4750_LCD_TRULY_TFT_GG1P0319LTSW_W
+	bool "TRULY_TFT_GG1P0319LTSW_W (240x320) (Smart LCD 16bit)"
+
+config JZ4750_SLCD_L009_ILI9325
+	bool "Umido L009 ILI9325 smart LCD panel"
+	select FB_JZ4750_SLCD
+	---help---
+	Driver for ILI9325 smart LCD panel as connected in Umido L009.
+
+config JZ4750_SLCD_A380_ILI9331
+	bool "Dingoo A380 ILI9331 smart LCD panel"
+	select FB_JZ4750_SLCD
+	---help---
+	Driver for ILI9331 smart LCD panel as connected in Dingoo A380.
+
+config JZ4750D_VGA_DISPLAY
+	depends on SOC_JZ4750D
+	bool "Jz4750D VGA Display"
+endchoice
+
 config FB_CIRRUS
 	tristate "Cirrus Logic support"
 	depends on FB && (ZORRO || PCI)
