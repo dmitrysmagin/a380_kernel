@@ -94,6 +94,15 @@
 #define MACH_MSP7120_FPGA       5	/* PMC-Sierra MSP7120 Emulation */
 #define MACH_MSP_OTHER        255	/* PMC-Sierra unknown board type */
 
+/*
+ * Valid machtype for group INGENIC
+ */
+#define  MACH_INGENIC_JZ4730	0	/* JZ4730 SOC		*/
+#define  MACH_INGENIC_JZ4740	1	/* JZ4740 SOC		*/
+#define  MACH_INGENIC_JZ4750	2	/* JZ4750 SOC		*/
+#define  MACH_INGENIC_JZ4750D	3	/* JZ4750D SOC		*/
+#define  MACH_INGENIC_JZ4750L	4	/* JZ4750L SOC		*/
+
 #define CL_SIZE			COMMAND_LINE_SIZE
 
 extern char *system_type;
