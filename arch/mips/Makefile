@@ -159,6 +159,14 @@ libs-$(CONFIG_SIBYTE_CFE)	+= arch/mips/sibyte/cfe/
 #
 
 #
+# Commond Ingenic JZ4750d series
+#
+
+core-$(CONFIG_SOC_JZ4750D)	+= arch/mips/jz4750d/
+cflags-$(CONFIG_SOC_JZ4750D)	+= -Iinclude/asm-mips/mach-jz4750d
+load-$(CONFIG_SOC_JZ4750D)	+= 0xffffffff80010000
+
+#
 # Acer PICA 61, Mips Magnum 4000 and Olivetti M700.
 #
 core-$(CONFIG_MACH_JAZZ)	+= arch/mips/jazz/
