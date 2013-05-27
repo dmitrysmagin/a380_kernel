@@ -670,6 +670,12 @@ makeboot =$(Q)$(MAKE) $(build)=arch/mips/boot VMLINUX=$(vmlinux-32) $(1)
 
 all:	$(all-y)
 
+uImage: $(vmlinux-32)
+	+@$(call makeboot,$@)
+
+zImage: $(vmlinux-32)
+	+@$(call makeboot,$@)
+
 vmlinux.bin: $(vmlinux-32)
 	+@$(call makeboot,$@)
 
@@ -694,12 +700,13 @@ endif
 
 archclean:
 	@$(MAKE) $(clean)=arch/mips/boot
+	@$(MAKE) $(clean)=arch/mips/boot/compressed
 	@$(MAKE) $(clean)=arch/mips/lasat
 
 define archhelp
-	echo '  vmlinux.ecoff        - ECOFF boot image'
-	echo '  vmlinux.bin          - Raw binary boot image'
-	echo '  vmlinux.srec         - SREC boot image'
+	echo  '  uImage	- u-boot format image (arch/$(ARCH)/boot/uImage)'
+	echo  '  zImage	- Compressed binary image (arch/$(ARCH)/boot/compressed/zImage)'
+	echo  '  vmlinux.bin	- Uncompressed binary image (arch/$(ARCH)/boot/vmlinux.bin)'
 	echo
 	echo '  These will be default as apropriate for a configured platform.'
 endef
