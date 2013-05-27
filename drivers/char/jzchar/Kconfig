@@ -1,0 +1,40 @@
+#
+# JzSOC char devices configuration
+#
+
+menu "JZSOC char device support"
+	depends on SOC_JZ4740 || SOC_JZ4730 || SOC_JZ4750 || SOC_JZ4750D
+
+config JZCHAR
+	tristate 'JzSOC char device support'
+
+config JZ_SADC
+	tristate 'JZ SADC driver support'
+	depends on JZCHAR
+
+config JZ_UDC_HOTPLUG
+	tristate 'JZ UDC hotplug driver support'
+	depends on JZCHAR
+
+config JZ_GSENSOR
+	tristate 'JZ G-sensor driver support'
+	depends on JZCHAR
+
+config JZ_RADIO_RDA5807P
+	tristate 'JZ Radio rda5807p driver support'
+	depends on JZCHAR
+
+config JZ_A380_ELAN
+	tristate 'JZ Dingoo A380 wireless driver support'
+	depends on JZCHAR
+
+config JZ_POWEROFF
+	tristate 'JZ board poweroff support'
+	depends on JZCHAR
+
+config JZ_TCSM
+	tristate 'JZ TCSM support'
+	depends on JZCHAR
+
+endmenu
+
