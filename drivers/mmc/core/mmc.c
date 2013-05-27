@@ -141,8 +141,21 @@ static int mmc_decode_csd(struct mmc_card *card)
 
 	e = UNSTUFF_BITS(resp, 47, 3);
 	m = UNSTUFF_BITS(resp, 62, 12);
-	csd->capacity	  = (1 + m) << (e + 2);
 
+#ifdef CONFIG_JZ_MSC0_MBR_OFFSET_8MB 
+	if(!strcmp(mmc_hostname(card->host) ,"mmc0")){
+#if defined(CONFIG_JZ_BOOT_FROM_MSC0)
+		csd->capacity	  = (1 + m) << (e + 2);
+		csd->capacity	  -= 16384;
+#else
+		csd->capacity	  = (1 + m) << (e + 2);			
+#endif			
+	}
+	else
+		csd->capacity	  = (1 + m) << (e + 2);			
+#else
+	csd->capacity	  = (1 + m) << (e + 2);	
+#endif		
 	csd->read_blkbits = UNSTUFF_BITS(resp, 80, 4);
 	csd->read_partial = UNSTUFF_BITS(resp, 79, 1);
 	csd->write_misalign = UNSTUFF_BITS(resp, 78, 1);
@@ -402,8 +415,9 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			EXT_CSD_BUS_WIDTH, EXT_CSD_BUS_WIDTH_4);
 		if (err)
 			goto free_card;
-
-		mmc_set_bus_width(card->host, MMC_BUS_WIDTH_4);
+		
+		/* all mmc v4 support 8 bit mmc card */
+		mmc_set_bus_width(card->host, MMC_BUS_WIDTH_8);
 	}
 
 	if (!oldcard)
@@ -572,7 +586,7 @@ static const struct mmc_bus_ops mmc_ops = {
 int mmc_attach_mmc(struct mmc_host *host, u32 ocr)
 {
 	int err;
-
+	printk("---%d:%s\n",__LINE__,__func__);
 	BUG_ON(!host);
 	WARN_ON(!host->claimed);
 
