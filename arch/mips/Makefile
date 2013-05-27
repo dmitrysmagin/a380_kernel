@@ -273,17 +273,23 @@ vmlinux.64: vmlinux
 
 all:	$(all-y)
 
-# boot
-vmlinux.bin vmlinux.ecoff vmlinux.srec: $(vmlinux-32) FORCE
-	$(Q)$(MAKE) $(build)=arch/mips/boot VMLINUX=$(vmlinux-32) arch/mips/boot/$@
+uImage: $(vmlinux-32)
+	+@$(call makeboot,$@)
 
-# boot/compressed
-vmlinuz vmlinuz.bin vmlinuz.ecoff vmlinuz.srec: $(vmlinux-32) FORCE
-	$(Q)$(MAKE) $(build)=arch/mips/boot/compressed \
-	   VMLINUX_LOAD_ADDRESS=$(load-y) 32bit-bfd=$(32bit-bfd) $@
+zImage: $(vmlinux-32)
+	+@$(call makeboot,$@)
 
+vmlinux.bin: $(vmlinux-32)
+	+@$(call makeboot,$@)
 
-CLEAN_FILES += vmlinux.32 vmlinux.64
+vmlinux.ecoff: $(vmlinux-32)
+	+@$(call makeboot,$@)
+
+vmlinux.srec: $(vmlinux-32)
+	+@$(call makeboot,$@)
+
+CLEAN_FILES += vmlinux.ecoff \
+	       vmlinux.srec
 
 archprepare:
 ifdef CONFIG_MIPS32_N32
@@ -308,13 +314,9 @@ archclean:
 
 define archhelp
 	echo '  install              - install kernel into $(INSTALL_PATH)'
-	echo '  vmlinux.ecoff        - ECOFF boot image'
-	echo '  vmlinux.bin          - Raw binary boot image'
-	echo '  vmlinux.srec         - SREC boot image'
-	echo '  vmlinuz              - Compressed boot(zboot) image'
-	echo '  vmlinuz.ecoff        - ECOFF zboot image'
-	echo '  vmlinuz.bin          - Raw binary zboot image'
-	echo '  vmlinuz.srec         - SREC zboot image'
+	echo '  uImage	- u-boot format image (arch/$(ARCH)/boot/uImage)'
+	echo '  zImage	- Compressed binary image (arch/$(ARCH)/boot/compressed/zImage)'
+	echo '  vmlinux.bin	- Uncompressed binary image (arch/$(ARCH)/boot/vmlinux.bin)'
 	echo
 	echo '  These will be default as apropriate for a configured platform.'
 endef
