@@ -122,6 +122,20 @@ choice
 # Integrated controllers
 #
 
+config USB_GADGET_JZ4750D
+	boolean "JZ4750D UDC"
+	depends on SOC_JZ4750D
+	select USB_GADGET_DUALSPEED
+	help
+		   Select this to support the Ingenic JZ4750D processor
+		    high speed USB device controller.
+
+config USB_JZ4750D
+	tristate
+	depends on USB_GADGET_JZ4750D
+	default USB_GADGET
+	select USB_GADGET_SELECTED
+
 config USB_GADGET_AT91
 	boolean "Atmel AT91 USB Device Port"
 	depends on ARCH_AT91 && !ARCH_AT91SAM9RL && !ARCH_AT91CAP9 && !ARCH_AT91SAM9G45
@@ -749,6 +763,14 @@ config USB_MASS_STORAGE
 	  Say "y" to link the driver statically, or "m" to build
 	  a dynamically linked module called "g_file_storage".  If unsure,
 	  consider File-backed Storage Gadget.
+
+config UDC_USE_LB_CACHE
+	bool "enable lb cache"
+	depends on USB_FILE_STORAGE && (SOC_JZ4740 || SOC_JZ4750 || SOC_JZ4750D)
+	default y
+	help
+	  say "y" to enable lb cache and UDC work in faster speed.
+	  say "n" to disable lb cache and UDC work in normal speed.
 
 config USB_G_SERIAL
 	tristate "Serial Gadget (with CDC ACM and CDC OBEX support)"
