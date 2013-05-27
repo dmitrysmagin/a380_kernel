@@ -1112,6 +1112,7 @@ config DEVPORT
 	default y
 
 source "drivers/s390/char/Kconfig"
+source "drivers/char/jzchar/Kconfig"
 
 endmenu
 
