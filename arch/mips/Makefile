@@ -196,6 +196,14 @@ cflags-$(CONFIG_AR7)		+= -I$(srctree)/arch/mips/include/asm/mach-ar7
 load-$(CONFIG_AR7)		+= 0xffffffff94100000
 
 #
+# Commond Ingenic JZ4750d series
+#
+
+core-$(CONFIG_SOC_JZ4750D)	+= arch/mips/jz4750d/
+cflags-$(CONFIG_SOC_JZ4750D)	+= -I$(srctree)/arch/mips/include/asm/mach-jz4750d
+load-$(CONFIG_SOC_JZ4750D)	+= 0xffffffff80010000
+
+#
 # Acer PICA 61, Mips Magnum 4000 and Olivetti M700.
 #
 core-$(CONFIG_MACH_JAZZ)	+= arch/mips/jazz/
