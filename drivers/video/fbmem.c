@@ -45,6 +45,10 @@
 
 #define FBPIXMAPSIZE	(1024 * 8)
 
+//hhx add
+unsigned char *vmfbmem_addr = NULL;
+u32 phy_vmfbmem_addr = 0;
+
 struct fb_info *registered_fb[FB_MAX] __read_mostly;
 int num_registered_fb __read_mostly;
 
@@ -1010,6 +1014,12 @@ fb_blank(struct fb_info *info, int blank)
 
  	return ret;
 }
+#define FBIOGET_VMFBMEM         0x4619
+#define FBIOGET_VMOSDMEM         0x4620
+#define FBIOGET_SETVMOSDMEM         0x4621
+
+
+
 
 static int 
 fb_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
@@ -1024,8 +1034,8 @@ fb_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 	struct fb_cmap_user cmap;
 	struct fb_event event;
 	void __user *argp = (void __user *)arg;
-	int i;
-	
+    int i;
+    //printk("%s %d fbioctl cmd  is 0x%x",__FILE__,__LINE__,cmd);	
 	if (!fb)
 		return -ENODEV;
 	switch (cmd) {
@@ -1044,9 +1054,21 @@ fb_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 		if (copy_to_user(argp, &var, sizeof(var)))
 			return -EFAULT;
 		return 0;
-	case FBIOGET_FSCREENINFO:
-		return copy_to_user(argp, &info->fix,
-				    sizeof(fix)) ? -EFAULT : 0;
+    case FBIOGET_FSCREENINFO:
+        //printk("%s %d phy_vmfbmem_addr is 0x%x\n",__FILE__,__LINE__,phy_vmfbmem_addr);
+        return copy_to_user(argp, &info->fix,
+            sizeof(fix)) ? -EFAULT : 0;
+    case FBIOGET_VMFBMEM:
+        //printk("%s %d phy_vmfbmem_addr is 0x%x  sizeof(phy_vmfbmem_addr) is %d \n",__FILE__,__LINE__,phy_vmfbmem_addr,sizeof(phy_vmfbmem_addr));
+        memset(vmfbmem_addr,0x00,(&info->var)->xres*(&info->var)->yres*2);
+        return copy_to_user(argp,&phy_vmfbmem_addr,sizeof(phy_vmfbmem_addr)) ? -EFAULT : 0;
+    case FBIOGET_VMOSDMEM:
+        //printk("%s %d phy_vmfbmem_addr is 0x%x  sizeof(phy_vmfbmem_addr) is %d \n",__FILE__,__LINE__,phy_vmfbmem_addr,sizeof(phy_vmfbmem_addr));
+        return copy_to_user(argp,vmfbmem_addr,(&info->var)->xres*(&info->var)->yres*2) ? -EFAULT : 0;
+    case FBIOGET_SETVMOSDMEM:
+        //printk("%s %d argp is 0x%x argp 1 is 0x%x FBIOGET_SETVMOSDMEM \n\n\n\n\n\n\n\n\n\n\n\n",__FILE__,__LINE__,*(char *)argp,*(char *)(argp+1));
+        return copy_from_user(vmfbmem_addr,argp,(&info->var)->xres*(&info->var)->yres*2) ? -EFAULT : 0;
+
 	case FBIOPUTCMAP:
 		if (copy_from_user(&cmap, argp, sizeof(cmap)))
 			return -EFAULT;
