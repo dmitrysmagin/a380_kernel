@@ -10,6 +10,7 @@ platforms += dec
 platforms += emma
 platforms += jazz
 platforms += jz4740
+platforms += jz4750d
 platforms += lasat
 platforms += loongson
 platforms += mipssim
