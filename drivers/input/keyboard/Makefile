@@ -31,3 +31,6 @@ obj-$(CONFIG_KEYBOARD_STOWAWAY)		+= stowaway.o
 obj-$(CONFIG_KEYBOARD_SUNKBD)		+= sunkbd.o
 obj-$(CONFIG_KEYBOARD_TOSA)		+= tosakbd.o
 obj-$(CONFIG_KEYBOARD_XTKBD)		+= xtkbd.o
+
+obj-$(CONFIG_KEYBOARD_A380_GPIO_KEYS)	+= a380_gpio_keys.o a380_gamepad.o a380_elan_pad.o
+obj-$(CONFIG_KEYBOARD_RZX50_GPIO_KEYS)	+= rzx50_gpio_keys.o rzx50_gamepad.o
