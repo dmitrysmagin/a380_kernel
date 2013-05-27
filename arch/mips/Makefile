@@ -739,17 +739,11 @@ makezboot =$(Q)$(MAKE) $(build)=arch/mips/boot/compressed \
 
 all:	$(all-y)
 
-vmlinuz: vmlinux FORCE
-	+@$(call makezboot,$@)
+uImage: $(vmlinux-32)
+	+@$(call makeboot,$@)
 
-vmlinuz.bin: vmlinux
-	+@$(call makezboot,$@)
-
-vmlinuz.ecoff: vmlinux
-	+@$(call makezboot,$@)
-
-vmlinuz.srec: vmlinux
-	+@$(call makezboot,$@)
+zImage: $(vmlinux-32)
+	+@$(call makeboot,$@)
 
 vmlinux.bin: $(vmlinux-32)
 	+@$(call makeboot,$@)
@@ -786,13 +780,9 @@ archclean:
 
 define archhelp
 	echo '  install              - install kernel into $(INSTALL_PATH)'
-	echo '  vmlinux.ecoff        - ECOFF boot image'
-	echo '  vmlinux.bin          - Raw binary boot image'
-	echo '  vmlinux.srec         - SREC boot image'
-	echo '  vmlinuz              - Compressed boot(zboot) image'
-	echo '  vmlinuz.ecoff        - ECOFF zboot image'
-	echo '  vmlinuz.bin          - Raw binary zboot image'
-	echo '  vmlinuz.srec         - SREC zboot image'
+	echo '  uImage	- u-boot format image (arch/$(ARCH)/boot/uImage)'
+	echo '  zImage	- Compressed binary image (arch/$(ARCH)/boot/compressed/zImage)'
+	echo '  vmlinux.bin	- Uncompressed binary image (arch/$(ARCH)/boot/vmlinux.bin)'
 	echo
 	echo '  These will be default as apropriate for a configured platform.'
 endef
