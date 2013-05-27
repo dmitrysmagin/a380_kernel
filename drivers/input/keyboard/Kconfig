@@ -363,6 +363,24 @@ config KEYBOARD_SAMSUNG
 	  To compile this driver as a module, choose M here: the
 	  module will be called samsung-keypad.
 
+config KEYBOARD_A380_GPIO_KEYS
+	tristate "Dingoo A380 GPIO keys support"
+	depends on JZSOC
+	select INPUT_POLLDEV
+	select MAGIC_SYSRQ
+	help
+	  This driver implements support for buttons directly
+	  connected to single GPIO pins in the Ingenic JZ SoC.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called a380_gpio_keys.
+
+config KEYBOARD_RZX50_GPIO_KEYS
+	tristate "Ritmix RZX50 GPIO keys support"
+	depends on JZSOC
+	select INPUT_POLLDEV
+	select MAGIC_SYSRQ
+
 config KEYBOARD_STOWAWAY
 	tristate "Stowaway keyboard"
 	select SERIO
