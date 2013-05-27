@@ -71,6 +71,17 @@
 #define MACH_LEMOTE_LL2F       7
 #define MACH_LOONGSON_END      8
 
+/*
+ * Valid machtype for group INGENIC
+ */
+#define  MACH_INGENIC_JZ4730	0	/* JZ4730 SOC		*/
+#define  MACH_INGENIC_JZ4740	1	/* JZ4740 SOC		*/
+#define  MACH_INGENIC_JZ4750	2	/* JZ4750 SOC		*/
+#define  MACH_INGENIC_JZ4750D	3	/* JZ4750D SOC		*/
+#define  MACH_INGENIC_JZ4750L	4	/* JZ4750L SOC		*/
+
+#define CL_SIZE			COMMAND_LINE_SIZE
+
 extern char *system_type;
 const char *get_system_type(void);
 
