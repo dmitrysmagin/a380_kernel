@@ -389,6 +389,11 @@ static void __cpuinit build_tlb_write_entry(u32 **p, struct uasm_label **l,
 		uasm_i_nop(p);
 		tlbw(p);
 		break;
+		
+	case CPU_JZRISC:
+		tlbw(p);
+		uasm_i_nop(p);
+		break;
 
 	default:
 		panic("No TLB refill handler yet (CPU type: %d)",
