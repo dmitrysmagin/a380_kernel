@@ -159,7 +159,7 @@ void __init cpu_cache_init(void)
 		return;
 	}
 
-	panic(cache_panic);
+	panic("%s", cache_panic);
 }
 
 int __weak __uncached_access(struct file *file, unsigned long addr)

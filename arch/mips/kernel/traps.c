@@ -1418,7 +1418,7 @@ void __init set_uncached_handler(unsigned long offset, void *addr, unsigned long
 #endif
 
 	if (!addr)
-		panic(panic_null_cerr);
+		panic("%s", panic_null_cerr);
 
 	memcpy((void *)(uncached_ebase + offset), addr, size);
 }
