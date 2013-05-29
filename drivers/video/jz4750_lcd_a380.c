@@ -39,7 +39,6 @@
 #include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
-#include <linux/pm_legacy.h>
 #include <linux/proc_fs.h>
 #include <linux/kthread.h>
 
@@ -120,7 +119,7 @@ struct lcd_cfb_info {
 	struct {
 		u16 red, green, blue;
 	} palette[NR_PALETTE];
-#ifdef CONFIG_PM
+#if 0 //def CONFIG_PM
 	struct pm_dev		*pm;
 #endif
 };
@@ -2345,7 +2344,7 @@ static irqreturn_t jz4750fb_interrupt_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_PM
+#if 0 //def CONFIG_PM
 /*
  * Suspend the LCDC.
  */
@@ -3015,7 +3014,7 @@ static int __init jz4750fb_init(void)
 		goto failed;
 	}
 
-#ifdef CONFIG_PM
+#if 0 //def CONFIG_PM
 	/*
 	 * Note that the console registers this as well, but we want to
 	 * power down the display prior to sleeping.
