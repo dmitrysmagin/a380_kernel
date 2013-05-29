@@ -23,7 +23,6 @@
 
 #include <linux/init.h>
 #include <linux/pm.h>
-#include <linux/pm_legacy.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
 #include <linux/proc_fs.h> 
@@ -604,13 +603,14 @@ int jz_pm_hibernate(void)
 {
 	return jz_pm_do_hibernate();
 }
-#define CONFIG_JZ_POWEROFF
+
 #ifndef CONFIG_JZ_POWEROFF
 static irqreturn_t pm_irq_handler (int irq, void *dev_id)
 {
 	return IRQ_HANDLED;
 }
 #endif
+
 static irqreturn_t pm_irq_handler (int irq, void *dev_id)
 {
 	lprintk("irq = %d\n",irq);
@@ -698,9 +698,9 @@ int jz_pm_sleep(void)
 		return retval;
 	}
 #endif
-	pm_send_all(PM_SUSPEND, (void *)3);
+	//pm_send_all(PM_SUSPEND, (void *)3);
 	retval = jz_pm_do_sleep();
-	pm_send_all(PM_RESUME, (void *)0);
+	//pm_send_all(PM_RESUME, (void *)0);
         lprintk("%s %d after sleep\n",__FILE__,__LINE__);
 
 #ifndef CONFIG_JZ_POWEROFF
