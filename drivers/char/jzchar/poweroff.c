@@ -27,7 +27,6 @@
 #include <linux/fs.h>
 #include <linux/spinlock.h>
 #include <linux/pm.h>
-#include <linux/pm_legacy.h>
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -353,7 +352,7 @@ static irqreturn_t poweroff_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_PM
+#if 0 //def CONFIG_PM
 
 static struct pm_dev *poweroff_dev;
 
@@ -504,7 +503,7 @@ static int __init poweroff_init(void)
 		return retval;
 	}
 
-#ifdef CONFIG_PM
+#if 0 //def CONFIG_PM
 	poweroff_dev = pm_register(PM_SYS_DEV, PM_SYS_UNKNOWN, poweroff_pm_callback);
 	if (poweroff_dev) {
 		poweroff_dev->data = &poweroff_dev;
