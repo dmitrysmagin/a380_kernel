@@ -15,7 +15,6 @@
 #include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
-#include <linux/pm_legacy.h>
 #include <linux/kthread.h>
 #include <linux/poll.h>
 #include <asm/irq.h>
