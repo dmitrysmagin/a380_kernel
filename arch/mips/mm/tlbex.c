@@ -381,7 +381,7 @@ static void __cpuinit build_tlb_write_entry(u32 **p, struct uasm_label **l,
 		
 	case CPU_JZRISC:
 		tlbw(p);
-		i_nop(p);
+		uasm_i_nop(p);
 		break;
 
 	default:
