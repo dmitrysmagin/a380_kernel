@@ -27,6 +27,7 @@
 #include <linux/interrupt.h>
 #include <linux/proc_fs.h> 
 #include <linux/sysctl.h>
+#include <linux/suspend.h>
 
 #include <asm/cacheops.h>
 #include <asm/jzsoc.h>
@@ -611,18 +612,12 @@ static irqreturn_t pm_irq_handler (int irq, void *dev_id)
 }
 #endif
 
-static irqreturn_t pm_irq_handler (int irq, void *dev_id)
-{
-	lprintk("irq = %d\n",irq);
-	return IRQ_HANDLED;
-}
 /* Put CPU to SLEEP mode */
 int jz_pm_sleep(void)
 {
 	int retval;
 
 #ifndef CONFIG_JZ_POWEROFF
-        sdf
 	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUP, pm_irq_handler, IRQF_DISABLED,
 				   "PM", NULL))) {
 		printk ("PM could not get IRQ for GPIO_WAKEUP\n");
@@ -698,9 +693,9 @@ int jz_pm_sleep(void)
 		return retval;
 	}
 #endif
-	//pm_send_all(PM_SUSPEND, (void *)3);
+
 	retval = jz_pm_do_sleep();
-	//pm_send_all(PM_RESUME, (void *)0);
+
         lprintk("%s %d after sleep\n",__FILE__,__LINE__);
 
 #ifndef CONFIG_JZ_POWEROFF
@@ -721,100 +716,40 @@ int jz_pm_sleep(void)
         free_irq (IRQ_GPIO_0 + GPIO_WAKEUPc, NULL);
 #endif
 
-        lprintk("%s %d after sleep\n",__FILE__,__LINE__);
-
+	lprintk("%s %d after sleep\n",__FILE__,__LINE__);
 
 	return retval;
 }
 
-#if 0
-/* Deprecated ,was used by dpm */
-void jz_pm_idle(void)
+/*
+ * valid states, only support mem(sleep)
+ */
+static int jz_pm_valid(suspend_state_t state)
 {
-	local_irq_disable();
-	if (!need_resched()) {
-		local_irq_enable();
-		cpu_wait();
-	}
+	return state == PM_SUSPEND_MEM;
 }
-#endif
-
-
-#ifdef CONFIG_SYSCTL
 
 /*
- * Use a temporary sysctl number. Horrid, but will be cleaned up in 2.6
- * when all the PM interfaces exist nicely.
+ * Jz CPU enter save power mode
  */
-#define CTL_PM_SUSPEND   1
-#define CTL_PM_HIBERNATE 2
-
-/*----------------------------------------------------------------------------
- * Power Management sleep sysctl proc interface
- *
- * A write to /proc/sys/pm/suspend invokes this function 
- * which initiates a sleep.
- *--------------------------------------------------------------------------*/
-static int sysctl_jz_pm_sleep(void)
+static int jz_pm_enter(suspend_state_t state)
 {
 	return jz_pm_sleep();
 }
 
-/*----------------------------------------------------------------------------
- * Power Management sleep sysctl proc interface
- *
- * A write to /proc/sys/pm/hibernate invokes this function 
- * which initiates a poweroff.
- *--------------------------------------------------------------------------*/
-static int sysctl_jz_pm_hibernate(void)
-{
-	return jz_pm_hibernate();
-}
-
-static struct ctl_table pm_table[] =
-{
-	{
-		.ctl_name	= CTL_UNNUMBERED,
-		.procname	= "suspend",
-		.data		= NULL,
-		.maxlen		= 0,
-		.mode		= 0600,
-		.proc_handler	= &sysctl_jz_pm_sleep,
-	},
-	{
-		.ctl_name	= CTL_UNNUMBERED,
-		.procname	= "hibernate",
-		.data		= NULL,
-		.maxlen		= 0,
-		.mode		= 0600,
-		.proc_handler	= &sysctl_jz_pm_hibernate,
-	},
-	{ .ctl_name = 0}
+static struct platform_suspend_ops jz_pm_ops = {
+	.valid		= jz_pm_valid,
+	.enter		= jz_pm_enter,
 };
-
-static struct ctl_table pm_dir_table[] =
-{
-	{
-		.ctl_name	= CTL_UNNUMBERED,
-		.procname	= "pm",
-		.mode		= 0555,
-		.child		= pm_table,
-	},
-	{ .ctl_name = 0}
-};
-
-#endif /* CONFIG_SYSCTL */
 
 /*
  * Initialize power interface
  */
-static int __init jz_pm_init(void)
+int __init jz_pm_init(void)
 {
-	printk("Power Management for JZ\n");
+	printk(JZ_SOC_NAME ": Power Management Interface Registered.\n");
 
-#ifdef CONFIG_SYSCTL
-	register_sysctl_table(pm_dir_table);
-#endif
+	suspend_set_ops(&jz_pm_ops);
 
 	return 0;
 }
