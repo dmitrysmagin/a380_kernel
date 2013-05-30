@@ -120,7 +120,7 @@ static void __init jz_clockevent_init(void)
 	struct clock_event_device *cd = &jz_clockevent_device;
 	unsigned int cpu = smp_processor_id();
 
-	cd->cpumask = cpumask_of_cpu(cpu);
+	cd->cpumask = cpumask_of(cpu);
 	clockevents_register_device(cd);
 }
 
