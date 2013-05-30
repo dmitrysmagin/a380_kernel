@@ -391,14 +391,14 @@ static int __init elan_pad_init()
 		res = create_proc_entry("jz/elan_pad", 0, NULL);
 		if(res)
 		{
-				res->owner = THIS_MODULE;
+				//res->owner = THIS_MODULE;
 				res->read_proc = proc_elan_read_proc;
 				res->write_proc = proc_elan_write_proc;
 		}
                 res = create_proc_entry("jz/elan_mcu_status", 0, NULL);
                 if(res)
                 {
-                  res->owner = THIS_MODULE;
+                  //res->owner = THIS_MODULE;
                   res->read_proc = proc_elan_mcu_status_read_proc;
                   res->write_proc = proc_elan_mcu_status_write_proc;
                 }

@@ -865,7 +865,7 @@ static int __init jz_kbd_init(void)
 	res = create_proc_entry("jz/alt", 0, NULL);
 	if(res)
 	{
-		res->owner = THIS_MODULE;
+		//res->owner = THIS_MODULE;
 		res->read_proc = proc_alt_read_proc;
 		res->write_proc = proc_alt_write_proc;
 	}
@@ -873,7 +873,7 @@ static int __init jz_kbd_init(void)
 	res_handle = create_proc_entry("jz/infrared_handle", 0, NULL);
 	if(res_handle)
 	{
-		res_handle->owner = THIS_MODULE;
+		//res_handle->owner = THIS_MODULE;
 		res_handle->read_proc = proc_mmc_infrared_handle_read_proc;
 		res_handle->write_proc = proc_mmc_infrared_handle_write_proc;
 	}
