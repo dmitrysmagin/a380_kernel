@@ -102,11 +102,4 @@ extern struct jz4740_udc *the_controller;
 #define	WARN_ON(x)	do { } while (0)
 #endif
 
-#ifndef	IRQ_NONE
-typedef void irqreturn_t;
-#define IRQ_NONE
-#define IRQ_HANDLED
-#define IRQ_RETVAL(x)
-#endif
-
 #endif /* __USB_GADGET_JZ4740_H__ */
