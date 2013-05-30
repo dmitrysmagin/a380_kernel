@@ -1,0 +1,16 @@
+//androidkaka@gmail.com, Shenzhen, China create it
+
+(1) how to compile
+
+    #make uImage (default is configed)
+
+    you can also use "#make 320e_defconfig;make menuconfig" to do config again.
+
+(2) how to burn kernel
+    # sudo dd if=./uImage of=/dev/sdb bs=1024 seek=1024 count=3072
+
+(3) problems need to change
+    . fb driver change for video play
+    . tve enable for tvout
+    . usb connect for udc
+    . 
