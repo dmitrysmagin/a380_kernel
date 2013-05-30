@@ -1404,7 +1404,7 @@ static int jz4750fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *i
 
 /* use default function cfb_fillrect, cfb_copyarea, cfb_imageblit */
 static struct fb_ops jz4750fb_ops = {
-	.owner			= THIS_MODULE,
+	//.owner			= THIS_MODULE,
 	.fb_setcolreg		= jz4750fb_setcolreg,
 	.fb_check_var 		= jz4750fb_check_var,
 	.fb_set_par 		= jz4750fb_set_par,
@@ -3364,7 +3364,7 @@ static int __init jz4750fb_init(void)
         res = create_proc_entry("jz/lcd_backlight", 0, NULL);
         if(res)
 	{
-		res->owner = THIS_MODULE;
+		//res->owner = THIS_MODULE;
 		res->read_proc = proc_lcd_backlight_read_proc;
 		res->write_proc = proc_lcd_backlight_write_proc;	
 	}	
@@ -3372,7 +3372,7 @@ static int __init jz4750fb_init(void)
 	res1 = create_proc_entry("jz/tvout", 0, NULL);
 	if(res1)
 	{
-		res1->owner = THIS_MODULE;
+		//res1->owner = THIS_MODULE;
 		res1->read_proc = proc_tvout_read_proc;
 		res1->write_proc = proc_tvout_write_proc;	
 	}
@@ -3381,14 +3381,14 @@ static int __init jz4750fb_init(void)
 	res3 = create_proc_entry("jz/lcd_flush", 0, NULL);
 	if(res3)
 	{
-		res3->owner = THIS_MODULE;
+		//res3->owner = THIS_MODULE;
 		res3->read_proc = proc_lcd_flush_read_proc;
 		res3->write_proc = proc_lcd_flush_write_proc;	
         }
         res4 = create_proc_entry("jz/lcd_a320", 0, NULL);
         if(res4)
         {
-        	res4->owner = THIS_MODULE;
+        	//res4->owner = THIS_MODULE;
 		res4->read_proc = proc_lcd_a320_read_proc;
 		res4->write_proc = proc_lcd_a320_write_proc;	
         }
