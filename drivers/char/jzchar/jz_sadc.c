@@ -643,7 +643,7 @@ static int __init sadc_init(void)
 
 	res = create_proc_entry("jz/battery", 0, NULL);
 	if (res) {
-		res->owner = THIS_MODULE;
+		//res->owner = THIS_MODULE;
 		res->proc_fops = &proc_sadc_battery_fops;
 	}
 

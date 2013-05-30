@@ -64,7 +64,7 @@ struct udc_pnp_stat
 static struct udc_pnp_stat cur_pnp_stat;
 
 static struct file_operations cable_fops = {
-	owner:		THIS_MODULE,
+	//owner:		THIS_MODULE,
 };
 
 static struct miscdevice cable_dev=
@@ -75,7 +75,7 @@ static struct miscdevice cable_dev=
 };
 
 static struct file_operations power_fops = {
-	owner:		THIS_MODULE,
+	//owner:		THIS_MODULE,
 };
 
 static struct miscdevice power_dev=
@@ -520,7 +520,7 @@ static int __init udc_hotplug_init(void)
         res = create_proc_entry("jz/change_power", 0, NULL);
         if(res)
         {
-          res->owner = THIS_MODULE;
+          //res->owner = THIS_MODULE;
           res->read_proc = proc_change_read_proc;
           res->write_proc = proc_change_write_proc;
         }

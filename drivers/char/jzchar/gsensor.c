@@ -308,7 +308,7 @@ static int __init sensor_init(void)
 		res = create_proc_entry("jz/gsensor", 0, NULL);
 		if(res)
 		{
-				res->owner = THIS_MODULE;
+				//res->owner = THIS_MODULE;
 				res->read_proc = proc_gsensor_read_proc;
 				res->write_proc = proc_gsensor_write_proc;
 		}
@@ -370,7 +370,7 @@ static int __init sensor_init(void)
 	res2 = create_proc_entry("jz/amp", 0, NULL);
 	if(res2)
 	{
-		res2->owner = THIS_MODULE;
+		//res2->owner = THIS_MODULE;
 		res2->read_proc = proc_amp_read_proc;
 		res2->write_proc = proc_amp_write_proc;
 	}
@@ -378,7 +378,7 @@ static int __init sensor_init(void)
 	res_hp = create_proc_entry("jz/hp_l009", 0, NULL);
 	if(res_hp)
 	{
-		res_hp->owner = THIS_MODULE;
+		//res_hp->owner = THIS_MODULE;
 		res_hp->read_proc = proc_hp_read_proc;
 		res_hp->write_proc = proc_hp_write_proc;
 	}
@@ -389,7 +389,7 @@ static int __init sensor_init(void)
 	res_medive = create_proc_entry("jz/medive_nl", 0, NULL);
 	if(res_medive)
 	{
-		res_medive->owner = THIS_MODULE;
+		//res_medive->owner = THIS_MODULE;
 		res_medive->read_proc = proc_medive_read_proc;
 		res_medive->write_proc = proc_medive_write_proc;
 	}
