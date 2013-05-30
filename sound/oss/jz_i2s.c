@@ -16,7 +16,7 @@
 #include <linux/delay.h>
 #include <linux/sound.h>
 #include <linux/slab.h>
-#include <sound/driver.h>
+//#include <sound/driver.h>
 #include <sound/core.h>
 #include <sound/initval.h>
 #include <linux/proc_fs.h>
