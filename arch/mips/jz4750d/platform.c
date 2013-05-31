@@ -13,10 +13,10 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/resource.h>
-#include <linux/msm_audio.h>
 
 #include <asm/jzsoc.h>
-
+#include <../sound/oss/jz_audio.h>
+#include <linux/spi/spi.h>
 
 extern void __init board_msc_init(void);
 
@@ -219,6 +219,35 @@ int __init jz_add_msc_devices(unsigned int controller, struct jz_mmc_platform_da
 	return platform_device_register(pdev);
 }
 #endif
+
+/** I2C controller **/
+static struct resource jz_i2c_resources[] = {
+	[0] = {
+		.start          = CPHYSADDR(I2C_BASE),
+		.end            = CPHYSADDR(I2C_BASE) + 0x10000 - 1,
+		.flags          = IORESOURCE_MEM,
+	},
+#if 0
+	[1] = {
+		.start          = IRQ_I2C,
+		.end            = IRQ_I2C,
+		.flags          = IORESOURCE_IRQ,
+	}
+#endif
+};
+
+static u64 jz_i2c_dmamask =  ~(u32)0;
+static struct platform_device jz_i2c_device = {
+	.name = "jz_i2c",
+	.id = 0,
+	.dev = {
+		.dma_mask               = &jz_i2c_dmamask,
+		.coherent_dma_mask      = 0xffffffff,
+	},
+	.num_resources  = ARRAY_SIZE(jz_i2c_resources),
+	.resource       = jz_i2c_resources,
+};
+
 //////////////////////////////////////////////////////////
 #define SND(num, desc) { .name = desc, .id = num }
 static struct snd_endpoint snd_endpoints_list[] = {
@@ -229,7 +258,7 @@ static struct snd_endpoint snd_endpoints_list[] = {
 };
 #undef SND
 
-static struct msm_snd_endpoints vogue_snd_endpoints = {
+static struct jz_snd_endpoints vogue_snd_endpoints = {
       .endpoints = snd_endpoints_list,
       .num = ARRAY_SIZE(snd_endpoints_list),
 };
@@ -241,7 +270,87 @@ static struct platform_device vogue_snd_device = {
       .platform_data = &vogue_snd_endpoints,
     },
 };
+///////////////////////////////////////////////////////////
 
+#define __BUILD_JZ_SPI_PLATFORM_DEV(ssi_id) 	\
+											\
+struct jz47xx_spi_info spi##ssi_id##_info_cfg = {		\
+	.chnl = ssi_id,										\
+	.bus_num = ssi_id,									\
+	.is_pllclk = 1,										\
+	.num_chipselect = MAX_SPI_CHIPSELECT_NUM,		\
+};					\
+static struct resource jz_spi##ssi_id##_resource[] = {	\
+	[0] = {												\
+		.start          = CPHYSADDR(SSI_BASE) + 0x1000*(ssi_id) ,			\
+		.end            = CPHYSADDR(SSI_BASE) + 0x1000*((ssi_id)+1) - 1,	\
+		.flags 			= IORESOURCE_MEM,				\
+	},									\
+	[1] = {								\
+		.start = IRQ_SSI,		\
+		.end   = IRQ_SSI,		\
+		.flags = IORESOURCE_IRQ,		\
+	},									\
+};	\
+static u64 jz_spi##ssi_id##_dmamask =  ~(u32)0;			\
+struct platform_device jz_spi##ssi_id##_device = {		\
+	.name		  = "jz47xx-spi",						\
+	.id		  = ssi_id,									\
+	.num_resources	  = ARRAY_SIZE(jz_spi##ssi_id##_resource),			\
+	.resource	  = jz_spi##ssi_id##_resource,							\
+        .dev              = {											\
+                .dma_mask = &jz_spi##ssi_id##_dmamask,					\
+                .coherent_dma_mask = 0xffffffffUL,						\
+                .platform_data = & spi##ssi_id##_info_cfg,				\
+        },																\
+};
+
+
+#ifdef CONFIG_JZ_SPI0
+__BUILD_JZ_SPI_PLATFORM_DEV(0)
+#endif
+#if 0
+#ifdef CONFIG_JZ_SPI1
+__BUILD_JZ_SPI_PLATFORM_DEV(1)
+#endif
+#endif
+
+static struct platform_device *jz_spi_devices[] __initdata = {
+#ifdef CONFIG_JZ_SPI0
+	&jz_spi0_device,
+#else
+	NULL,
+#endif
+#if 0
+#ifdef CONFIG_JZ_SPI1
+	&jz_spi1_device,
+#else
+	NULL,
+#endif
+#endif
+};
+
+int __init jz_add_spi_devices(unsigned int host_id, struct spi_board_info *board_info,int board_num)
+{
+
+	struct platform_device	*pdev;
+	struct jz47xx_spi_info	*host_info;
+	
+	if (JZ_SPI_ID_INVALID(host_id))
+		return -EINVAL;
+	pdev = jz_spi_devices[host_id];
+	if (NULL == pdev)
+		return -EINVAL;
+
+	host_info = (struct jz47xx_spi_info *)pdev->dev.platform_data;
+	host_info->board_info = board_info;
+	host_info->board_size = board_num;
+#ifndef CONFIG_JZ_SPI_BOARD_INFO_REGISTER
+	spi_register_board_info(board_info,board_num);	
+#endif
+
+	return platform_device_register(pdev);
+}
 
 
 /* All */
@@ -249,14 +358,16 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 //	&jz_usb_ohci_device,
 	&jz_lcd_device,
 	&jz_usb_gdt_device,
-//	&jz_mmc_device,
-        &vogue_snd_device,
-
+	//&jz_mmc_device,
+	//&jz_i2c_device,
+	&vogue_snd_device,
 };
 
+extern void __init board_spi_init(void);
 static int __init jz_platform_init(void)
 {
 	board_msc_init();
+	//board_spi_init();
 	return platform_add_devices(jz_platform_devices, ARRAY_SIZE(jz_platform_devices));
 }
 

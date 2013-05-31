@@ -272,4 +272,17 @@ do {						\
 })
 #endif /*ACTIVE_LOW_MSC1_CD*/
 
+/*
+ *  SPI
+ */
+#define GPIO_SSI0_CE0	(32*1+29)
+#define GPIO_SSI0_CE1	(32*1+31)
+#define SSI0_GPC_PIN	(32*1+30)
+
+#define SPI_CHIPSELECT_NUM_A	GPIO_SSI0_CE0
+#define SPI_CHIPSELECT_NUM_B	GPIO_SSI0_CE1
+
+#define SPI0_BUS	0
+#define SPI1_BUS	1
+
 #endif /* __ASM_JZ4750d_L009_H__ */
