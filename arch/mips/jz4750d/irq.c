@@ -75,8 +75,8 @@ static struct irq_chip intc_irq_type = {
 	.typename = "INTC",
 	.startup = startup_intc_irq,
 	.shutdown = shutdown_intc_irq,
-	.enable = enable_intc_irq,
-	.disable = disable_intc_irq,
+	.unmask = enable_intc_irq,
+	.mask = disable_intc_irq,
 	.ack = mask_and_ack_intc_irq,
 	.end = end_intc_irq,
 };
@@ -145,8 +145,8 @@ static struct irq_chip gpio_irq_type = {
 	.typename = "GPIO",
 	.startup = startup_gpio_irq,
 	.shutdown = shutdown_gpio_irq,
-	.enable = enable_gpio_irq,
-	.disable = disable_gpio_irq,
+	.unmask = enable_gpio_irq,
+	.mask = disable_gpio_irq,
 	.ack = mask_and_ack_gpio_irq,
 	.end = end_gpio_irq,
 };
@@ -215,8 +215,8 @@ static struct irq_chip dma_irq_type = {
 	.typename = "DMA",
 	.startup = startup_dma_irq,
 	.shutdown = shutdown_dma_irq,
-	.enable = enable_dma_irq,
-	.disable = disable_dma_irq,
+	.unmask = enable_dma_irq,
+	.mask = disable_dma_irq,
 	.ack = mask_and_ack_dma_irq,
 	.end = end_dma_irq,
 };
@@ -234,21 +234,21 @@ void __init arch_init_irq(void)
 	 */
 	for (i = 0; i < 32; i++) {
 		disable_intc_irq(i);
-		irq_desc[i].chip = &intc_irq_type;
+		set_irq_chip_and_handler(i, &intc_irq_type, handle_level_irq);
 	}
 	
 	/* Set up DMAC irq
 	 */
 	for (i = 0; i < NUM_DMA; i++) {
 		disable_dma_irq(IRQ_DMA_0 + i);
-		irq_desc[IRQ_DMA_0 + i].chip = &dma_irq_type;
+		set_irq_chip_and_handler(IRQ_DMA_0 + i, &dma_irq_type, handle_level_irq);
 	}
 
 	/* Set up GPIO irq
 	 */
 	for (i = 0; i < NUM_GPIO; i++) {
 		disable_gpio_irq(IRQ_GPIO_0 + i);
-		irq_desc[IRQ_GPIO_0 + i].chip = &gpio_irq_type;
+		set_irq_chip_and_handler(IRQ_GPIO_0 + i, &gpio_irq_type, handle_level_irq);
 	}
 }
 
