@@ -889,15 +889,19 @@ static inline void cpu_probe_cavium(struct cpuinfo_mips *c, unsigned int cpu)
 	}
 }
 
-static inline void cpu_probe_ingenic(struct cpuinfo_mips *c)
+static inline void cpu_probe_ingenic(struct cpuinfo_mips *c, unsigned int cpu)
 {
 	decode_configs(c);
-	c->options &= ~MIPS_CPU_COUNTER; /* JZRISC does not implement the CP0 counter. */
+
+	/* JZRISC does not implement the CP0 counter. */
+	c->options &= ~MIPS_CPU_COUNTER;
 	switch (c->processor_id & 0xff00) {
 	case PRID_IMP_JZRISC:
 		c->cputype = CPU_JZRISC;
 		c->isa_level = MIPS_CPU_ISA_M32R1;
 		c->tlbsize = 32;
+
+		__cpu_name[cpu] = "Ingenic JZRISC";
 		break;
 	default:
 		panic("Unknown Ingenic Processor ID!");
@@ -941,8 +945,9 @@ __cpuinit void cpu_probe(void)
 		break;
 	case PRID_COMP_CAVIUM:
 		cpu_probe_cavium(c, cpu);
+		break;
 	case PRID_COMP_INGENIC:
-		cpu_probe_ingenic(c);
+		cpu_probe_ingenic(c, cpu);
 		break;
 	}
 
