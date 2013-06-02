@@ -36,6 +36,11 @@
 #include <linux/i2c-dev.h>
 #include <linux/jiffies.h>
 #include <linux/uaccess.h>
+#include <asm/uaccess.h>
+#include "busses/i2c-jz47xx.h"
+
+
+extern unsigned long sub_addr;
 
 static struct i2c_driver i2cdev_driver;
 
@@ -447,12 +452,26 @@ static long i2cdev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case I2C_RETRIES:
 		client->adapter->retries = arg;
 		break;
+
 	case I2C_TIMEOUT:
 		/* For historical reasons, user-space sets the timeout
 		 * value in units of 10 ms.
 		 */
 		client->adapter->timeout = msecs_to_jiffies(arg * 10);
 		break;
+
+	case I2C_SET_SUB_ADDRESS:
+#if defined(CONFIG_SOC_JZ4750)
+ 		sub_addr = *(unsigned long *)arg;
+		break;
+#endif
+	case I2C_SET_CLOCK:
+#if defined(CONFIG_SOC_JZ4750)
+ 		arg = *(unsigned long *)arg;		
+		i2c_jz_setclk(NULL, arg);
+#endif
+		break;
+
 	default:
 		/* NOTE:  returning a fault code here could cause trouble
 		 * in buggy userspace code.  Some old kernel bugs returned
