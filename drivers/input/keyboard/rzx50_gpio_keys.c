@@ -503,8 +503,8 @@ static void jz_kbd_poll (struct input_polled_dev *dev)
                     s |= real_key_pos_select;
                     break;
                   case 2:
-                    //LEFT
-                    s |= KEY_L_ID;
+                    //R
+                    s |= KEY_R_ID;
                     break;
                 }
               }
@@ -518,7 +518,7 @@ static void jz_kbd_poll (struct input_polled_dev *dev)
                 switch (i)
                 {
                   case 0:
-                    //SELECT
+                    //Y
                     s |= KEY_Y_ID;
                     break;
                   case 1:
@@ -526,7 +526,7 @@ static void jz_kbd_poll (struct input_polled_dev *dev)
                     s |= KEY_A_ID;
                     break;
                   case 2:
-                    //DOWN
+                    //B
                     s |= KEY_B_ID;
                     break;
                   case 3:
@@ -546,11 +546,11 @@ static void jz_kbd_poll (struct input_polled_dev *dev)
                 switch (i)
                 {
                   case 0:
-                    //R
+                    //LEFT
                     s |= KEY_LEFT_ID;
                     break;
                   case 1:
-                    //B
+                    //DOWN
                     s |= KEY_DOWN_ID;
                     break;
                   case 2:

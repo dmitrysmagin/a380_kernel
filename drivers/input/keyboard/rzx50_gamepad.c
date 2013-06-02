@@ -190,7 +190,7 @@ extern unsigned long infrared_handle_key_scan();
 #define dprintk(x...)
 #endif
 
-unsigned int real_key_pos_r = KEY_R_ID;
+unsigned int real_key_pos_r = KEY_L_ID;
 unsigned int real_key_pos_select = KEY_SELECT_ID;
 
 
@@ -227,14 +227,14 @@ int board_detect(unsigned int ad_value)
   {
     printk("new board !!!! change key define\n");
     real_key_pos_r = KEY_SELECT_ID;
-    real_key_pos_select = KEY_R_ID;
+    real_key_pos_select = KEY_L_ID;
     umido_hardware_version = 1;
     return 1;
   }
   else
   {
     printk("old board !!!!\n");
-    real_key_pos_r = KEY_R_ID;
+    real_key_pos_r = KEY_L_ID;
     real_key_pos_select = KEY_SELECT_ID;
     umido_hardware_version = 0;
     return 0;
@@ -398,8 +398,8 @@ static ssize_t key_read(struct file *filp, char __user *buf, size_t count, loff_
             key_value |= real_key_pos_select;
             break;
           case 2:
-            //L
-            key_value |= KEY_L_ID;
+            //R
+            key_value |= KEY_R_ID;
             break;
         }
       }
