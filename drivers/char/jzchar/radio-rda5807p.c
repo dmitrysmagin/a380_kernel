@@ -6,6 +6,7 @@
 #include <linux/miscdevice.h>
 #include <linux/fs.h>
 #include <linux/types.h>
+#include <linux/sched.h>
 
 MODULE_AUTHOR("caijicheng<caijicheng2006@163.com>");
 MODULE_DESCRIPTION("RDA5807P radio Driver");
