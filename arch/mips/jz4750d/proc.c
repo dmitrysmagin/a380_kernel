@@ -28,6 +28,7 @@
 #include <linux/sysctl.h>
 #include <linux/proc_fs.h>
 #include <linux/page-flags.h>
+#include <linux/sched.h>
 #include <asm/uaccess.h>
 #include <asm/pgtable.h>
 #include <asm/jzsoc.h>
