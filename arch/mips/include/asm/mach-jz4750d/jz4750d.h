@@ -16,8 +16,36 @@
 #ifndef __ASM_JZ4750_H__
 #define __ASM_JZ4750_H__
 
+#include <asm/mach-jz4750d/base.h>
 #include <asm/mach-jz4750d/regs.h>
-#include <asm/mach-jz4750d/ops.h>
+
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/jz4750d_rtc.h>
+#include <asm/mach-jz4750d/jz4750d_tcu.h>
+#include <asm/mach-jz4750d/jz4750d_wdt.h>
+#include <asm/mach-jz4750d/jz4750d_dmac.h>
+#include <asm/mach-jz4750d/jz4750d_aic.h>
+#include <asm/mach-jz4750d/jz4750d_uart.h>
+#include <asm/mach-jz4750d/jz4750d_pcm.h>
+#include <asm/mach-jz4750d/jz4750d_i2c.h>
+#include <asm/mach-jz4750d/jz4750d_ssi.h>
+#include <asm/mach-jz4750d/jz4750d_msc.h>
+#include <asm/mach-jz4750d/jz4750d_emc.h>
+#include <asm/mach-jz4750d/jz4750d_cim.h>
+#include <asm/mach-jz4750d/jz4750d_sadc.h>
+#include <asm/mach-jz4750d/jz4750d_lcdc.h>
+#include <asm/mach-jz4750d/jz4750d_tve.h>
+#include <asm/mach-jz4750d/jz4750d_udc.h>
+#include <asm/mach-jz4750d/jz4750d_bch.h>
+#include <asm/mach-jz4750d/jz4750d_owi.h>
+#include <asm/mach-jz4750d/jz4750d_mc.h>
+#include <asm/mach-jz4750d/jz4750d_me.h>
+#include <asm/mach-jz4750d/jz4750d_otp.h>
+#include <asm/mach-jz4750d/jz4750d_tssi.h>
+#include <asm/mach-jz4750d/jz4750d_ipu.h>
+
 #include <asm/mach-jz4750d/dma.h>
 #include <asm/mach-jz4750d/misc.h>
 #include <asm/mach-jz4750d/platform.h>
@@ -25,6 +53,7 @@
 /*------------------------------------------------------------------
  * Platform definitions
  */
+
 #ifdef CONFIG_JZ4750D_A380
 #include <asm/mach-jz4750d/board-a380.h>
 #endif
@@ -33,12 +62,10 @@
 #include <asm/mach-jz4750d/board-rzx50.h>
 #endif
 
-
 /*------------------------------------------------------------------
  * Follows are related to platform definitions
  */
 
-#include <asm/mach-jz4750d/clock.h>
 #include <asm/mach-jz4750d/serial.h>
 #include <asm/mach-jz4750d/spi.h>
 
