@@ -214,7 +214,7 @@ extern unsigned int l009_globle_volume;
 //printk("hp_pnp_irq---- is %d \n",__gpio_get_pin(GPIO_HP_DETE));
 
 		//if(__gpio_get_pin(GPIO_HP_DETE))  //HP OF
-#if 1
+#ifdef CONFIG_OSS_OBSOLETE
 		if(__gpio_get_pin(GPIO_HP_DETE))  //HP OFF
         {
           //printk("hp_pnp_irq----, hp off\n");
