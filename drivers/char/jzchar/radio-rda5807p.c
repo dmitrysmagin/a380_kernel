@@ -190,9 +190,9 @@ static void radio_set_volume(int val)
 
 u16 rda5807p_freq_to_chan(u16 frequency)
 {
-	u8 channel_spacing=0;
-	u16 bottom_band=0;
-	u16 channel=0;
+	unsigned int channel_spacing=0;
+	unsigned int bottom_band=0;
+	unsigned int channel=0;
 
 	if ((set_tune[1] & 0x0c) == 0x00)
 		bottom_band = 870;
