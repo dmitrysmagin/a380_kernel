@@ -1,0 +1,19 @@
+config SND_JZ4750_SOC
+	tristate "SoC Audio for Ingenic jz4750 chip"
+	depends on (JZ4750D_RZX50 || JZ4750D_A380) && SND_SOC
+	help
+	  Say Y or M if you want to add support for codecs attached to
+	  the Jz4750 AC97, I2S or SSP interface. You will also need
+	  to select the audio interfaces to support below.
+
+config SND_JZ4750_SOC_APUS
+	tristate "SoC Audio support for Ingenic Jz4750 APUS board"
+	depends on SND_JZ4750_SOC
+	help
+	  Say Y if you want to add support for SoC audio of internal codec on Ingenic Jz4750 APUS board.
+
+config SND_JZ4750_SOC_I2S
+	depends on SND_JZ4750_SOC && SND_JZ4750_SOC_APUS
+	tristate "SoC Audio (I2S protocol) for Ingenic jz4750 chip"
+	help
+	  Say Y if you want to use I2S protocol and I2S codec on Ingenic Jz4750 APUS board.
