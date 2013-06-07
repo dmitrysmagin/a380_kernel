@@ -30,6 +30,15 @@
 #include <sound/pcm_params.h>
 #include <sound/timer.h>
 
+#define snd_assert(A, B)						\
+do {									\
+	if(A) {								\
+		printk(KERN_ERR "Assertion failed! %s,%s,%s,line=%d\n", \
+			#A, __FILE__, __func__, __LINE__);		\
+		B;							\
+	}								\
+} while (0)
+
 /*
  * fill ring buffer with silence
  * runtime->silence_start: starting pointer to silence area
