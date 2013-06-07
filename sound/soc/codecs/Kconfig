@@ -281,3 +281,9 @@ config SND_SOC_WM2000
 
 config SND_SOC_WM9090
 	tristate
+
+config SND_SOC_DLV
+	tristate "Jz4750 internal codec"
+	depends on SND_SOC && SND_JZ4750_SOC_APUS && SND_JZ4750_SOC_I2S
+	help
+	  Say Y if you want to use internal codec on Ingenic Jz4750 APUS board.
