@@ -374,9 +374,6 @@ extern jz_clocks_t jz_clocks;
 /* PLL output frequency */
 static __inline__ unsigned int __cpm_get_pllout(void)
 {
-#if defined(CONFIG_FPGA)
-	return JZ_EXTAL/CFG_DIV;
-#else
 	unsigned long m, n, no, pllout;
 	unsigned long cppcr = REG_CPM_CPPCR;
 	unsigned long od[4] = {1, 2, 2, 4};
@@ -388,69 +385,46 @@ static __inline__ unsigned int __cpm_get_pllout(void)
 	} else
 		pllout = JZ_EXTAL;
 	return pllout;
-#endif
 }
 
 /* PLL output frequency for MSC/I2S/LCD/USB */
 static __inline__ unsigned int __cpm_get_pllout2(void)
 {
-#if defined(CONFIG_FPGA)
-	return JZ_EXTAL/CFG_DIV;
-#else
 	if (REG_CPM_CPCCR & CPM_CPCCR_PCS)
 		return __cpm_get_pllout();
 	else
 		return __cpm_get_pllout()/2;
-#endif
 }
 
 /* CPU core clock */
 static __inline__ unsigned int __cpm_get_cclk(void)
 {
-
-#if defined(CONFIG_FGPA)
-	return JZ_EXTAL;
-#else
 	int div[] = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32};
 	return __cpm_get_pllout() / div[__cpm_get_cdiv()];
-#endif
 }
 
 /* AHB system bus clock */
 static __inline__ unsigned int __cpm_get_hclk(void)
 {
-#if defined(CONFIG_FPGA)
-	return JZ_EXTAL/CFG_DIV;
-#else
 	int div[] = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32};
 
 	return __cpm_get_pllout() / div[__cpm_get_hdiv()];
-#endif
-
 }
 
 /* Memory bus clock */
 static __inline__ unsigned int __cpm_get_mclk(void)
 {
-#if defined(CONFIG_FPGA)
-	return JZ_EXTAL/CFG_DIV;
-#else
 	int div[] = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32};
 
 	return __cpm_get_pllout() / div[__cpm_get_mdiv()];
-#endif
 }
 
 /* APB peripheral bus clock */
 static __inline__ unsigned int __cpm_get_pclk(void)
 {
-#if defined(CONFIG_FPGA)
-	return JZ_EXTAL/CFG_DIV;
-#else
 	int div[] = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32};
 
 	return __cpm_get_pllout() / div[__cpm_get_pdiv()];
-#endif
 }
 
 /* LCDC module clock */
@@ -505,15 +479,10 @@ static __inline__ unsigned int __cpm_get_extalclk0(void)
 /* EXTAL clock for UART,I2C,SSI,TCU,USB-PHY */
 static __inline__ unsigned int __cpm_get_extalclk(void)
 {
-#if defined(CONFIG_FPGA)
-	return __cpm_get_pllout();
-#else
 	if (REG_CPM_CPCCR & CPM_CPCCR_ECS)
 		return __cpm_get_extalclk0()/2;
 	else
 		return __cpm_get_extalclk0();
-#endif
-
 }
 
 /* RTC clock for CPM,INTC,RTC,TCU,WDT */

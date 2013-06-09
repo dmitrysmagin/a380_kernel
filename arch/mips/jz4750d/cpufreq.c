@@ -1,7 +1,7 @@
 /*
  * linux/arch/mips/jz4750d/cpufreq.c
  *
- * cpufreq driver for JZ4750D 
+ * cpufreq driver for JZ4750D
  *
  * Copyright (c) 2006-2008  Ingenic Semiconductor Inc.
  * Author: <lhhuang@ingenic.cn>
@@ -26,7 +26,6 @@
 
 //#define CHANGE_PLL 1
 #undef CHANGE_PLL
-void pll_init(unsigned int clock);
 
 #define PLL_UNCHANGED 0
 #define PLL_GOES_UP   1
@@ -76,7 +75,7 @@ extern jz_clocks_t jz_clocks;
 
 static void jz_update_clocks(void)
 {
-	/* Next clocks must be updated if we have changed 
+	/* Next clocks must be updated if we have changed
 	 * the PLL or divisors.
 	 */
 	jz_clocks.cclk = __cpm_get_cclk();
@@ -89,10 +88,8 @@ static void jz_update_clocks(void)
 	jz_clocks.mscclk = __cpm_get_mscclk(0);
 }
 
-static void
-jz_init_boot_config(void)
+static void jz_init_boot_config(void)
 {
-	printk("enter jz_init_boot_config\n");
 	if (!boot_config.lcd_clks_initialized) {
 		/* the first time to scale pll */
 		boot_config.lcdpix_clk = __cpm_get_pixclk();
@@ -103,7 +100,7 @@ jz_init_boot_config(void)
 		/* the first time to scale frequencies */
 		unsigned int dmcr, rtcor;
 		unsigned int tras, rcd, tpc, trwl, trc;
-		
+
 		dmcr = REG_EMC_DMCR;
 		rtcor = REG_EMC_RTCOR;
 
@@ -123,13 +120,12 @@ jz_init_boot_config(void)
 
 		boot_config.sdram_initialized = 1;
 	}
-	printk("leave jz_init_boot_config\n");
 }
 
 static void jz_update_dram_rtcor(unsigned int new_mclk)
 {
 	unsigned int rtcor;
-	
+
 	new_mclk /= 1000;
 	rtcor = boot_config.rtcor * new_mclk / boot_config.mclk;
 	rtcor--;
@@ -193,10 +189,10 @@ static void jz_update_dram_dmcr(unsigned int new_mclk)
 
 	trc = (trc < 1) ? 1: trc;
 	trc = (trc > 15) ? 15: trc;
-	trc /= 2;	
+	trc /= 2;
 
 	dmcr = REG_EMC_DMCR;
-	
+
 	dmcr &= ~(EMC_DMCR_TRAS_MASK | EMC_DMCR_RCD_MASK | EMC_DMCR_TPC_MASK | EMC_DMCR_TRWL_MASK | EMC_DMCR_TRC_MASK);
 	dmcr |= ((tras << EMC_DMCR_TRAS_BIT) | (rcd << EMC_DMCR_RCD_BIT) | (tpc << EMC_DMCR_TPC_BIT) | (trwl << EMC_DMCR_TRWL_BIT) | (trc << EMC_DMCR_TRC_BIT));
 
@@ -204,7 +200,7 @@ static void jz_update_dram_dmcr(unsigned int new_mclk)
 }
 
 static void jz_update_dram_prev(unsigned int cur_mclk, unsigned int new_mclk)
-{	
+{
 	/* No risk, no fun: run with interrupts on! */
 	if (new_mclk > cur_mclk) {
 		/* We're going FASTER, so first update TRAS, RCD, TPC, TRWL
@@ -220,11 +216,11 @@ static void jz_update_dram_prev(unsigned int cur_mclk, unsigned int new_mclk)
 }
 
 static void jz_update_dram_post(unsigned int cur_mclk, unsigned int new_mclk)
-{	
+{
 	/* No risk, no fun: run with interrupts on! */
 	if (new_mclk > cur_mclk) {
 		/* We're going FASTER, so update RTCOR
-		 * after changing the frequency 
+		 * after changing the frequency
 		 */
 		jz_update_dram_rtcor(new_mclk);
 	} else {
@@ -237,11 +233,10 @@ static void jz_update_dram_post(unsigned int cur_mclk, unsigned int new_mclk)
 
 static void jz_scale_divisors(struct dpm_regs *regs)
 {
-	printk("enter jz_scale_divisors...\n");
 	unsigned int cpccr;
 	unsigned int cur_mclk, new_mclk;
 	int div[] = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32};
-	unsigned int tmp = 0, wait = PLL_WAIT_500NS; 
+	unsigned int tmp = 0, wait = PLL_WAIT_500NS;
 
 	cpccr = REG_CPM_CPCCR;
 	cpccr &= ~((unsigned long)regs->cpccr_mask);
@@ -251,11 +246,9 @@ static void jz_scale_divisors(struct dpm_regs *regs)
 	cur_mclk = __cpm_get_mclk();
 	new_mclk = __cpm_get_pllout() / div[(cpccr & CPM_CPCCR_MDIV_MASK) >> CPM_CPCCR_MDIV_BIT];
 
-	printk("--1---\n");
 	/* Update some DRAM parameters before changing frequency */
 	jz_update_dram_prev(cur_mclk, new_mclk);
 
-	printk("--2---\n");
 	/* update register to change the clocks.
 	 * align this code to a cache line.
 	 */
@@ -280,27 +273,24 @@ static void jz_scale_divisors(struct dpm_regs *regs)
 		: "r" (CPM_CPCCR), "r" (cpccr), "r" (wait), "r" (tmp));
 
 	/* Update some other DRAM parameters after changing frequency */
-	printk("--3---\n");
 	jz_update_dram_post(cur_mclk, new_mclk);
-	printk("--4---\n");
-	printk("leave jz_scale_divisors...\n");
 }
 
 #ifdef CHANGE_PLL
 /* Maintain the LCD clock and pixel clock */
 static void jz_scale_lcd_divisors(struct dpm_regs *regs)
-{	
+{
 	unsigned int new_pll, new_lcd_div, new_lcdpix_div;
 	unsigned int cpccr;
-	unsigned int tmp = 0, wait = PLL_WAIT_500NS; 
+	unsigned int tmp = 0, wait = PLL_WAIT_500NS;
 
 	if (!boot_config.lcd_clks_initialized) return;
 
 	new_pll = __cpm_get_pllout();
-//	new_lcd_div = new_pll / boot_config.lcd_clk;
+	new_lcd_div = new_pll / boot_config.lcd_clk;
 	new_lcdpix_div = new_pll / boot_config.lcdpix_clk;
 
-#if 0
+#if 1
 	if (new_lcd_div < 1)
 		new_lcd_div = 1;
 	if (new_lcd_div > 16)
@@ -315,8 +305,8 @@ static void jz_scale_lcd_divisors(struct dpm_regs *regs)
 //	REG_CPM_CPCCR2 = new_lcdpix_div - 1;
 
 	cpccr = REG_CPM_CPCCR;
-//	cpccr &= ~CPM_CPCCR_LDIV_MASK;
-//	cpccr |= ((new_lcd_div - 1) << CPM_CPCCR_LDIV_BIT);
+	cpccr &= ~CPM_CPCCR_LDIV_MASK;
+	cpccr |= ((new_lcd_div - 1) << CPM_CPCCR_LDIV_BIT);
 	cpccr |= CPM_CPCCR_CE;       /* update immediately */
 
 	/* update register to change the clocks.
@@ -361,7 +351,7 @@ static void jz_scale_pll(struct dpm_regs *regs)
 	 */
 	jz_update_dram_prev(cur_mclk, new_mclk);
 
-	/* 
+	/*
 	 * Update PLL, align code to cache line.
 	 */
 	cppcr |= CPM_CPPCR_PLLEN;
@@ -393,9 +383,9 @@ static void jz4750d_transition(struct dpm_regs *regs)
 	jz_init_boot_config();
 
 #ifdef CHANGE_PLL
-	/* 
+	/*
 	 * Disable LCD before scaling pll.
-	 * LCD and LCD pixel clocks should not be changed even if the PLL 
+	 * LCD and LCD pixel clocks should not be changed even if the PLL
 	 * output frequency has been changed.
 	 */
 	REG_LCD_CTRL &= ~LCD_CTRL_ENA;
@@ -403,9 +393,9 @@ static void jz4750d_transition(struct dpm_regs *regs)
 	/*
 	 * Stop module clocks before scaling PLL
 	 */
-	//__cpm_stop_eth();
-	//__cpm_stop_aic(1);
-	//__cpm_stop_aic(2);
+	__cpm_stop_eth();
+	__cpm_stop_aic(1);
+	__cpm_stop_aic(2);
 #endif
 
 	/* ... add more as necessary */
@@ -433,9 +423,9 @@ static void jz4750d_transition(struct dpm_regs *regs)
 	/*
 	 * Restart module clocks before scaling PLL
 	 */
-	//__cpm_start_eth();
-	//__cpm_start_aic(1);
-	//__cpm_start_aic(2);
+	__cpm_start_eth();
+	__cpm_start_aic(1);
+	__cpm_start_aic(2);
 
 	/* ... add more as necessary */
 
@@ -476,7 +466,6 @@ static unsigned int index_to_divisor(unsigned int index, struct dpm_regs *regs)
 
 	do {
 		div_of_cclk = __cpm_get_pllout() / (1000 * new_freq);
-		printk("==== div_of_cclk=%d ==== \n",div_of_cclk);
 	} while (div_of_cclk==0);
 
 	if(div_of_cclk == 1 || div_of_cclk == 2 || div_of_cclk == 4) {
@@ -493,11 +482,9 @@ static unsigned int index_to_divisor(unsigned int index, struct dpm_regs *regs)
 		div[i] *= div_of_cclk;
 	}
 
-	printk("divisors of I:S:P:M = %d:%d:%d:%d\n", div[0], div[1], div[2], div[3]);
-
-	regs->cpccr = 
-		(n2FR[div[0]] << CPM_CPCCR_CDIV_BIT) | 
-		(n2FR[div[1]] << CPM_CPCCR_HDIV_BIT) | 
+	regs->cpccr =
+		(n2FR[div[0]] << CPM_CPCCR_CDIV_BIT) |
+		(n2FR[div[1]] << CPM_CPCCR_HDIV_BIT) |
 		(n2FR[div[2]] << CPM_CPCCR_PDIV_BIT) |
 		(n2FR[div[3]] << CPM_CPCCR_MDIV_BIT);
 
@@ -529,11 +516,6 @@ static int jz4750d_freq_target(struct cpufreq_policy *policy,
 			  unsigned int target_freq,
 			  unsigned int relation)
 {
-	//maddrone
-	//return 0;
-
-	printk("CPU_FREQ: freq_target, policy = 0x%x, freq=%d, relation=%d\n", 
-			policy, target_freq, relation);
 	unsigned int new_index = 0;
 
 	if (cpufreq_frequency_table_target(policy,
@@ -541,23 +523,16 @@ static int jz4750d_freq_target(struct cpufreq_policy *policy,
 					   target_freq, relation, &new_index))
 		return -EINVAL;
 
-	printk("new_index = %d\n",new_index);
-
 	jz4750d_set_cpu_divider_index(policy->cpu, new_index);
-	//pll_init(target_freq);	
 
-	//dprintk("new frequency is %d KHz (REG_CPM_CPCCR:0x%x)\n", __cpm_get_cclk() / 1000, REG_CPM_CPCCR);
-	printk("new frequency is %d KHz (REG_CPM_CPCCR:0x%x)\n", __cpm_get_cclk() / 1000, REG_CPM_CPCCR);
+	printk("New frequency is %d MHz (REG_CPM_CPCCR:0x%x)\n",
+		__cpm_get_cclk() / 1000000, REG_CPM_CPCCR);
 
 	return 0;
 }
 
 static int jz4750d_freq_verify(struct cpufreq_policy *policy)
 {
-	//maddrone
-	//return 0;
-
-	printk("===== verify ===== policy = ..\n");
 	return cpufreq_frequency_table_verify(policy,
 					      &jz4750d_freq_table.table[0]);
 }
@@ -620,114 +595,6 @@ static void __exit jz4750d_cpufreq_exit(void)
 {
 	cpufreq_unregister_driver(&cpufreq_jz4750d_driver);
 }
-
-
-//======================maddrone add ==============================
-/* Define this to the CPU frequency */
-#define CPU_FREQ 336000000    /* CPU clock: 336 MHz */
-#define CFG_EXTAL 12000000    /* EXT clock: 12 Mhz */
-
-// SDRAM Timings, unit: ns
-#define SDRAM_TRAS		45	/* RAS# Active Time */
-#define SDRAM_RCD		20	/* RAS# to CAS# Delay */
-#define SDRAM_TPC		20	/* RAS# Precharge Time */
-#define SDRAM_TRWL		7	/* Write Latency Time */
-//#define SDRAM_TREF	        15625	/* Refresh period: 4096 refresh cycles/64ms */ 
-#define SDRAM_TREF      7812  /* Refresh period: 8192 refresh cycles/64ms */
-
-static volatile unsigned long  *jz_cdcregl, *jz_cpmregl, *jz_emcregl, *jz_gpioregl, *jz_lcdregl;
-volatile unsigned short *jz_emcregs;
-
-
-
-static inline int sdram_convert(unsigned int pllin,unsigned int *sdram_freq)
-{
-	register unsigned int ns, dmcr,tmp;
- 
-	ns = 1000000000 / pllin;
-	tmp = SDRAM_TRAS/ns;
-	if (tmp < 4) tmp = 4;
-	if (tmp > 11) tmp = 11;
-	dmcr |= ((tmp-4) << EMC_DMCR_TRAS_BIT);
-
-	tmp = SDRAM_RCD/ns;
-	if (tmp > 3) tmp = 3;
-	dmcr |= (tmp << EMC_DMCR_RCD_BIT);
-
-	tmp = SDRAM_TPC/ns;
-	if (tmp > 7) tmp = 7;
-	dmcr |= (tmp << EMC_DMCR_TPC_BIT);
-
-	tmp = SDRAM_TRWL/ns;
-	if (tmp > 3) tmp = 3;
-	dmcr |= (tmp << EMC_DMCR_TRWL_BIT);
-
-	tmp = (SDRAM_TRAS + SDRAM_TPC)/ns;
-	if (tmp > 14) tmp = 14;
-	dmcr |= (((tmp + 1) >> 1) << EMC_DMCR_TRC_BIT);
-
-	/* Set refresh registers */
-	tmp = SDRAM_TREF/ns;
-	tmp = tmp/64 + 1;
-	if (tmp > 0xff) tmp = 0xff;
-        *sdram_freq = tmp; 
-
-	return 0;
-
-}
- 
-void pll_init(unsigned int clock)
-{
-	register unsigned int cfcr, plcr1;
-	unsigned int sdramclock = 0;
-	int n2FR[33] = {
-		0, 0, 1, 2, 3, 0, 4, 0, 5, 0, 0, 0, 6, 0, 0, 0,
-		7, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0,
-		9
-	};
-	//int div[5] = {1, 4, 4, 4, 4}; /* divisors of I:S:P:L:M */
-  	int div[5] = {1, 3, 3, 3, 3}; /* divisors of I:S:P:L:M */
-	int nf, pllout2;
-
-	cfcr = /*CPM_CPCCR_CLKOEN |*/  (n2FR[div[0]] << CPM_CPCCR_CDIV_BIT) | 
-		(n2FR[div[1]] << CPM_CPCCR_HDIV_BIT) | 
-		(n2FR[div[2]] << CPM_CPCCR_PDIV_BIT) |
-		(n2FR[div[3]] << CPM_CPCCR_MDIV_BIT);
-	/*	(n2FR[div[4]] << CPM_CPCCR_LDIV_BIT);*/
-
-	pllout2 = (cfcr & CPM_CPCCR_PCS) ? clock : (clock / 2);
-
-	/* Init UHC clock */
-	REG_CPM_UHCCDR = pllout2 / 48000000 - 1;
-
-	nf = clock * 2 / CFG_EXTAL;
-	plcr1 = ((nf - 2) << CPM_CPPCR_PLLM_BIT) | /* FD */
-		(0 << CPM_CPPCR_PLLN_BIT) |	/* RD=0, NR=2 */
-		(0 << CPM_CPPCR_PLLOD_BIT) |    /* OD=0, NO=1 */
-		(0x20 << CPM_CPPCR_PLLST_BIT) | /* PLL stable time */
-		CPM_CPPCR_PLLEN;                /* enable PLL */          
-
-	/* init PLL */
-	REG_CPM_CPCCR = cfcr;
-	REG_CPM_CPPCR = plcr1;
-	
-  	sdram_convert(clock,&sdramclock);
-  	if(sdramclock > 0)
-  	{
-	REG_EMC_RTCOR = sdramclock;
-	REG_EMC_RTCNT = sdramclock;	  
-
-  	}else
-  	{
-  	printk("sdram init fail!\n");
-  	while(1);
-  	} 
-	
-}
-
-
-
-//======================maddrone add end ==============================
 
 module_init(jz4750d_cpufreq_init);
 module_exit(jz4750d_cpufreq_exit);
