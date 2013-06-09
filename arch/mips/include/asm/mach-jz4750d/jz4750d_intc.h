@@ -69,6 +69,7 @@
 #define IRQ_DMA_0	32  /* 32 to 43 for DMAC0's 0-5  and DMAC1's 0-5 */
 #define IRQ_GPIO_0	48  /* 48 to 240 for GPIO pin 0 to 192 */
 
+#define NUM_INTC	32
 #define NUM_DMA		MAX_DMA_NUM	/* 12 */
 #define NUM_GPIO	MAX_GPIO_NUM	/* GPIO NUM: 192, Jz4750D real num GPIO 178 */
 

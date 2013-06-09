@@ -173,12 +173,16 @@ static void enable_dma_irq(unsigned int irq)
 
 static void disable_dma_irq(unsigned int irq)
 {
-	__dmac_channel_disable_irq(irq - IRQ_DMA_0);
+	int chan = irq - IRQ_DMA_0;
+	__dmac_disable_channel(chan);
+	__dmac_channel_disable_irq(chan);
 }
 
 static void mask_and_ack_dma_irq(unsigned int irq)
 {
 	unsigned int intc_irq;
+
+	disable_dma_irq(irq);
 
 	if ( irq < (IRQ_DMA_0 + HALF_DMA_NUM) ) 	/* DMAC Group 0 irq */
 		intc_irq = IRQ_DMAC0;
@@ -189,8 +193,8 @@ static void mask_and_ack_dma_irq(unsigned int irq)
 		return ;
 	}
 	__intc_ack_irq(intc_irq);
-	__dmac_channel_ack_irq(irq-IRQ_DMA_0); /* needed?? add 20080506, Wolfgang */
-	__dmac_channel_disable_irq(irq - IRQ_DMA_0);
+	//__dmac_channel_ack_irq(irq-IRQ_DMA_0); /* needed?? add 20080506, Wolfgang */
+	//__dmac_channel_disable_irq(irq - IRQ_DMA_0);
 }
 
 static void end_dma_irq(unsigned int irq)
@@ -232,7 +236,7 @@ void __init arch_init_irq(void)
 
 	/* Set up INTC irq
 	 */
-	for (i = 0; i < 32; i++) {
+	for (i = 0; i < NUM_INTC; i++) {
 		disable_intc_irq(i);
 		set_irq_chip_and_handler(i, &intc_irq_type, handle_level_irq);
 	}
@@ -254,29 +258,25 @@ void __init arch_init_irq(void)
 
 static int plat_real_irq(int irq)
 {
-	switch (irq) {
-	case IRQ_GPIO0:
-		irq = __gpio_group_irq(0) + IRQ_GPIO_0;
-		break;
-	case IRQ_GPIO1:
-		irq = __gpio_group_irq(1) + IRQ_GPIO_0 + 32;
-		break;
-	case IRQ_GPIO2:
-		irq = __gpio_group_irq(2) + IRQ_GPIO_0 + 64;
-		break;
-	case IRQ_GPIO3:
-		irq = __gpio_group_irq(3) + IRQ_GPIO_0 + 96;
-		break;
-	case IRQ_GPIO4:
-		irq = __gpio_group_irq(4) + IRQ_GPIO_0 + 128;
-		break;
-	case IRQ_GPIO5:
-		irq = __gpio_group_irq(5) + IRQ_GPIO_0 + 160;
-		break;
-	case IRQ_DMAC0:
-	case IRQ_DMAC1:
-		irq = __dmac_get_irq() + IRQ_DMA_0;
-		break;
+	int group = 0;
+
+	if ((irq >= IRQ_GPIO5) && (irq <= IRQ_GPIO0)) {
+		group = IRQ_GPIO0 - irq;
+		irq = __gpio_group_irq(group);
+		if (irq >= 0) irq += IRQ_GPIO0 + 32 * group;
+	} else {
+		switch (irq) {
+		case IRQ_DMAC0:
+		case IRQ_DMAC1:
+			irq = __dmac_get_irq();
+			if (irq < 0) {
+				printk("REG_DMAC_DMAIPR(0) = 0x%08x\n", REG_DMAC_DMAIPR(0));
+				printk("REG_DMAC_DMAIPR(1) = 0x%08x\n", REG_DMAC_DMAIPR(1));
+				return irq;
+			}
+			irq += IRQ_DMA_0;
+			break;
+		}
 	}
 
 	return irq;
