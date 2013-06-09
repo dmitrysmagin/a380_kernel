@@ -195,6 +195,7 @@ extern int jz_request_dma(int dev_id,
 			  irqreturn_t (*irqhandler)(int, void *),
 			  unsigned long irqflags,
 			  void *irq_dev_id);
+extern void jz_stop_dma(unsigned int chan);
 extern void jz_free_dma(unsigned int dmanr);
 
 extern int jz_dma_read_proc(char *buf, char **start, off_t fpos,

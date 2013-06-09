@@ -172,10 +172,18 @@ int jz_request_dma(int dev_id, const char *dev_str,
 	if (dev_id < 0 || dev_id >= DMA_ID_MAX)
 		return -EINVAL;
 
- 	for (i = 0; i < MAX_DMA_NUM; i++) {
-		if (jz_dma_table[i].dev_id < 0)
+	for (i = 0; i < MAX_DMA_NUM; i++) {
+		if (jz_dma_table[i].dev_id == dev_id)
 			break;
 	}
+
+	if (i == MAX_DMA_NUM) {
+		for (i = 0; i < MAX_DMA_NUM; i++) {
+			if (jz_dma_table[i].dev_id < 0)
+				break;
+		}
+	}
+
 	if (i == MAX_DMA_NUM)  /* no free channel */
 		return -ENODEV;
 
@@ -210,6 +218,36 @@ int jz_request_dma(int dev_id, const char *dev_str,
 		REG_DMAC_DMACKE(1) = 1 << (i - HALF_DMA_NUM);
 
 	return i;
+}
+
+/**
+ * can be called while wait dma finish interrupt
+ * can NOT be called from atomic or interrupt context
+ *	(because we use schedule_timeout internally)
+ **/
+void jz_stop_dma(unsigned int chan)
+{
+	u32 old_counter = REG_DMAC_DTCR(chan);
+	u32 cur_counter;
+
+	/* wait for the counter not change */
+	while (1) {
+		schedule_timeout(HZ / 10); /* 100ms */
+		cur_counter = REG_DMAC_DTCR(chan);
+		if (cur_counter == old_counter)
+			break;
+		old_counter = cur_counter;
+	}
+
+
+	REG_DMAC_DCCSR(chan) = 0;
+
+	REG_DMAC_DCMD(chan) = 0;
+	REG_DMAC_DSAR(chan) = 0;
+	REG_DMAC_DTAR(chan) = 0;
+	REG_DMAC_DTCR(chan) = 0;
+	REG_DMAC_DRSR(chan) = 0;
+	REG_DMAC_DDA(chan) = 0;
 }
 
 void jz_free_dma(unsigned int dmanr)
