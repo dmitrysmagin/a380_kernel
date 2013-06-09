@@ -263,7 +263,8 @@ static int plat_real_irq(int irq)
 	if ((irq >= IRQ_GPIO5) && (irq <= IRQ_GPIO0)) {
 		group = IRQ_GPIO0 - irq;
 		irq = __gpio_group_irq(group);
-		if (irq >= 0) irq += IRQ_GPIO0 + 32 * group;
+		if (irq >= 0)
+			irq += IRQ_GPIO_0 + 32 * group;
 	} else {
 		switch (irq) {
 		case IRQ_DMAC0:
