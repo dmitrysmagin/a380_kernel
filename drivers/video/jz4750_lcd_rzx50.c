@@ -133,8 +133,6 @@ struct lcd_cfb_info {
 // write 1 to /proc/jz/lcd_flush to start SLCD Flush
 // write 0 to /proc/jz/lcd_flush to stop SLCD Flush
 static unsigned int lcd_flush_flag = 1;
-static unsigned int lcd_a320_flag = 0;
-
 
 static struct lcd_cfb_info *jz4750fb_info;
 static struct jz4750_lcd_dma_desc *dma_desc_base;
@@ -146,7 +144,10 @@ static unsigned char *lcd_frame0, *lcd_frame01;
 static unsigned char *lcd_frame1;
 
 static struct jz4750_lcd_dma_desc *dma0_desc_cmd0, *dma0_desc_cmd;
-static unsigned char *lcd_cmdbuf ;
+
+#ifdef CONFIG_FB_JZ4750_SLCD
+static unsigned char *lcd_cmdbuf;
+#endif
 
 static void jz4750fb_set_mode( struct jz4750lcd_info * lcd_info );
 static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info );
@@ -663,9 +664,6 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 }
 
 static struct task_struct * resize_task;
-static struct task_struct * resize_a320_original_task;
-static struct task_struct * resize_a320_full_screen_task;
-unsigned int resize_a320_go_out = 0;
 unsigned short *frame_dst;
 unsigned short *frame_src; 
 //unsigned short frame_temp[640*480];
@@ -680,73 +678,6 @@ unsigned short *frame_src;
 //char g_pix[640*480];
 //char b_pix[640*480];
 
-static void fb_a320_thread(unsigned int src_weight, unsigned int src_height, unsigned int dst_weight, unsigned int dst_height,int mode)
-{
-  frame_dst = (unsigned short *)lcd_frame01;
-  frame_src = (unsigned short *)lcd_frame0;
-  unsigned short *lcd_frame_temp;
-#define FRACTION_STEP 0x10000
-  const unsigned int  x_fraction=src_weight*FRACTION_STEP/dst_weight;
-  const unsigned int  y_fraction=src_height*FRACTION_STEP/dst_height;
-  unsigned int x_temp = 0;
-  unsigned int y_temp = 0;
-  y_temp = y_fraction;
-  unsigned int original_size_offset = ((dst_height - src_height) >> 1)*dst_weight;
-
-  int i,j;
-#define A320_FULLSCREEN 1
-#define A320_ORIGINAL   2
-  switch (mode)
-  {
-    case A320_FULLSCREEN:
-      for(j = 0; j < dst_height; j++)
-      {
-        y_temp += y_fraction;
-        if(y_temp >= FRACTION_STEP)
-        {
-          y_temp -= FRACTION_STEP;
-          //scale horiontal
-          x_temp = x_fraction;
-          for(i = 0; i < dst_weight; i++)
-          {
-            x_temp += x_fraction;
-            *frame_dst = *frame_src;
-            if(x_temp >= FRACTION_STEP) 
-            {
-              frame_src++;
-              x_temp -= FRACTION_STEP; 
-            }
-            frame_dst++;
-          }
-          frame_src += 480-320;
-        }
-        else
-        {
-          lcd_frame_temp = frame_dst - dst_weight;
-          for(i = 0; i < dst_weight; i++)
-          {
-            *frame_dst++ = *lcd_frame_temp++;
-          }
-        }
-      }
-      break;
-    case A320_ORIGINAL:
-      frame_dst += original_size_offset;
-      for(j = 0; j < src_height; j++)
-      {
-        frame_dst +=(dst_weight - src_weight)/2;
-        for(i = 0; i < src_weight; i++)
-        {
-          *frame_dst = *frame_src;
-          frame_dst++;
-          frame_src++;
-        }
-        frame_src += 480-320;
-        frame_dst +=(dst_weight - src_weight)/2;
-      }
-      break;
-  }
-}
 static void fb2x(void)
 {
 	frame_dst = (unsigned short *)lcd_frame01;
@@ -2862,7 +2793,7 @@ printk("====%d====== Test H Color BAR Over ============\n",__LINE__);
 #endif
 
 }
-#endif	
+#endif
 
 static unsigned int l009_backlight = 100;
 void draw_lock_picture(void) 
@@ -2937,99 +2868,6 @@ static int proc_lcd_flush_read_proc(
 	return sprintf(page, "%lu\n", lcd_flush_flag);
 }
 
-
-
-static int fb_resize_a320_original_thread(void *unused)
-{
-	printk("kernel frame buffer fb_resize_a320_original_thread start!\n");
-	while(1)
-	{
-		set_current_state(TASK_INTERRUPTIBLE);
-		schedule_timeout(HZ/20);
-		fb_a320_thread(320,240,480,272,A320_ORIGINAL);
-		if(resize_a320_go_out)
-		break;
-	}
-
-}
-static void fb_resize_a320_original_start()
-{
-	resize_a320_go_out= 0;
-	resize_a320_original_task= kthread_run(fb_resize_a320_original_thread, NULL, "fb_a320_original");
-	if(IS_ERR(resize_a320_original_task))
-	{
-		printk("Kernel fb_a320_originalstart error!\n");
-		return;
-	}
-}
-static int fb_resize_a320_fullscreen_thread(void *unused)
-{
-  printk("kernel frame buffer resize thread start!\n");
-  while(1)
-  {
-    set_current_state(TASK_INTERRUPTIBLE);
-    schedule_timeout(HZ/20);
-    fb_a320_thread(320,240,480,272,A320_FULLSCREEN);
-    if(resize_a320_go_out)
-      break;
-  }
-}
-static void fb_resize_a320_fullscreen_start()
-{
-	resize_a320_go_out = 0;
-	resize_a320_full_screen_task = kthread_run(fb_resize_a320_fullscreen_thread, NULL, "fb_a320_fullscreen");
-	if(IS_ERR(resize_a320_full_screen_task))
-	{
-		printk("Kernel fb_a320_fullscreen start error!\n");
-		return;
-	}
-}
-static int proc_lcd_a320_read_proc(
-			char *page, char **start, off_t off,
-			int count, int *eof, void *data)
-{
-	return sprintf(page, "%lu\n", lcd_a320_flag);
-}
-
-static int proc_lcd_a320_write_proc(
-			struct file *file, const char *buffer,
-			unsigned long count, void *data)
-{
-  int last_lcd_a320_flag = lcd_a320_flag;
-
-  lcd_a320_flag =  simple_strtoul(buffer, 0, 10);
-  printk("%s %d lcd_a320_flag is %d\n",__FILE__,__LINE__,lcd_a320_flag);
-
-  if(tvout_flag == 0)
-  {
-    if(lcd_a320_flag == 0)  	
-    {
-      resize_a320_go_out = 1;
-      dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
-    }
-    else if(lcd_a320_flag == 1)
-    {
-      resize_a320_go_out = 1;
-      memset(lcd_frame0,0x00,480*272*2);
-      memset(lcd_frame01,0x00,480*272*2);
-      dma0_desc0->databuf = virt_to_phys((void *)lcd_frame01);
-      fb_resize_a320_original_start();
-    }
-    else if(lcd_a320_flag == 2)
-    {
-      resize_a320_go_out = 1;
-      memset(lcd_frame0,0x00,480*272*2);
-      memset(lcd_frame01,0x00,480*272*2);
-      dma0_desc0->databuf = virt_to_phys((void *)lcd_frame01);
-      fb_resize_a320_fullscreen_start();
-    }
-  }
-  else
-  {
-    lcd_a320_flag = last_lcd_a320_flag;
-  }
-  return count;
-}
 static int proc_lcd_flush_write_proc(
 			struct file *file, const char *buffer,
 			unsigned long count, void *data)
@@ -3157,65 +2995,12 @@ static start_logo_task(void)
     return;
   }
 }
-void jz4750_l009_draw_poweroff(void)
-{
-  return;
-#if 0
-  //printk("%s %d\n",__FILE__,__LINE__);
-  memcpy((unsigned char *)lcd_frame0,(unsigned char *)l009_bootpic, 400 * 240 * 2);
-  __lcd_set_backlight_level(100);
-  REG_SLCD_CTRL &= ~(0x04);
-  __slcd_enable_dma();   //maddrone add
-  msleep(1000);
-#endif
-  //printk("%s %d\n",__FILE__,__LINE__);
-}
-EXPORT_SYMBOL(jz4750_l009_draw_poweroff);
 
-static draw_rgb_to_lcd()
-{
-	int i = 0, j =0;
-	unsigned short *fb = (unsigned short *)lcd_frame0;
-	for (i=0;i<90;i++)
-		for(j=0;j<480;j++){
-			*fb = 0xf800;
-			fb++;
-		}
-#if 1
-	for (i=0;i<90;i++)
-		for(j=0;j<480;j++){
-			*fb = 0x07e0;
-			fb++;
-		}
-	for (i=0;i<92;i++)
-		for(j=0;j<480;j++){
-			*fb = 0x001f;
-			fb++;
-		}
-#endif
-        dma_cache_wback((unsigned int)(lcd_frame0), 480 * 272 * 2);
-        //while(1);
-}
-#define BOOTPIC_NUM 1
-static void logo_display_(void)
-{
-  printk("kernel logo display  thread start!\n");
-  char *p_l009 = 0x83000000;
-  int i = 0;
-  for(i = 0; i < BOOTPIC_NUM; i++)
-  {
-    memcpy((unsigned char *)lcd_frame0,(unsigned char *)p_l009, 480 * 272 * 2);
-    dma_cache_wback((unsigned int)(lcd_frame0), 480 * 272 * 2);
-    mdelay(70);
-  }
-}
-
- 
 static int __init jz4750fb_init(void)
 {
 	struct lcd_cfb_info *cfb;
 	int err = 0;
-	struct proc_dir_entry *res, *res1, *res3, *res4;
+	struct proc_dir_entry *res, *res1, *res3;
 
 #if 1
 	/* gpio init __gpio_as_lcd */
@@ -3385,20 +3170,6 @@ static int __init jz4750fb_init(void)
 		res3->read_proc = proc_lcd_flush_read_proc;
 		res3->write_proc = proc_lcd_flush_write_proc;	
         }
-        res4 = create_proc_entry("jz/lcd_a320", 0, NULL);
-        if(res4)
-        {
-        	//res4->owner = THIS_MODULE;
-		res4->read_proc = proc_lcd_a320_read_proc;
-		res4->write_proc = proc_lcd_a320_write_proc;	
-        }
-#if 0
-	while(1)
-	{
-		msleep(500);
-		print_lcdc_registers();
-	}
-#endif
 
 	//maddrone add ipu driver init
 	//ipu_dirver_register_irq(ipu_priv);
