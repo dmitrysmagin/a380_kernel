@@ -1,5 +1,5 @@
 /*
- * linux/arch/mips/jz4750d/common/pm.c
+ * linux/arch/mips/jz4750d/pm.c
  *
  * JZ4750D Power Management Routines
  *
@@ -40,30 +40,7 @@
 #define dprintk(x...)
 #endif
 
-#undef DEBUG_L009
-//#define DEBUG_L009
-#ifdef DEBUG_L009
-#define lprintk(x...)	printk(x)
-#else
-#define lprintk(x...)
-#endif
-
-
-
 #define GPIO_PORT_NUM   6
-/*****************L009 gpio******************/
-#define GPIO_WAKEUP1	(32*4+0)
-#define GPIO_WAKEUP2	(32*4+1)
-#define GPIO_WAKEUP3	(32*4+2)
-#define GPIO_WAKEUP4	(32*4+3)
-#define GPIO_WAKEUP5	(32*2+31)
-#define GPIO_WAKEUP6	(32*3+16)
-#define GPIO_WAKEUP7	(32*4+11)
-#define GPIO_WAKEUP8	(32*3+17)
-#define GPIO_WAKEUP9	(32*4+7)
-#define GPIO_WAKEUPa	(32*4+10)
-#define GPIO_WAKEUPb	(32*3+21)
-#define GPIO_WAKEUPc	(32*4+8)
 
 /*
  * __gpio_as_sleep set all pins to pull-disable, and set all pins as input
@@ -96,29 +73,13 @@ do {	                                      \
 static void led_flush_test(int level)
 {
 	return;
-	#define LCD_BACKLIGHT_PIN 32*4+22
-
-	__gpio_as_output(LCD_BACKLIGHT_PIN);
-	__gpio_enable_pull(LCD_BACKLIGHT_PIN);
-	int i = 0;
-
-	#define FLUSH_TIMES 5
-	//for(i = 0; i < FLUSH_TIMES; i++)
-	{
-		//__gpio_clear_pin(LCD_BACKLIGHT_PIN);
-		//delay_1S();
-		if(1 == level)
-		__gpio_set_pin(LCD_BACKLIGHT_PIN);
-		if(0 == level)
-		__gpio_clear_pin(LCD_BACKLIGHT_PIN);
-		//delay_1S();
-	}
 }
 
 static int jz_pm_do_hibernate(void)
 {
-	printk("Put CPU into hibernate mode.\n");
 	static unsigned int call_times = 0;
+
+	printk("Put CPU into hibernate mode.\n");
 	if(call_times > 0) return 0;
 	call_times++;
 
@@ -138,8 +99,8 @@ static int jz_pm_do_hibernate(void)
 	__gpio_clear_pin(LCD_BACKLIGHT_PIN);
 	mdelay(30);
 
-#define GPIO_AMPEN          (32 * 4 + 5)  /* GPE5 */
-#define GPIO_HP_OFF         (32 * 4 + 9)  /* GPE9 */
+//#define GPIO_AMPEN          (32 * 4 + 5)  /* GPE5 */
+//#define GPIO_HP_OFF         (32 * 4 + 9)  /* GPE9 */
 	__gpio_as_output(GPIO_AMPEN);
 	__gpio_enable_pull(GPIO_AMPEN);
 	__gpio_as_output(GPIO_HP_OFF);
@@ -149,19 +110,6 @@ static int jz_pm_do_hibernate(void)
 	__gpio_clear_pin(GPIO_HP_OFF);
 	//REG_CPM_CLKGR |= 0x1ffffffb;
 	mdelay(100);
-
-#undef Test_wakeup_pluse
-#ifdef Test_wakeup_pluse
-	while(1) {
-		__gpio_set_pin(PIN_POWER_ELAN);
-		mdelay(30);
-		__gpio_clear_pin(PIN_POWER_ELAN);
-		mdelay(150);
-		__gpio_set_pin(PIN_POWER_ELAN);
-		mdelay(1000);
-		printk("test pluse %s %d\n",__FILE__,__LINE__);
-	}
-#endif
 
 	/*
 	 * RTC Wakeup or 1Hz interrupt can be enabled or disabled
@@ -217,8 +165,6 @@ static int jz_pm_do_hibernate(void)
 	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
 	REG_RTC_HSPR = 0x12345678;
 
-
-
 	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
 	REG_RTC_HWCR = 0x00;
 
@@ -249,70 +195,6 @@ static int jz_pm_do_hibernate(void)
 		led_flush_test(0);
 		mdelay(4000);
 	}
-
-#if 0
-	//set alarm hibernate reset
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_RCR |= 0x0d;
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_RSR = 0;
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_RSAR |= 100000;
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_HWCR = 0x01;
-#endif
-
-#undef ENABLE_RTC_ALARM_WAKE_UP
-#ifdef ENABLE_RTC_ALARM_WAKE_UP
-#define ENABLE_RTC 1
-	while(!__rtc_write_ready()); /* set wakeup alarm enable */
-	if(ENABLE_RTC != (REG_RTC_HWCR & 0x1)) {
-		while (!__rtc_write_ready());
-		REG_RTC_HWCR = (REG_RTC_HWCR & ~0x1) | ENABLE_RTC;
-	}
-
-	while(!__rtc_write_ready()); /* set alarm function */
-	if(ENABLE_RTC != ((REG_RTC_RCR>>2) & 0x1)) {
-		while(!__rtc_write_ready());
-		REG_RTC_RCR = (REG_RTC_RCR & ~(1<<2)) | (ENABLE_RTC<<2);
-	}
-
-	while(!__rtc_write_ready());
-	if (!(REG_RTC_RCR & RTC_RCR_AIE)) { /* Enable alarm irq */
-		__rtc_enable_alarm_irq();
-	}
-
-	while (!__rtc_write_ready());
-	REG_RTC_RSR = 0;
-
-	while(!__rtc_write_ready());
-	REG_RTC_RSAR = 5;
-
-	while(!__rtc_write_ready()) ; /* set alarm function */
-	if (!((REG_RTC_RCR >> 2) & 0x1)) {
-		while(!__rtc_write_ready());
-		__rtc_enable_alarm();
-	}
-
-	while(!__rtc_write_ready());
-	if(!(REG_RTC_RCR & RTC_RCR_AIE)) { /* Enable alarm irq */
-		__rtc_enable_alarm_irq();
-	}
-
-	while(!__rtc_write_ready()); /* clear  alarm flag 20110721*/
-	REG_RTC_RCR &= ~RTC_RCR_AF;
-
-
-#undef TEST_RTC_COUNTER
-#ifdef TEST_RTC_COUNTER
-	int i = 10000;
-	while(i--) {
-		while(!__rtc_write_ready());
-		printk("REG_RTC_RSR is %d REG_RTC_RSAR is %d i is %d\n", REG_RTC_RSR, REG_RTC_RSAR, i);
-		mdelay(500);
-	}
-#endif //TEST_RTC_COUNTER
-#endif //ENABLE_RTC_ALARM_WAKE_UP
 
 	/* Put CPU to power down mode */
 	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
@@ -451,77 +333,6 @@ static int jz_pm_do_sleep(void)
 	/* enable RTC alarm */
 	__intc_unmask_irq(IRQ_RTC);
 
-#if 0
-        /* make system wake up after n seconds by RTC alarm */
-	unsigned int v, n;
-	n = 10;
-	while (!__rtc_write_ready());
-	__rtc_enable_alarm();
-	while (!__rtc_write_ready());
-	__rtc_enable_alarm_irq();
- 	while (!__rtc_write_ready());
- 	v = __rtc_get_second();
- 	while (!__rtc_write_ready());
- 	__rtc_set_alarm_second(v+n);
-#endif
-
-	/* WAKEUP key */
-#if 0
-	__gpio_as_irq_fall_edge(GPIO_WAKEUP);
-	__gpio_unmask_irq(GPIO_WAKEUP);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUP/32));  /* unmask IRQ_GPIOn depends on GPIO_WAKEUP */
-#endif
-
-#if 1
-	__gpio_as_irq_rise_edge(GPIO_WAKEUP1);
-	__gpio_unmask_irq(GPIO_WAKEUP1);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUP1/32));
-
-	__gpio_as_irq_rise_edge(GPIO_WAKEUP2);
-	__gpio_unmask_irq(GPIO_WAKEUP2);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUP2/32));
-
-	__gpio_as_irq_rise_edge(GPIO_WAKEUP3);
-	__gpio_unmask_irq(GPIO_WAKEUP3);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUP3/32));
-
-	__gpio_as_irq_rise_edge(GPIO_WAKEUP4);
-	__gpio_unmask_irq(GPIO_WAKEUP4);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUP4/32));
-
-	__gpio_as_irq_rise_edge(GPIO_WAKEUP5);
-	__gpio_unmask_irq(GPIO_WAKEUP5);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUP5/32));
-
-	__gpio_as_irq_rise_edge(GPIO_WAKEUP6);
-	__gpio_unmask_irq(GPIO_WAKEUP6);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUP6/32));
-
-	__gpio_as_irq_rise_edge(GPIO_WAKEUP7);
-	__gpio_unmask_irq(GPIO_WAKEUP7);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUP7/32));
-
-	__gpio_as_irq_rise_edge(GPIO_WAKEUP8);
-	__gpio_unmask_irq(GPIO_WAKEUP8);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUP8/32));
-
-	__gpio_as_irq_rise_edge(GPIO_WAKEUP9);
-	__gpio_unmask_irq(GPIO_WAKEUP9);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUP9/32));
-
-	__gpio_as_irq_rise_edge(GPIO_WAKEUPa);
-	__gpio_unmask_irq(GPIO_WAKEUPa);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUPa/32));
-
-	__gpio_as_irq_rise_edge(GPIO_WAKEUPb);
-	__gpio_unmask_irq(GPIO_WAKEUPb);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUPb/32));
-
-	__gpio_as_irq_rise_edge(GPIO_WAKEUPc);
-	__gpio_unmask_irq(GPIO_WAKEUPc);
-	__intc_unmask_irq(IRQ_GPIO0 - (GPIO_WAKEUPc/32));
-#endif
-
 	/* disable externel clock Oscillator in sleep mode */
 	__cpm_disable_osc_in_sleep();
 	/* select 32K crystal as RTC clock in sleep mode */
@@ -556,7 +367,7 @@ static int jz_pm_do_sleep(void)
 
 	/* Restore current time */
 	xtime.tv_sec = REG_RTC_RSR + delta;
-	lprintk("%s %d after sleep\n",__FILE__,__LINE__);
+	dprintk("%s %d after sleep\n",__FILE__,__LINE__);
 
 	return 0;
 }
@@ -567,10 +378,12 @@ int jz_pm_hibernate(void)
 	return jz_pm_do_hibernate();
 }
 
+#ifndef CONFIG_JZ_POWEROFF
 static irqreturn_t pm_irq_handler (int irq, void *dev_id)
 {
 	return IRQ_HANDLED;
 }
+#endif
 
 /* Put CPU to SLEEP mode */
 int jz_pm_sleep(void)
@@ -584,99 +397,16 @@ int jz_pm_sleep(void)
 		return retval;
 	}
 #endif
-	#if 1
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUP1, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUP1\n");
-		return retval;
-	}
-
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUP2, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUP2\n");
-		return retval;
-	}
-
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUP3, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUP3\n");
-		return retval;
-	}
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUP4, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUP4\n");
-		return retval;
-	}
-
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUP5, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUP5\n");
-		return retval;
-	}
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUP6, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUP6\n");
-		return retval;
-	}
-
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUP7, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUP7\n");
-		return retval;
-	}
-
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUP8, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUP8\n");
-		return retval;
-	}
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUP9, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUP9\n");
-		return retval;
-	}
-
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUPa, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUPa\n");
-		return retval;
-	}
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUPb, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUPb\n");
-		return retval;
-	}
-
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUPc, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUPc\n");
-		return retval;
-	}
-#endif
 
 	retval = jz_pm_do_sleep();
 
-        lprintk("%s %d after sleep\n",__FILE__,__LINE__);
+	dprintk("%s %d after sleep\n",__FILE__,__LINE__);
 
 #ifndef CONFIG_JZ_POWEROFF
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUP, NULL);
-#endif
-#if 1
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUP1, NULL);
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUP2, NULL);
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUP3, NULL);
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUP4, NULL);
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUP5, NULL);
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUP6, NULL);
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUP7, NULL);
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUP8, NULL);
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUP9, NULL);
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUPa, NULL);
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUPb, NULL);
-        free_irq (IRQ_GPIO_0 + GPIO_WAKEUPc, NULL);
+	free_irq (IRQ_GPIO_0 + GPIO_WAKEUP, NULL);
 #endif
 
-	lprintk("%s %d after sleep\n",__FILE__,__LINE__);
+	dprintk("%s %d after sleep\n",__FILE__,__LINE__);
 
 	return retval;
 }
