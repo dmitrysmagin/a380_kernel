@@ -60,16 +60,15 @@
 #endif
 
 #ifdef CONFIG_JZ4750_SLCD_L009_ILI9331  
-#include "umido_slcd_ILI9331.h"
+#include "a380_slcd_ILI9331.h"
 #endif
 
 #ifdef CONFIG_JZ4750_SLCD_L009_ILI9325  
-#include "umido_slcd_ILI9331.h"
+#include "a380_slcd_ILI9331.h"
 #endif
 
 //maddrone add
 //#include "bootpic.h"
-//#include "L009_scale.h"
 #include "lockpic.h"
 
 //maddrone add
@@ -680,21 +679,23 @@ unsigned short *frame_src;
 
 static void fb2x(void)
 {
-	frame_dst = (unsigned short *)lcd_frame01;
-	frame_src = (unsigned short *)lcd_frame0;
-        unsigned short *lcd_frame_temp;
 #define TV_OUT_WEIGHT 640
 #define TV_OUT_HEIGHT 480
 #define SCREEN_WEIGHT 480
 #define SCREEN_HEIGHT 272
 #define FRACTION_STEP 0x10000
+	unsigned short *lcd_frame_temp;
         const unsigned int  x_fraction=SCREEN_WEIGHT*FRACTION_STEP/TV_OUT_WEIGHT;
         const unsigned int  y_fraction=SCREEN_HEIGHT*FRACTION_STEP/TV_OUT_HEIGHT;
         unsigned int x_temp = 0;
         unsigned int y_temp = 0;
+        int i,j;
+
+	frame_dst = (unsigned short *)lcd_frame01;
+	frame_src = (unsigned short *)lcd_frame0;
+
         y_temp = y_fraction;
 
-        int i,j;
         for(j = 0; j < TV_OUT_HEIGHT; j++)
         {
           y_temp += y_fraction;
@@ -961,9 +962,10 @@ static int fb_resize_thread(void *unused)
 		if(resize_go_out)
 		break;
 	}
-
+	return 0;
 }
-static void fb_resize_start()
+
+static void fb_resize_start(void)
 {
 #ifdef TVOUT_2x
 	resize_go_out = 0;
@@ -975,7 +977,6 @@ static void fb_resize_start()
 	}
 #endif	
 }
-
 
 /* 
  * switch to tve mode from lcd mode
@@ -1648,7 +1649,11 @@ static int jz4750fb_map_smem(struct lcd_cfb_info *cfb)
 	lcd_frame01 = (unsigned char *)__get_free_pages(GFP_KERNEL, page_shift);
 #endif
 	//maddrone add for mplayer trans fb
+#ifdef TVOUT_2x
 	vmfbmem_addr = lcd_frame01;
+#else
+	vmfbmem_addr = lcd_frame0;
+#endif
         memset(vmfbmem_addr,0xff,480*272*2);
         phy_vmfbmem_addr = virt_to_phys((void *)vmfbmem_addr);
 
@@ -1878,6 +1883,7 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 	//maddrone change here
 	if(lcd_info->panel.cfg & LCD_CFG_TVEN)
 	{
+		unsigned int frame_size0;
 #ifdef TVOUT_2x
                 lprint_dbg("tvout_640_480 is %d\n",tvout_640_480);
 		if(tvout_640_480)
@@ -1887,7 +1893,6 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 		
 		dma0_desc0->frame_id = (unsigned int)0x0000da00; /* DMA0'0 */
 		//maddrone
-		unsigned int frame_size0;
 		//frame_size0 = (640 * 480 * 32) >> 3;
 		frame_size0 = (640 * 480 * 16) >> 3;
 		frame_size0 /= 4;
@@ -1899,7 +1904,6 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 		dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
 		dma0_desc0->frame_id = (unsigned int)0x0000da00; /* DMA0'0 */
 		//maddrone
-		unsigned int frame_size0;
 		frame_size0 = (tvout_display_w * tvout_display_h * 16) >> 3;
 		frame_size0 /= 4;
 		dma0_desc0->cmd = frame_size0;
@@ -1910,10 +1914,10 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 	}
 	else
 	{
+		unsigned int frame_size0;
 		dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
 		dma0_desc0->frame_id = (unsigned int)0x0000da00; /* DMA0'0 */
 		//maddrone
-		unsigned int frame_size0;
 		frame_size0 = (480 * 272 * 16) >> 3;
 		frame_size0 /= 4;
 		dma0_desc0->cmd = frame_size0;
@@ -2376,26 +2380,25 @@ static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info )
 	 * 5. start lcd clock in CPM
 	 * 6. enable lcdc.
 	 */
+	int cnt = 0xfffe;
 
-        printk("In jz4750fb_deep_set_mode  \n");
-        lprint_dbg("\n");
+	printk("In jz4750fb_deep_set_mode  \n");
+	lprint_dbg("\n");
 
-        __lcd_set_dis(); /* regular disable */
-        int cnt = 0xfffe;
+	__lcd_set_dis(); /* regular disable */
 #define NORMAL_DISABLE 0
 #define  QUICH_DISABLE 0
 #if QUICH_DISABLE
-        sdf
-        while(!__lcd_quick_disable_done() && cnt > 1) {
-          cnt--;
-        }
+	while(!__lcd_quick_disable_done() && cnt > 1) {
+		cnt--;
+	}
 #elif  NORMAL_DISABLE
-        while(!__lcd_disable_done() && cnt > 1) {
-          cnt--;
-        }
+	while(!__lcd_disable_done() && cnt > 1) {
+		cnt--;
+	}
 #endif
-        mdelay(50);
-        lprint_dbg("cnt is %d\n",cnt);
+	mdelay(50);
+	lprint_dbg("cnt is %d\n",cnt);
 	//__slcd_disable_dma();   //maddrone add
 	lcd_info->osd.fg_change = FG_CHANGE_ALL; /* change FG0, FG1 size, postion??? */
 	jz4750fb_descriptor_init(lcd_info);
@@ -2404,10 +2407,9 @@ static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info )
 	jz4750fb_change_clock(lcd_info);
 	//__slcd_enable_dma();   //maddrone add
 	//REG_SLCD_CTRL |= SLCD_CTRL_DMA_EN; //maddrone add
-        __lcd_clr_dis();
+	__lcd_clr_dis();
 	__lcd_set_ena();	/* enable lcdc */
 	printk("Out jz4750fb_deep_set_mode  \n");
-	
 }
 
 static irqreturn_t jz4750fb_interrupt_handler(int irq, void *dev_id)
@@ -2628,9 +2630,9 @@ static void display_v_color_bar(int w, int h, int bpp) {
 		}
 	}
 }
+#endif
 
-static void 
-display_h_color_bar(int w, int h, int bpp) 
+static void display_h_color_bar(int w, int h, int bpp) 
 {
   //int i,j, data = 0;
   //int *ptr,*ptr2;
@@ -2793,7 +2795,6 @@ printk("====%d====== Test H Color BAR Over ============\n",__LINE__);
 #endif
 
 }
-#endif
 
 static unsigned int l009_backlight = 100;
 void draw_lock_picture(void) 
@@ -2806,37 +2807,25 @@ void draw_lock_picture(void)
 
 	p = p + 100*480 + 215; 
 #define PIC_HEIGHT 70
-	for(i = 0; i < PIC_HEIGHT-3; i++)
-	{
-		
-		for(j = 0; j < PIC_HEIGHT; j++)
-		{
-#if 0	
-			while( *q == 0xf800 && j < PIC_HEIGHT)
-			{  k++;
-				q++;
-				j++; }
-#endif
-				if((*q &0xf000) == 0xf000||(*q & 0xe000) == 0xe000||(*q & 0xd000) == 0xd000||(*q & 0xc000) == 0xc000)
-				{
-					*p++;
-					*q++;
-				}
-				else
-				{
-
-					*p++ = *q++;
-				}
+	for(i = 0; i < PIC_HEIGHT-3; i++) {
+		for(j = 0; j < PIC_HEIGHT; j++) {
+			if((*q & 0xf000) == 0xf000 ||
+			   (*q & 0xe000) == 0xe000 ||
+			   (*q & 0xd000) == 0xd000 ||
+			   (*q & 0xc000) == 0xc000) {
+				*p++;
+				*q++;
+			} else {
+				*p++ = *q++;
+			}
 		}
 		p = p + 480 - PIC_HEIGHT;
 	}
-	
+
 	dma_cache_wback((unsigned int)(lcd_frame0), 480 * 272);
-        if(l009_backlight == 0)
-          __lcd_set_backlight_level(50);
-        mdelay(500);
-        if(l009_backlight == 0)
-          __lcd_set_backlight_level(0);
+	if(l009_backlight == 0) __lcd_set_backlight_level(50);
+	mdelay(500);
+	if(l009_backlight == 0) __lcd_set_backlight_level(0);
 
 }
 EXPORT_SYMBOL(draw_lock_picture);
@@ -2845,7 +2834,7 @@ static int proc_lcd_backlight_read_proc(
 			char *page, char **start, off_t off,
 			int count, int *eof, void *data)
 {
-	return sprintf(page, "%lu\n", l009_backlight);
+	return sprintf(page, "%ui\n", l009_backlight);
 }
 
 static int proc_lcd_backlight_write_proc(
@@ -2865,7 +2854,7 @@ static int proc_lcd_flush_read_proc(
 			char *page, char **start, off_t off,
 			int count, int *eof, void *data)
 {
-	return sprintf(page, "%lu\n", lcd_flush_flag);
+	return sprintf(page, "%ui\n", lcd_flush_flag);
 }
 
 static int proc_lcd_flush_write_proc(
@@ -2924,8 +2913,8 @@ static int proc_tvout_write_proc(
 	tvout_flag =  simple_strtoul(buffer, 0, 10);
 	
 	printk("buffer XXXXXXXXXXXXXXXXXXXX---%s---\n",buffer);
-	printk("************* tvout_flag = %d *************\n",tvout_flag);
-	printk("************* old   flag = %d *************\n",old_flag);
+	printk("************* tvout_flag = %lu *************\n",tvout_flag);
+	printk("************* old   flag = %lu *************\n",old_flag);
 	if(old_flag==0  && tvout_flag==1)	//lcd to pal
 	{
 		jz4750lcd_info_switch_to_TVE(PANEL_MODE_TVE_NTSC);
@@ -2934,7 +2923,7 @@ static int proc_tvout_write_proc(
 		jz4750tve_enable_tve();
 		/* turn off lcd backlight */
 		__lcd_display_off();
-                tvout_640_480 = 0;
+		tvout_640_480 = 0;
 		jz4750fb_deep_set_mode(jz4750_lcd_info);
 		//display_h_color_bar(720, 540, 16);
 		fb_resize_start();
@@ -2967,33 +2956,6 @@ static int proc_tvout_write_proc(
 	{}	
 
 	return count;
-}
-static struct task_struct * logo_task;
-#define BOOT_LOGO_PIC_NUM 1
-static void logo_display(unsigned long data)
-{
-  //printk("%s %d \n",__FILE__,__LINE__);
-  printk("kernel logo display  thread start!\n");
-  char *p_l009 = 0x83000000;
-  int i = 0;
-  for(i = 0; i < BOOT_LOGO_PIC_NUM; i++)
-  {
-    memcpy((unsigned char *)lcd_frame0,(unsigned char *)p_l009, 480 * 272 * 2);
-    p_l009 += 480*272*2;
-    set_current_state(TASK_INTERRUPTIBLE);
-    schedule_timeout(HZ/10);
-  }
-  
-}
-
-static start_logo_task(void)
-{
-  logo_task= kthread_run(logo_display, NULL, "logo task");
-  if(IS_ERR(logo_task))
-  {
-    printk("Kernel battery _monitor thread start error!\n");
-    return;
-  }
 }
 
 static int __init jz4750fb_init(void)
@@ -3074,11 +3036,11 @@ static int __init jz4750fb_init(void)
 	err = jz4750fb_map_smem(cfb);
 	if (err)
 		goto failed;
-	char *p_l009 = 0x83000000;
-	//maddrone add boot pic here
-        //memcpy((unsigned char *)lcd_frame0,(unsigned char *)l009_bootpic, 320 * 240 * 2);
-        //memcpy((unsigned char *)lcd_frame0,(unsigned char *)p_l009, 400 * 240 * 2);
 
+	// logo display could be put here
+	//int p = 0;
+	//for(; p < 240; p++)
+	//	memcpy((unsigned char *)lcd_frame0 + p * 480*2,(unsigned char *)l009_bootpic + p * 400*2, 400 * 2);
 
 	jz4750fb_deep_set_mode( jz4750_lcd_info );
 
@@ -3117,9 +3079,7 @@ static int __init jz4750fb_init(void)
 #endif
 	//display_h_color_bar(jz4750_lcd_info->osd.fg0.w, jz4750_lcd_info->osd.fg0.h, jz4750_lcd_info->osd.fg0.bpp);
         mdelay(50);
-        start_logo_task();
 	//draw_rgb_to_lcd();
-        //logo_display_();
 	__lcd_display_on();
 	//mdelay(2000);
 	//alterac add
