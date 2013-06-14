@@ -33,27 +33,6 @@ void __init board_msc_init(void);
 extern int jz_add_msc_devices(unsigned int controller, struct jz_mmc_platform_data *plat);
 extern int __init jz_add_spi_devices(unsigned int host_id, struct spi_board_info *board_info, int board_num);
 
-extern void (*jz_timer_callback)(void);
-
-static void dancing(void)
-{
-	static unsigned char slash[] = "\\|/-";
-//	static volatile unsigned char *p = (unsigned char *)0xb6000058;
-	static volatile unsigned char *p = (unsigned char *)0xb6000016;
-	static unsigned int count = 0;
-	*p = slash[count++];
-	count &= 3;
-}
-
-static void l009_timer_callback(void)
-{
-	static unsigned long count = 0;
-
-	if ((++count) % 50 == 0) {
-		dancing();
-		count = 0;
-	}
-}
 #define CONFIG_JZ_ROOTFS_IN_SD
 static void cetus_sd_gpio_init(struct device *dev)
 {
@@ -305,6 +284,4 @@ void __init jz_board_setup(void)
 
 	board_cpm_setup();
 	board_gpio_setup();
-
-	jz_timer_callback = l009_timer_callback;
 }
