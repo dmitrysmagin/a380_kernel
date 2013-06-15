@@ -15,7 +15,7 @@
 /*
  * --------------------------------
  * NOTE:
- * This LCD driver support TFT16 TFT32 LCD, not support STN and Special TFT LCD 
+ * This LCD driver support TFT16 TFT32 LCD, not support STN and Special TFT LCD
  * now.
  * 	It seems not necessory to support STN and Special TFT.
  * 	If it's necessary, update this driver in the future.
@@ -59,16 +59,15 @@
 #include "jz_kgm_spfd5420a.h"
 #endif
 
-#ifdef CONFIG_JZ4750_SLCD_L009_ILI9331  
+#ifdef CONFIG_JZ4750_SLCD_L009_ILI9331
 #include "a380_slcd_ILI9331.h"
 #endif
 
-#ifdef CONFIG_JZ4750_SLCD_L009_ILI9325  
+#ifdef CONFIG_JZ4750_SLCD_L009_ILI9325
 #include "a380_slcd_ILI9331.h"
 #endif
 
 //maddrone add
-//#include "bootpic.h"
 #include "lockpic.h"
 
 //maddrone add
@@ -81,7 +80,7 @@ MODULE_DESCRIPTION("Jz4750 LCD Controller driver");
 MODULE_AUTHOR("Wolfgang Wang, <lgwang@ingenic.cn>");
 MODULE_LICENSE("GPL");
 
-//0: lcd   1 : 480X272->640X480    2:640X480 
+//0: lcd   1 : 480X272->640X480    2:640X480
 static unsigned long tvout_flag  = 0;
 
 static int resize_go_out = 0;
@@ -93,16 +92,6 @@ static void display_h_color_bar(int w, int h, int bpp);
 #undef DEBUG
 #define TVOUT_2x
 
-//#define DEBUG_L009
-
-#ifdef DEBUG_L009
-#define lprint_dbg(f, arg...) printk("dbg::" __FILE__ ",LINE(%d): " f "\n", __LINE__, ## arg)
-#else
-#define lprint_dbg(f, arg...) do {} while (0)
-#endif
-
-
-
 #ifdef DEBUG
 #define dprintk(x...)	printk(x)
 #define print_dbg(f, arg...) printk("dbg::" __FILE__ ",LINE(%d): " f "\n", __LINE__, ## arg)
@@ -110,10 +99,6 @@ static void display_h_color_bar(int w, int h, int bpp);
 #define dprintk(x...)
 #define print_dbg(f, arg...) do {} while (0)
 #endif
-
-#define print_err(f, arg...) printk(KERN_ERR DRIVER_NAME ": " f "\n", ## arg)
-#define print_warn(f, arg...) printk(KERN_WARNING DRIVER_NAME ": " f "\n", ## arg)
-#define print_info(f, arg...) printk(KERN_INFO DRIVER_NAME ": " f "\n", ## arg)
 
 struct lcd_cfb_info {
 	struct fb_info		fb;
@@ -155,7 +140,7 @@ static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info );
 struct jz4750lcd_info jz4750_lcd_panel = {
 #if defined(CONFIG_JZ4750_LCD_SAMSUNG_LTP400WQF02)
 	.panel = {
-		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */ 
+		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */
 		LCD_CFG_NEWDES | /* 8words descriptor */
 		LCD_CFG_MODE_GENERIC_TFT | /* General TFT panel */
 		LCD_CFG_MODE_TFT_18BIT | 	/* output 18bpp */
@@ -182,7 +167,7 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 	 },
 #elif defined(CONFIG_JZ4750_LCD_AUO_A043FL01V2)
 	.panel = {
-		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */ 
+		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */
 		LCD_CFG_NEWDES | /* 8words descriptor */
 		LCD_CFG_MODE_GENERIC_TFT | /* General TFT panel */
 		LCD_CFG_MODE_TFT_24BIT | 	/* output 18bpp */
@@ -210,7 +195,7 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 	 },
 #elif defined(CONFIG_JZ4750_LCD_TOPPOLY_TD043MGEB1)
 	.panel = {
-		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */ 
+		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */
 		LCD_CFG_NEWDES | /* 8words descriptor */
 		LCD_CFG_MODE_GENERIC_TFT | /* General TFT panel */
 		LCD_CFG_MODE_TFT_24BIT | 	/* output 18bpp */
@@ -238,7 +223,7 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 	 },
 #elif defined(CONFIG_JZ4750_LCD_TRULY_TFT_GG1P0319LTSW_W)
 	.panel = {
-		 .cfg = LCD_CFG_LCDPIN_SLCD | /* Underrun recover*/ 
+		 .cfg = LCD_CFG_LCDPIN_SLCD | /* Underrun recover*/
 		 LCD_CFG_NEWDES | /* 8words descriptor */
 		 LCD_CFG_MODE_SLCD, /* TFT Smart LCD panel */
 		 .slcd_cfg = SLCD_CFG_DWIDTH_16BIT | SLCD_CFG_CWIDTH_16BIT | SLCD_CFG_CS_ACTIVE_LOW | SLCD_CFG_RS_CMD_LOW | SLCD_CFG_CLK_ACTIVE_FALLING | SLCD_CFG_TYPE_PARALLEL,
@@ -264,7 +249,7 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 
 #elif defined(CONFIG_JZ4750_LCD_FOXCONN_PT035TN01)
 	.panel = {
-		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */ 
+		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */
 		LCD_CFG_NEWDES | /* 8words descriptor */
 		LCD_CFG_MODE_GENERIC_TFT | /* General TFT panel */
 //		LCD_CFG_MODE_TFT_18BIT | 	/* output 18bpp */
@@ -294,7 +279,7 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 	 },
 #elif defined(CONFIG_JZ4750_LCD_INNOLUX_PT035TN01_SERIAL)
 	.panel = {
-		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */ 
+		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */
 		LCD_CFG_NEWDES | /* 8words descriptor */
 		LCD_CFG_MODE_GENERIC_TFT | /* Serial TFT panel */
 		LCD_CFG_MODE_TFT_24BIT | 	/* output 24bpp */
@@ -321,8 +306,8 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 	 },
 #elif defined(CONFIG_JZ4750_SLCD_KGM701A3_TFT_SPFD5420A)
 	.panel = {
-//		 .cfg = LCD_CFG_LCDPIN_SLCD | LCD_CFG_RECOVER | /* Underrun recover*/ 
-		 .cfg = LCD_CFG_LCDPIN_SLCD | /* Underrun recover*/ 
+//		 .cfg = LCD_CFG_LCDPIN_SLCD | LCD_CFG_RECOVER | /* Underrun recover*/
+		 .cfg = LCD_CFG_LCDPIN_SLCD | /* Underrun recover*/
 //		 LCD_CFG_DITHER | /* dither */
 		 LCD_CFG_NEWDES | /* 8words descriptor */
 		 LCD_CFG_MODE_SLCD, /* TFT Smart LCD panel */
@@ -348,10 +333,10 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 		 .fg0 = {32, 0, 0, 320, 240}, /* bpp, x, y, w, h */
 		 .fg1 = {32, 0, 0, 400, 240}, /* bpp, x, y, w, h */
 	 },
-#elif defined(CONFIG_JZ4750_SLCD_L009_ILI9331)  
+#elif defined(CONFIG_JZ4750_SLCD_L009_ILI9331)
 	.panel = {
-//		 .cfg = LCD_CFG_LCDPIN_SLCD | LCD_CFG_RECOVER | /* Underrun recover*/ 
-		 .cfg = LCD_CFG_LCDPIN_SLCD | /* Underrun recover*/ 
+//		 .cfg = LCD_CFG_LCDPIN_SLCD | LCD_CFG_RECOVER | /* Underrun recover*/
+		 .cfg = LCD_CFG_LCDPIN_SLCD | /* Underrun recover*/
 //		 LCD_CFG_DITHER | /* dither */
 		 LCD_CFG_NEWDES | /* 8words descriptor */
 		 LCD_CFG_MODE_SLCD, /* TFT Smart LCD panel */
@@ -382,7 +367,7 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 	 },
 #elif defined(CONFIG_JZ4750D_VGA_DISPLAY)
 	.panel = {
-		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER |/* Underrun recover */ 
+		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER |/* Underrun recover */
 		LCD_CFG_NEWDES | /* 8words descriptor */
 		LCD_CFG_MODE_GENERIC_TFT | /* General TFT panel */
 		LCD_CFG_MODE_TFT_24BIT | 	/* output 18bpp */
@@ -446,7 +431,7 @@ struct jz4750lcd_info jz4750_info_tve = {
 	.panel = {
 		.cfg = LCD_CFG_TVEN | /* output to tve */
 		LCD_CFG_NEWDES | /* 8words descriptor */
-		LCD_CFG_TVEPEH | 
+		LCD_CFG_TVEPEH |
 		//LCD_CFG_RECOVER | /* underrun protect */
 		LCD_CFG_MODE_INTER_CCIR656, /* Interlace CCIR656 mode */
 		//.ctrl = LCD_CTRL_OFUM | LCD_CTRL_BST_16,	/* 16words burst */
@@ -616,7 +601,7 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 			red = 1 << 3;
 			if (((blue >> 3) == 0) && ((blue >> 2) != 0))
 				blue = 1 << 3;
-			ctmp = ((red >> 3) << 11) 
+			ctmp = ((red >> 3) << 11)
 				| ((green >> 2) << 5) | (blue >> 3);
 		}
 
@@ -625,28 +610,28 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 		ptr[regno] = ctmp;
 
 		break;
-		
+
 	case 15:
 		if (regno < 16)
 			((u32 *)cfb->fb.pseudo_palette)[regno] =
-				((red >> 3) << 10) | 
+				((red >> 3) << 10) |
 				((green >> 3) << 5) |
 				(blue >> 3);
 		break;
 	case 16:
 		if (regno < 16) {
 			((u32 *)cfb->fb.pseudo_palette)[regno] =
-				((red >> 3) << 11) | 
+				((red >> 3) << 11) |
 				((green >> 2) << 5) |
-				(blue >> 3); 
+				(blue >> 3);
 		}
 		break;
 	case 17 ... 32:
 		if (regno < 16)
 			((u32 *)cfb->fb.pseudo_palette)[regno] =
-				(red << 16) | 
+				(red << 16) |
 				(green << 8) |
-				(blue << 0); 
+				(blue << 0);
 
 /*		if (regno < 16) {
 			unsigned val;
@@ -664,9 +649,9 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 
 static struct task_struct * resize_task;
 unsigned short *frame_dst;
-unsigned short *frame_src; 
+unsigned short *frame_src;
 //unsigned short frame_temp[640*480];
-        
+
 #define SCALE_WIDTH  160 //x_src = (x_dest * SCALE_WIDTH) >> 8
 #define SCALE_HEIGHT  128 //y_src = (y_dest * SCALE_HEIGHT) >> 8
 #define GET_R(temp) temp>>11
@@ -679,275 +664,45 @@ unsigned short *frame_src;
 
 static void fb2x(void)
 {
-#define TV_OUT_WEIGHT 640
-#define TV_OUT_HEIGHT 480
-#define SCREEN_WEIGHT 480
-#define SCREEN_HEIGHT 272
-#define FRACTION_STEP 0x10000
+	#define TV_OUT_WEIGHT 640
+	#define TV_OUT_HEIGHT 480
+	#define SCREEN_WEIGHT 480
+	#define SCREEN_HEIGHT 272
+	#define FRACTION_STEP 0x10000
 	unsigned short *lcd_frame_temp;
-        const unsigned int  x_fraction=SCREEN_WEIGHT*FRACTION_STEP/TV_OUT_WEIGHT;
-        const unsigned int  y_fraction=SCREEN_HEIGHT*FRACTION_STEP/TV_OUT_HEIGHT;
-        unsigned int x_temp = 0;
-        unsigned int y_temp = 0;
-        int i,j;
+	const unsigned int x_fraction = SCREEN_WEIGHT*FRACTION_STEP/TV_OUT_WEIGHT;
+	const unsigned int y_fraction = SCREEN_HEIGHT*FRACTION_STEP/TV_OUT_HEIGHT;
+	unsigned int x_temp = 0;
+	unsigned int y_temp = 0;
+	int i,j;
 
 	frame_dst = (unsigned short *)lcd_frame01;
 	frame_src = (unsigned short *)lcd_frame0;
 
-        y_temp = y_fraction;
+	y_temp = y_fraction;
 
-        for(j = 0; j < TV_OUT_HEIGHT; j++)
-        {
-          y_temp += y_fraction;
-          if(y_temp >= FRACTION_STEP)
-          {
-            y_temp -= FRACTION_STEP;
-            //scale horiontal
-            x_temp = x_fraction;
-            for(i = 0; i < TV_OUT_WEIGHT; i++)
-            {
-              x_temp += x_fraction;
-              *frame_dst = *frame_src;
-              if(x_temp >= FRACTION_STEP) 
-              {
-                frame_src++;
-                x_temp -= FRACTION_STEP; 
-              }
-              frame_dst++;
-            }
-          }
-          else
-          {
-            lcd_frame_temp = frame_dst - TV_OUT_WEIGHT;
-            for(i = 0; i < TV_OUT_WEIGHT; i++)
-            {
-              *frame_dst++ = *lcd_frame_temp++;
-            }
-          }
-        }
-#if 0
-        int i,j,l;
-        int  m = 0;
-        int  k = 0;
-     
-	for(i=0; i<240; i++)
-	{
-		l = m;
-		for(j=0; j<320; j++)
-		{
-			frame_dst[k++] = frame_src[l];
-			frame_dst[k++] = frame_src[l++];
+	for(j = 0; j < TV_OUT_HEIGHT; j++) {
+		y_temp += y_fraction;
+		if(y_temp >= FRACTION_STEP) {
+			y_temp -= FRACTION_STEP;
+			//scale horiontal
+			x_temp = x_fraction;
+			for(i = 0; i < TV_OUT_WEIGHT; i++) {
+				x_temp += x_fraction;
+				*frame_dst = *frame_src;
+				if(x_temp >= FRACTION_STEP) {
+					frame_src++;
+					x_temp -= FRACTION_STEP;
+				}
+				frame_dst++;
+			}
+		} else {
+			lcd_frame_temp = frame_dst - TV_OUT_WEIGHT;
+			for(i = 0; i < TV_OUT_WEIGHT; i++) {
+				*frame_dst++ = *lcd_frame_temp++;
+			}
 		}
-		
-		l = m;
-		for(j=0; j<320; j++)
-		{
-			frame_dst[k++] = frame_src[l];
-			frame_dst[k++] = frame_src[l++]; 
-		}
-		
-		m += 320;
 	}
-#endif
-#if 0
-        int i,j,l;
-        int  m = 0;
-        int  k = 0;
-        for(i=0; i<240; i++)
-        {
-		l = m;
-		for(j=0; j<80; j++)
-		{
-				frame_dst[k++] = frame_src[l];
-				frame_dst[k++] = frame_src[l++];
-				frame_dst[k++] = frame_src[l++];
-				frame_dst[k++] = frame_src[l];
-				frame_dst[k++] = frame_src[l++];
-				frame_dst[k++] = frame_src[l];
-				frame_dst[k++] = frame_src[l++];
-				frame_dst[k++] = frame_src[l++];
-		}
-		
-		l = m;
-		for(j=0; j<80; j++)
-		{
-				frame_dst[k++] = frame_src[l];
-				frame_dst[k++] = frame_src[l++];
-				frame_dst[k++] = frame_src[l++];
-				frame_dst[k++] = frame_src[l];
-				frame_dst[k++] = frame_src[l++];
-				frame_dst[k++] = frame_src[l];
-				frame_dst[k++] = frame_src[l++];
-				frame_dst[k++] = frame_src[l++];
-		}
-		
-		m += 400;
-	}
-#if 0	
-        //memcpy(frame_temp,&frame_dst,640*480*2);
-        for(i = 0; i < 640*480; i++)
-        {
-          frame_temp[i] = frame_dst[i];
-        }
-        printk("%d \n",__LINE__);
-        char r1,g1,b1;
-        char r2,g2,b2;
-        char r3,g3,b3;
-        char r4,g4,b4;
-        char r5,g5,b5;
-        char r6,g6,b6;
-        char r7,g7,b7;
-        char r8,g8,b8;
-        char r9,g9,b9;
-        char r,g,b;
-        short temp;
-        k = 0;
-        int temp_y = 0;
-        for(i = 0; i < 480; i++)
-        {
-          temp_y = i*640;
-
-          for(j = 0; j < 640; j++)
-          {
-            temp = frame_temp[j+i];
-            r_pix[j+i] = GET_R(temp);;
-            g_pix[j+i] = GET_G(temp);;
-            b_pix[j+i] = GET_B(temp);;
-          }
-        }
-        for(i =1 ; i < 480-2; i++)
-        {
-          temp_y = i*640;
-          k = temp_y + 1;
-          for(j = 1; j < 640-2; j++)
-          {
-#if 0
-            temp = frame_temp[j-1+temp_y-640]; 
-            r1 = GET_R(temp); 
-            g1 = GET_G(temp); 
-            b1 = GET_B(temp); 
-            temp = frame_temp[j+temp_y-640]; 
-            r2 = GET_R(temp); 
-            g2 = GET_G(temp); 
-            b2 = GET_B(temp); 
-            temp = frame_temp[j+1+temp_y-640]; 
-            r3 = GET_R(temp); 
-            g3 = GET_G(temp); 
-            b3 = GET_B(temp); 
-            temp = frame_temp[j-1+temp_y]; 
-            r4 = GET_R(temp); 
-            g4 = GET_G(temp); 
-            b4 = GET_B(temp); 
-            temp = frame_temp[j+temp_y]; 
-            r5 = GET_R(temp); 
-            g5 = GET_G(temp); 
-            b5 = GET_B(temp); 
-            temp = frame_temp[j+1+temp_y]; 
-            r6 = GET_R(temp); 
-            g6 = GET_G(temp); 
-            b6 = GET_B(temp); 
-            temp = frame_temp[j-1+temp_y+640]; 
-            r7 = GET_R(temp); 
-            g7 = GET_G(temp); 
-            b7 = GET_B(temp); 
-            temp = frame_temp[j+temp_y+640]; 
-            r8 = GET_R(temp); 
-            g8 = GET_G(temp); 
-            b8 = GET_B(temp); 
-            temp = frame_temp[j+1+temp_y+640]; 
-            r9 = GET_R(temp); 
-            g9 = GET_G(temp); 
-            b9 = GET_B(temp); 
-#else
-            r1 = r_pix[j-1+temp_y-640]; 
-            g1 = g_pix[j-1+temp_y-640]; 
-            b1 = b_pix[j-1+temp_y-640]; 
-            r2 = r_pix[j+temp_y-640]; 
-            g2 = g_pix[j+temp_y-640]; 
-            b2 = b_pix[j+temp_y-640]; 
-            r3 = r_pix[j+1+temp_y-640]; 
-            g3 = g_pix[j+1+temp_y-640]; 
-            b3 = b_pix[j+1+temp_y-640]; 
-            r4 = r_pix[j-1+temp_y]; 
-            g4 = g_pix[j-1+temp_y]; 
-            b4 = b_pix[j-1+temp_y]; 
-            r5 = r_pix[j+temp_y]; 
-            g5 = g_pix[j+temp_y]; 
-            b5 = b_pix[j+temp_y]; 
-            r6 = r_pix[j+1+temp_y]; 
-            g6 = g_pix[j+1+temp_y]; 
-            b6 = b_pix[j+1+temp_y]; 
-            r7 = r_pix[j-1+temp_y+640]; 
-            g7 = g_pix[j-1+temp_y+640]; 
-            b7 = b_pix[j-1+temp_y+640]; 
-            r8 = r_pix[j+temp_y+640]; 
-            g8 = g_pix[j+temp_y+640]; 
-            b8 = b_pix[j+temp_y+640]; 
-            r9 = r_pix[j+1+temp_y+640]; 
-            g9 = g_pix[j+1+temp_y+640]; 
-            b9 = b_pix[j+1+temp_y+640]; 
-
-#endif
-            r = (r1+r2<<1+r3+r4<<1+r5<<2+r6<<1+r7+r8<<1+r9) >> 4;
-            g = (g1+g2<<1+g3+g4<<1+g5<<2+g6<<1+g7+g8<<1+g9) >> 4;
-            b = (b1+b2<<1+b3+b4<<1+b5<<2+b6<<1+b7+b8<<1+b9) >> 4;
-            frame_dst[k++] = CREATE_RGB(r,g,b);
-
-          }
-        }
-#endif
-#else
-#if 0
-        int i,j;
-        int r,g,b;
-        int r1,g1,b1;
-        int r2,g2,b2;
-        int r3,g3,b3;
-        int r4,g4,b4;
-        int temp = 0;
-        int temp_y = 0;
-        int k = 0;
-        register int tmp_x_y;//,tmp_uv,tmp_1uv,tmp_u1v,tmp_1u1v;
-        for(i =0; i < 480; i++)
-        {
-          temp_y = y_dest_array[i]*400;
-          for(j = 0; j < 640; j++)
-          {
-            temp = frame_src[x_dest_array[j]+temp_y]; 
-            r1 = GET_R(temp); 
-            g1 = GET_G(temp); 
-            b1 = GET_B(temp); 
-            temp = frame_src[x_dest_array[j] + 1 + temp_y]; 
-            r2 = GET_R(temp); 
-            g2 = GET_G(temp); 
-            b2 = GET_B(temp); 
-            temp = frame_src[x_dest_array[j] +temp_y +400]; 
-            r3 = GET_R(temp); 
-            g3 = GET_G(temp); 
-            b3 = GET_B(temp); 
-            temp = frame_src[x_dest_array[j] + 1 +temp_y +400]; 
-            r4 = GET_R(temp); 
-            g4 = GET_G(temp); 
-            b4 = GET_B(temp); 
-#if 0
-            r =  ((4-u_dest_array[j])*(4-v_dest_array[i])*r1+(u_dest_array[j])*(4-v_dest_array[i])*r2 + (4-u_dest_array[j])*(v_dest_array[i])*r3+ (u_dest_array[j])*(v_dest_array[i])*r4) >> 4;
-            g =  ((4-u_dest_array[j])*(4-v_dest_array[i])*g1+(u_dest_array[j])*(4-v_dest_array[i])*g2 + (4-u_dest_array[j])*(v_dest_array[i])*g3+ (u_dest_array[j])*(v_dest_array[i])*g4) >> 4;
-            b =  ((4-u_dest_array[j])*(4-v_dest_array[i])*b1+(u_dest_array[j])*(4-v_dest_array[i])*b2 + (4-u_dest_array[j])*(v_dest_array[i])*b3+ (u_dest_array[j])*(v_dest_array[i])*b4) >> 4;
-#else
-tmp_x_y= i*640+j;
-//tmp_uv,tmp_1uv,tmp_u1v,tmp_1u1v;
-        
-            r =  (u_1_v_1_dest_array[tmp_x_y]*r1+u_v_1_dest_array[tmp_x_y]*r2 + u_1_v_dest_array[tmp_x_y]*r3+ u_v_dest_array[tmp_x_y]*r4) >> 4;
-            g =  (u_1_v_1_dest_array[tmp_x_y]*g1+u_v_1_dest_array[tmp_x_y]*g2 + u_1_v_dest_array[tmp_x_y]*g3+ u_v_dest_array[tmp_x_y]*g4) >> 4;
-            b =  (u_1_v_1_dest_array[tmp_x_y]*b1+u_v_1_dest_array[tmp_x_y]*b2 + u_1_v_dest_array[tmp_x_y]*b3+ u_v_dest_array[tmp_x_y]*b4) >> 4;
-
-#endif
-            frame_dst[k++] = CREATE_RGB(r,g,b);
-          }
-        }
-#endif
-#endif
-	//memset(lcd_frame01, 0x0, 640 * 480 * 2);
 }
 
 static int fb_resize_thread(void *unused)
@@ -975,10 +730,10 @@ static void fb_resize_start(void)
 		printk("Kernel fb resize thread start error!\n");
 		return;
 	}
-#endif	
+#endif
 }
 
-/* 
+/*
  * switch to tve mode from lcd mode
  * mode:
  * 	PANEL_MODE_TVE_PAL: switch to TVE_PAL mode
@@ -1076,9 +831,9 @@ static void jz4750lcd_info_switch_to_TVE(int mode)
 		h = ( osd_lcd->fg1.h < TVE_HEIGHT_NTSC)?osd_lcd->fg1.h:TVE_HEIGHT_NTSC;
 		x = ((TVE_WIDTH_NTSC - w) >> 2) << 1;
 		y = ((TVE_HEIGHT_NTSC - h) >> 2) << 1;
-        //info->osd.fg1.bpp = 32;	/* use RGB888 int TVE mode */
-        info->osd.fg1.bpp = 16;	/* use RGB565 in TVE mode*/
-        info->osd.fg1.x = x;
+		//info->osd.fg1.bpp = 32;	/* use RGB888 int TVE mode */
+		info->osd.fg1.bpp = 16;	/* use RGB565 in TVE mode*/
+		info->osd.fg1.x = x;
 		info->osd.fg1.y = y;
 		info->osd.fg1.w = w;
 		info->osd.fg1.h = h;
@@ -1092,7 +847,7 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 {
 	int ret = 0;
 
-        void __user *argp = (void __user *)arg;
+	void __user *argp = (void __user *)arg;
 
 //	struct jz4750lcd_info *lcd_info = jz4750_lcd_info;
 
@@ -1111,7 +866,7 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 	case FBIODISPOFF:
 		__lcd_display_off();
 		#if 1
-		if ( jz4750_lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD || 
+		if ( jz4750_lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD ||
 			jz4750_lcd_info->panel.cfg & LCD_CFG_TVEN ) /*  */
 			__lcd_clr_ena(); /* Smart lcd and TVE mode only support quick disable */
 		else {
@@ -1161,16 +916,13 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 		case PANEL_MODE_TVE_PAL: 	/* switch to TVE_PAL mode */
 		case PANEL_MODE_TVE_NTSC: 	/* switch to TVE_NTSC mode */
 			printk("IOCTL: arg=PANEL_MODE_TVE_PAL\n");
-			if(arg == PANEL_MODE_TVE_PAL)
-            {
-              tvout_display_w = 720;
-              tvout_display_h = 540;
-            }
-			else
-			{
-              tvout_display_w = 720;
-              tvout_display_h = 482;
-            }
+			if(arg == PANEL_MODE_TVE_PAL) {
+				tvout_display_w = 720;
+				tvout_display_h = 540;
+			} else {
+				tvout_display_w = 720;
+				tvout_display_h = 482;
+			}
 			jz4750lcd_info_switch_to_TVE(arg);
 			jz4750tve_init(arg); /* tve controller init */
 			udelay(100);
@@ -1220,7 +972,7 @@ static int jz4750fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	unsigned long start;
 	unsigned long off;
 	u32 len;
-	lprint_dbg("the smem_start is 0x%x\n",cfb->fb.fix.smem_start);
+	print_dbg("the smem_start is 0x%x\n",cfb->fb.fix.smem_start);
 	off = vma->vm_pgoff << PAGE_SHIFT;
 	//fb->fb_get_fix(&fix, PROC_CONSOLE(info), info);
 
@@ -1260,7 +1012,7 @@ static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *inf
 }
 
 
-/* 
+/*
  * set the video mode according to info->var
  */
 static int jz4750fb_set_par(struct fb_info *info)
@@ -1302,7 +1054,7 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *info)
 	return 0;
 }
 
-/* 
+/*
  * pan display
  */
 static int jz4750fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
@@ -1336,7 +1088,7 @@ static int jz4750fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *i
 
 /* use default function cfb_fillrect, cfb_copyarea, cfb_imageblit */
 static struct fb_ops jz4750fb_ops = {
-	//.owner			= THIS_MODULE,
+	.owner			= THIS_MODULE,
 	.fb_setcolreg		= jz4750fb_setcolreg,
 	.fb_check_var 		= jz4750fb_check_var,
 	.fb_set_par 		= jz4750fb_set_par,
@@ -1355,36 +1107,19 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 	struct lcd_cfb_info *cfb = (struct lcd_cfb_info *)info;
 	struct jz4750lcd_info *lcd_info = jz4750_lcd_info;
 	int chgvar = 0;
-	
+
 	//maddrone modify here
-	var->height	            = lcd_info->osd.fg0.h;	/* tve mode */
-	var->width	            = lcd_info->osd.fg0.w;
+	var->height = lcd_info->osd.fg0.h;	/* tve mode */
+	var->width = lcd_info->osd.fg0.w;
 
-        if(tvout_640_480 == 0)
-        {
-          var->height = 272;
-          var->width = 480;
-        }
-        else if(tvout_640_480 == 1)
-        {
-          var->height = 480;
-          var->width = 640;
-        }
-        lprint_dbg("var->height is %d var->width is %d\n",var->height,var->width);
-#if 0
-	//maddrone add
-
-	if(tvout_640_480)
-	{
-	var->height	            = 480;	/* tve mode */
-	var->width	            = 640;
+	if(tvout_640_480 == 0) {
+		var->height = 272;
+		var->width = 480;
+	} else if(tvout_640_480 == 1) {
+		var->height = 480;
+		var->width = 640;
 	}
-	else
-	{
-	var->height	            = 272;	/* tve mode */
-	var->width	            = 480;
-	}
-#endif
+	print_dbg("var->height is %d var->width is %d\n",var->height,var->width);
 
 	var->bits_per_pixel	    = lcd_info->osd.fg0.bpp;
 
@@ -1405,7 +1140,7 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 	var->vsync_len              = 0;
 	var->sync                   = 0;
 	var->activate              &= ~FB_ACTIVATE_TEST;
-    
+
 	/*
 	 * CONUPDATE and SMOOTH_XPAN are equal.  However,
 	 * SMOOTH_XPAN is only used internally by fbcon.
@@ -1526,7 +1261,7 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 
 	cfb->fb.var = *var;
 	cfb->fb.var.activate &= ~FB_ACTIVATE_ALL;
-        lprint_dbg("cfb->fb.fix.line_length is %d\n",cfb->fb.fix.line_length);
+	print_dbg("cfb->fb.fix.line_length is %d\n",cfb->fb.fix.line_length);
 	/*
 	 * Update the old var.  The fbcon drivers still use this.
 	 * Once they are using cfb->fb.var, this can be dropped.
@@ -1545,7 +1280,7 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 
 static struct lcd_cfb_info * jz4750fb_alloc_fb_info(void)
 {
- 	struct lcd_cfb_info *cfb;
+	struct lcd_cfb_info *cfb;
 
 	cfb = kmalloc(sizeof(struct lcd_cfb_info) + sizeof(u32) * 16, GFP_KERNEL);
 
@@ -1637,7 +1372,7 @@ static int jz4750fb_map_smem(struct lcd_cfb_info *cfb)
 	needroom += ((w * bpp + 7) >> 3) * h;
 #endif // two layer
 
-	
+
 	printk("FrameBuffer bpp = %d\n",bpp);
 
 	for (page_shift = 0; page_shift < 12; page_shift++)
@@ -1654,19 +1389,19 @@ static int jz4750fb_map_smem(struct lcd_cfb_info *cfb)
 #else
 	vmfbmem_addr = lcd_frame0;
 #endif
-        memset(vmfbmem_addr,0xff,480*272*2);
-        phy_vmfbmem_addr = virt_to_phys((void *)vmfbmem_addr);
+	memset(vmfbmem_addr,0xff,480*272*2);
+	phy_vmfbmem_addr = virt_to_phys((void *)vmfbmem_addr);
 
 	if ((!lcd_palette) || (!lcd_frame0))
 		return -ENOMEM;
 	memset((void *)lcd_palette, 0, PAGE_SIZE);
 	memset((void *)lcd_frame0, 0, PAGE_SIZE << page_shift);
 
-	
+
 	dma_desc_base = (struct jz4750_lcd_dma_desc *)((void*)lcd_palette + ((PALETTE_SIZE+3)/4)*4);
 
 #if defined(CONFIG_FB_JZ4750_SLCD)
-	printk("=========== CONFIG FB JZ4750 sllcd.. \n");	
+	printk("=========== CONFIG FB JZ4750 sllcd.. \n");
 
 	lcd_cmdbuf = (unsigned char *)__get_free_pages(GFP_KERNEL, 0);
 	memset((void *)lcd_cmdbuf, 0, PAGE_SIZE);
@@ -1691,7 +1426,7 @@ static int jz4750fb_map_smem(struct lcd_cfb_info *cfb)
 	 */
 	page = (unsigned long)lcd_palette;
 	SetPageReserved(virt_to_page((void*)page));
-	
+
 	for (page = (unsigned long)lcd_frame0;
 	     page < PAGE_ALIGN((unsigned long)lcd_frame0 + (PAGE_SIZE<<page_shift));
 	     page += PAGE_SIZE) {
@@ -1768,8 +1503,8 @@ static void jz4750fb_unmap_smem(struct lcd_cfb_info *cfb)
 	}
 
 	if (lcd_frame0) {
-		for (tmp=(unsigned char *)lcd_frame0; 
-		     tmp < lcd_frame0 + (PAGE_SIZE << page_shift); 
+		for (tmp=(unsigned char *)lcd_frame0;
+		     tmp < lcd_frame0 + (PAGE_SIZE << page_shift);
 		     tmp += PAGE_SIZE) {
 			map = virt_to_page(tmp);
 			clear_bit(PG_reserved, &map->flags);
@@ -1809,29 +1544,29 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 	dma1_desc1 		= dma_desc_base + 6;
 
 	/*
-	 * Normal TFT panel's DMA Chan0: 
-	 *	TO LCD Panel: 	
-	 * 		no palette:	dma0_desc0 <<==>> dma0_desc0 
+	 * Normal TFT panel's DMA Chan0:
+	 *	TO LCD Panel:
+	 * 		no palette:	dma0_desc0 <<==>> dma0_desc0
 	 * 		palette :	dma0_desc_palette <<==>> dma0_desc0
 	 *	TO TV Encoder:
 	 * 		no palette:	dma0_desc0 <<==>> dma0_desc1
-	 * 		palette:	dma0_desc_palette --> dma0_desc0 
+	 * 		palette:	dma0_desc_palette --> dma0_desc0
 	 * 				--> dma0_desc1 --> dma0_desc_palette --> ...
-	 * 				
-	 * SMART LCD TFT panel(dma0_desc_cmd)'s DMA Chan0: 
+	 *
+	 * SMART LCD TFT panel(dma0_desc_cmd)'s DMA Chan0:
 	 *	TO LCD Panel:
-	 * 		no palette:	dma0_desc_cmd <<==>> dma0_desc0 
+	 * 		no palette:	dma0_desc_cmd <<==>> dma0_desc0
 	 * 		palette :	dma0_desc_palette --> dma0_desc_cmd
 	 * 				--> dma0_desc0 --> dma0_desc_palette --> ...
 	 *	TO TV Encoder:
-	 * 		no palette:	dma0_desc_cmd --> dma0_desc0 
+	 * 		no palette:	dma0_desc_cmd --> dma0_desc0
 	 * 				--> dma0_desc1 --> dma0_desc_cmd --> ...
-	 * 		palette:	dma0_desc_palette --> dma0_desc_cmd 
-	 * 				--> dma0_desc0 --> dma0_desc1 
+	 * 		palette:	dma0_desc_palette --> dma0_desc_cmd
+	 * 				--> dma0_desc0 --> dma0_desc1
 	 * 				--> dma0_desc_palette --> ...
 	 * DMA Chan1:
 	 *	TO LCD Panel:
-	 * 		dma1_desc0 <<==>> dma1_desc0 
+	 * 		dma1_desc0 <<==>> dma1_desc0
 	 *	TO TV Encoder:
 	 * 		dma1_desc0 <<==>> dma1_desc1
 	 */
@@ -1844,19 +1579,19 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 	dma0_desc_cmd0->cmd 		= LCD_CMD_CMD | 3; /* command */
 	//dma0_desc_cmd0->cmd 		= LCD_CMD_CMD | 0; /* command */
 	dma0_desc_cmd0->offsize 	= 0;
-	dma0_desc_cmd0->page_width 	= 0; 
+	dma0_desc_cmd0->page_width 	= 0;
 	dma0_desc_cmd0->cmd_num 	= 3;
 	//dma0_desc_cmd0->cmd_num 	= 0;
 
 
 	/* Dummy Command Descriptor, cmd_num is 0 */
 	dma0_desc_cmd->next_desc 	= (unsigned int)virt_to_phys(dma0_desc0);
-	dma0_desc_cmd->databuf 		= 0; 
+	dma0_desc_cmd->databuf 		= 0;
 	dma0_desc_cmd->frame_id 	= (unsigned int)0x0da000cd; /* dma0's cmd0 */
 	dma0_desc_cmd->cmd 		= LCD_CMD_CMD | 0; /* dummy command */
 	dma0_desc_cmd->cmd_num 		= 0;
-	dma0_desc_cmd->offsize 		= 0; 
-	dma0_desc_cmd->page_width 	= 0; 
+	dma0_desc_cmd->offsize 		= 0;
+	dma0_desc_cmd->page_width 	= 0;
 
 	/* Palette Descriptor */
 	dma0_desc_palette->next_desc 	= (unsigned int)virt_to_phys(dma0_desc_cmd0);
@@ -1885,12 +1620,12 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 	{
 		unsigned int frame_size0;
 #ifdef TVOUT_2x
-                lprint_dbg("tvout_640_480 is %d\n",tvout_640_480);
+                print_dbg("tvout_640_480 is %d\n",tvout_640_480);
 		if(tvout_640_480)
 		dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
 		else
 		dma0_desc0->databuf = virt_to_phys((void *)lcd_frame01);
-		
+
 		dma0_desc0->frame_id = (unsigned int)0x0000da00; /* DMA0'0 */
 		//maddrone
 		//frame_size0 = (640 * 480 * 32) >> 3;
@@ -1924,11 +1659,11 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 		dma0_desc0->desc_size = (272 << 16) | 480;
 		dma0_desc0->offsize = 0;
 		dma0_desc0->cmd_num = 0;
-         	}	
+         	}
 
 	/* DMA0 Descriptor1 */
 	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) { /* TVE mode */
-		
+
 		printk("TV Enable Mode...\n");
 		if (lcd_info->osd.fg0.bpp <= 8) /* load palette only once at setup */
 			dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc_palette);
@@ -1973,7 +1708,7 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 
 #if 0
 	/* Palette Descriptor */
-	if ( lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD ) 
+	if ( lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD )
 //		dma0_desc_palette->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd);
 		dma0_desc_palette->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd1);
 	else
@@ -1993,7 +1728,7 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 
 //---------------------------------
 	dma0_desc_cmd1->next_desc = (unsigned int)virt_to_phys(dma0_desc0);
-	dma0_desc_cmd1->databuf 	= 0; 
+	dma0_desc_cmd1->databuf 	= 0;
 	dma0_desc_cmd1->frame_id = (unsigned int)0x0da0cad1; /* dma0's cmd0 */
 	dma0_desc_cmd1->cmd 	= LCD_CMD_CMD | 0; /* dummy command */
 	dma0_desc_cmd1->cmd_num 	= 0;
@@ -2007,10 +1742,10 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 		if (lcd_info->osd.fg0.bpp <= 8) /* load palette only once at setup?? */
 //			dma0_desc0->next_desc = (unsigned int)virt_to_phys(dma0_desc_palette); //tft
 			dma0_desc0->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd); // smart lcd
-		else if ( lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD ) 
+		else if ( lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD )
 			dma0_desc0->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd1);
 //			dma0_desc0->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd);
-		else 
+		else
 			dma0_desc0->next_desc = (unsigned int)virt_to_phys(dma0_desc0);
 	}
 
@@ -2021,10 +1756,10 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) { /* TVE mode */
 		if (lcd_info->osd.fg0.bpp <= 8) /* load palette only once at setup?? */
 			dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc_palette);
-		
-		else if ( lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD ) 
+
+		else if ( lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD )
 			dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd);
-		else 
+		else
 			dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc0);
 		dma0_desc1->frame_id = (unsigned int)0x0000da01; /* DMA0'1 */
 	}
@@ -2078,8 +1813,7 @@ static void jz4750fb_set_panel_mode( struct jz4750lcd_info * lcd_info )
 	else if ( lcd_info->osd.fg0.bpp > 16 && lcd_info->osd.fg0.bpp < 32+1 ) {
 		lcd_info->osd.fg0.bpp = 32;
 		lcd_info->panel.ctrl |= LCD_CTRL_BPP_18_24;
-	}
-	else {
+	} else {
 		printk("The BPP %d is not supported\n", lcd_info->osd.fg0.bpp);
 		lcd_info->osd.fg0.bpp = 32;
 		lcd_info->panel.ctrl |= LCD_CTRL_BPP_18_24;
@@ -2090,7 +1824,7 @@ static void jz4750fb_set_panel_mode( struct jz4750lcd_info * lcd_info )
 	REG_LCD_CTRL = lcd_info->panel.ctrl; /* LCDC Controll Register */
 	REG_LCD_CFG = lcd_info->panel.cfg; /* LCDC Configure Register */
 	REG_SLCD_CFG = lcd_info->panel.slcd_cfg; /* Smart LCD Configure Register */
-	
+
 	if ( lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD ) /* enable Smart LCD DMA */
 		REG_SLCD_CTRL = SLCD_CTRL_DMA_EN;
 
@@ -2137,9 +1871,9 @@ static void jz4750fb_set_osd_mode( struct jz4750lcd_info * lcd_info )
 static void jz4750fb_foreground_resize( struct jz4750lcd_info * lcd_info )
 {
 	int fg0_line_size, fg0_frm_size, fg1_line_size, fg1_frm_size;
-	/* 
-	 * NOTE: 
-	 * Foreground change sequence: 
+	/*
+	 * NOTE:
+	 * Foreground change sequence:
 	 * 	1. Change Position Registers -> LCD_OSDCTL.Change;
 	 * 	2. LCD_OSDCTRL.Change -> descripter->Size
 	 * Foreground, only one of the following can be change at one time:
@@ -2148,8 +1882,8 @@ static void jz4750fb_foreground_resize( struct jz4750lcd_info * lcd_info )
 	 * 	3. F1 size
 	 *	4. F1 position
 	 */
-	
-	/* 
+
+	/*
 	 * The rules of f0, f1's position:
 	 * 	f0.x + f0.w <= panel.w;
 	 * 	f0.y + f0.h <= panel.h;
@@ -2159,8 +1893,8 @@ static void jz4750fb_foreground_resize( struct jz4750lcd_info * lcd_info )
 	 * to simplified operation, fg.y and fg.h should be even number always.
 	 *
 	 */
-        lprint_dbg("the fg0x is %d fg0y is %d fg0w is %d fgoh is %d\n",lcd_info->osd.fg0.x,lcd_info->osd.fg0.y,lcd_info->osd.fg0.w,lcd_info->osd.fg0.h);
-        lprint_dbg("the fg1x is %d fg1y is %d fg1w is %d fg1h is %d\n",lcd_info->osd.fg1.x,lcd_info->osd.fg1.y,lcd_info->osd.fg1.w,lcd_info->osd.fg1.h);
+	print_dbg("the fg0x is %d fg0y is %d fg0w is %d fgoh is %d\n",lcd_info->osd.fg0.x,lcd_info->osd.fg0.y,lcd_info->osd.fg0.w,lcd_info->osd.fg0.h);
+	print_dbg("the fg1x is %d fg1y is %d fg1w is %d fg1h is %d\n",lcd_info->osd.fg1.x,lcd_info->osd.fg1.y,lcd_info->osd.fg1.w,lcd_info->osd.fg1.h);
 	/* Foreground 0  */
 	if ( lcd_info->osd.fg0.x >= lcd_info->panel.w )
 		lcd_info->osd.fg0.x = lcd_info->panel.w;
@@ -2168,24 +1902,24 @@ static void jz4750fb_foreground_resize( struct jz4750lcd_info * lcd_info )
 		lcd_info->osd.fg0.y = lcd_info->panel.h;
 	if ( lcd_info->osd.fg0.x + lcd_info->osd.fg0.w > lcd_info->panel.w )
 		lcd_info->osd.fg0.w = lcd_info->panel.w - lcd_info->osd.fg0.x;
-	if ( lcd_info->osd.fg0.y + lcd_info->osd.fg0.h > lcd_info->panel.h ) 
+	if ( lcd_info->osd.fg0.y + lcd_info->osd.fg0.h > lcd_info->panel.h )
 		lcd_info->osd.fg0.h = lcd_info->panel.h - lcd_info->osd.fg0.y;
 	/* Foreground 1 */
 	/* Case TVE ??? TVE 720x573 or 720x480*/
-	if ( lcd_info->osd.fg1.x >= lcd_info->panel.w ) 
+	if ( lcd_info->osd.fg1.x >= lcd_info->panel.w )
 		lcd_info->osd.fg1.x = lcd_info->panel.w;
-	if ( lcd_info->osd.fg1.y >= lcd_info->panel.h ) 
+	if ( lcd_info->osd.fg1.y >= lcd_info->panel.h )
 		lcd_info->osd.fg1.y = lcd_info->panel.h;
-	if ( lcd_info->osd.fg1.x + lcd_info->osd.fg1.w > lcd_info->panel.w ) 
+	if ( lcd_info->osd.fg1.x + lcd_info->osd.fg1.w > lcd_info->panel.w )
 		lcd_info->osd.fg1.w = lcd_info->panel.w - lcd_info->osd.fg1.x;
-	if ( lcd_info->osd.fg1.y + lcd_info->osd.fg1.h > lcd_info->panel.h ) 
+	if ( lcd_info->osd.fg1.y + lcd_info->osd.fg1.h > lcd_info->panel.h )
 		lcd_info->osd.fg1.h = lcd_info->panel.h - lcd_info->osd.fg1.y;
 
 //	fg0_line_size = lcd_info->osd.fg0.w*((lcd_info->osd.fg0.bpp+7)/8);
 	fg0_line_size = (lcd_info->osd.fg0.w*(lcd_info->osd.fg0.bpp)/8);
 	fg0_line_size = ((fg0_line_size+3)>>2)<<2; /* word aligned */
 	fg0_frm_size = fg0_line_size * lcd_info->osd.fg0.h;
-	
+
 	printk("fg0_frm_size = 0x%x\n",fg0_frm_size);
 
 	fg1_line_size = lcd_info->osd.fg1.w*((lcd_info->osd.fg1.bpp+7)/8);
@@ -2201,20 +1935,20 @@ static void jz4750fb_foreground_resize( struct jz4750lcd_info * lcd_info )
 		}
 
 		/* set change */
-		if ( !(lcd_info->osd.osd_ctrl & LCD_OSDCTRL_IPU) && 
+		if ( !(lcd_info->osd.osd_ctrl & LCD_OSDCTRL_IPU) &&
 		     (lcd_info->osd.fg_change != FG_CHANGE_ALL) )
 			REG_LCD_OSDCTRL |= LCD_OSDCTRL_CHANGES;
 
-		/* wait change ready???  maddrone open*/ 
+		/* wait change ready???  maddrone open*/
 		while ( REG_LCD_OSDS & LCD_OSDS_READY )	/* fix in the future, Wolfgang, 06-20-2008 */
 		print_dbg("wait LCD_OSDS_READY\n");
-		
+
 		if ( lcd_info->osd.fg_change & FG0_CHANGE_SIZE ) { /* change FG0 size */
 			if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) { /* output to TV */
 				dma0_desc0->cmd = dma0_desc1->cmd = (fg0_frm_size/4)/2;
-				dma0_desc0->offsize = dma0_desc1->offsize 
+				dma0_desc0->offsize = dma0_desc1->offsize
 					= fg0_line_size/4;
-				dma0_desc0->page_width = dma0_desc1->page_width 
+				dma0_desc0->page_width = dma0_desc1->page_width
 					= fg0_line_size/4;
 				#ifdef TVOUT_2x
 				if(tvout_640_480)
@@ -2232,7 +1966,7 @@ static void jz4750fb_foreground_resize( struct jz4750lcd_info * lcd_info )
 				dma0_desc0->page_width = dma0_desc1->page_width = 0;
 			}
 
-			dma0_desc0->desc_size = dma0_desc1->desc_size 
+			dma0_desc0->desc_size = dma0_desc1->desc_size
 				= lcd_info->osd.fg0.h << 16 | lcd_info->osd.fg0.w;
 			REG_LCD_SIZE0 = (lcd_info->osd.fg0.h<<16)|lcd_info->osd.fg0.w;
 
@@ -2252,8 +1986,8 @@ static void jz4750fb_foreground_resize( struct jz4750lcd_info * lcd_info )
 				dma1_desc0->offsize = dma1_desc1->offsize = 0;
 				dma1_desc0->page_width = dma1_desc1->page_width = 0;
 			}
-			
-			dma1_desc0->desc_size = dma1_desc1->desc_size 
+
+			dma1_desc0->desc_size = dma1_desc1->desc_size
 				= lcd_info->osd.fg1.h << 16 | lcd_info->osd.fg1.w;
 			REG_LCD_SIZE1 = lcd_info->osd.fg1.h << 16|lcd_info->osd.fg1.w;
 		}
@@ -2306,12 +2040,11 @@ static void jz4750fb_change_clock( struct jz4750lcd_info * lcd_info )
 
 		REG_CPM_LPCDR  |= CPM_LPCDR_LTCS;  //maddrone add
 		REG_CPM_CPCCR |= CPM_CPCCR_CE ; /* update divide */
-	}
-        else { 		/* LCDC output to  LCD panel */
-                //pclk = 12000000;
-                pclk = 22000000;
+	} else { 		/* LCDC output to  LCD panel */
+		//pclk = 12000000;
+		pclk = 22000000;
 		val = __cpm_get_pllout2() / pclk; /* pclk */
-                printk("carlos tve: pllout2 = %d plck is %d\n", __cpm_get_pllout2(),pclk);
+		printk("carlos tve: pllout2 = %d plck is %d\n", __cpm_get_pllout2(),pclk);
 		val--;
 		dprintk("ratio: val = %d\n", val);
 		if ( val > 0x7ff ) {
@@ -2330,7 +2063,7 @@ static void jz4750fb_change_clock( struct jz4750lcd_info * lcd_info )
 		__cpm_set_ldiv( val );
 #endif
 		REG_CPM_CPCCR |= CPM_CPCCR_CE ; /* update divide */
-		
+
 	}
 
 	dprintk("REG_CPM_LPCDR=0x%08x\n", REG_CPM_LPCDR);
@@ -2345,14 +2078,14 @@ static void jz4750fb_change_clock( struct jz4750lcd_info * lcd_info )
 #endif
 	__cpm_start_lcd();
 	udelay(1000);
-	/* 
+	/*
 	 * set lcd device clock and lcd pixel clock.
 	 * what about TVE mode???
 	 *
 	 */
 }
 
-/* 
+/*
  * jz4750fb_set_mode(), set osd configure, resize foreground
  *
  */
@@ -2366,7 +2099,7 @@ static void jz4750fb_set_mode( struct jz4750lcd_info * lcd_info )
 }
 
 /**
- * @brief jz4750fb_deep_set_mode 
+ * @brief jz4750fb_deep_set_mode
  *
  * @param lcd_info
  */
@@ -2383,7 +2116,7 @@ static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info )
 	int cnt = 0xfffe;
 
 	printk("In jz4750fb_deep_set_mode  \n");
-	lprint_dbg("\n");
+	print_dbg("\n");
 
 	__lcd_set_dis(); /* regular disable */
 #define NORMAL_DISABLE 0
@@ -2398,7 +2131,7 @@ static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info )
 	}
 #endif
 	mdelay(50);
-	lprint_dbg("cnt is %d\n",cnt);
+	print_dbg("cnt is %d\n",cnt);
 	//__slcd_disable_dma();   //maddrone add
 	lcd_info->osd.fg_change = FG_CHANGE_ALL; /* change FG0, FG1 size, postion??? */
 	jz4750fb_descriptor_init(lcd_info);
@@ -2464,12 +2197,12 @@ static int jzfb_suspend(void)
 static int jzfb_resume(void)
 {
 	__cpm_start_lcd();
-	
-	//maddrone 
-	//__gpio_set_pin(GPIO_DISP_OFF_N); 
-	
-    __lcd_special_on();
-    //__lcd_slcd_special_on();
+
+	//maddrone
+	//__gpio_set_pin(GPIO_DISP_OFF_N);
+
+	__lcd_special_on();
+	//__lcd_slcd_special_on();
 	__lcd_set_ena();
 	mdelay(200);
 	__lcd_set_backlight_level(80);
@@ -2588,7 +2321,7 @@ static void display_v_color_bar(int w, int h, int bpp) {
 #if 1
 			for (j = 0;j < h; j++)
 				for (i = 0;i < wpl; i++) {
-					if((i/8)%8==7) 
+					if((i/8)%8==7)
 						*ptr++ = 0xffffff;
 					else if ((i/8)%8==1)
 						*ptr++ = 0xff0000;
@@ -2608,7 +2341,7 @@ static void display_v_color_bar(int w, int h, int bpp) {
 #else
 			for (j = 0;j < h; j++)
 				for (i = 0;i < wpl; i++) {
-					if((i/8)%8==7) 
+					if((i/8)%8==7)
 						*ptr++ = 0x00ff0000;
 					else if ((i/8)%8==1)
 						*ptr++ = 0xffff0000;
@@ -2632,7 +2365,7 @@ static void display_v_color_bar(int w, int h, int bpp) {
 }
 #endif
 
-static void display_h_color_bar(int w, int h, int bpp) 
+static void display_h_color_bar(int w, int h, int bpp)
 {
   //int i,j, data = 0;
   //int *ptr,*ptr2;
@@ -2646,7 +2379,7 @@ static void display_h_color_bar(int w, int h, int bpp)
   //dma_cache_wback((unsigned int)(ptr), 320 * 240 * 2);
   //memset((unsigned char *)ptr2, 320*240*4, 0xF0);
 
-  //for(i=0; i<320*240; i++) Mcupanel_Data(0xF0F0);				
+  //for(i=0; i<320*240; i++) Mcupanel_Data(0xF0F0);
   printk("========== Test H Color BAR Over ============\n");
 #if 0
   short open_pic0[400][240];
@@ -2661,7 +2394,7 @@ static void display_h_color_bar(int w, int h, int bpp)
   short open_pic9[400][240];
 #endif
 printk("====%d====== Test H Color BAR Over ============\n",__LINE__);
-#if 0 
+#if 0
   memset((char *)open_pic0,0x00,400*240*2);
  printk("====%d====== Test H Color BAR Over ============\n",__LINE__);
   memset(open_pic1,0xf8,400*240*2);
@@ -2713,7 +2446,7 @@ printk("====%d====== Test H Color BAR Over ============\n",__LINE__);
   }
   dma_cache_wback((unsigned int)(lcd_frame0), 400 * 240);
 printk("====%d====== Test H Color BAR Over ============\n",__LINE__);
- 
+
 #endif
 
 #if 0
@@ -2723,22 +2456,22 @@ printk("====%d====== Test H Color BAR Over ============\n",__LINE__);
         case 1:
           if(i%(wpl*8)==0)
             data = ((i/(wpl*8))%2)*0xffffffff;
-          *ptr++ = data; 
+          *ptr++ = data;
           break;
         case 2:
           if(i%(wpl*8)==0)
             data = ((i/(wpl*8))%4)*0x55555555;
-          *ptr++ = data; 
+          *ptr++ = data;
           break;
         case 4:
           if(i%(wpl*8)==0)
             data = ((i/(wpl*8))%16)*0x11111111;
-          *ptr++ = data; 
+          *ptr++ = data;
           break;
         case 8:
           if(i%(wpl*8)==0)
             data = ((i/(wpl*8))%256)*0x01010101;
-          *ptr++ = data; 
+          *ptr++ = data;
           break;
       }
     }
@@ -2797,7 +2530,7 @@ printk("====%d====== Test H Color BAR Over ============\n",__LINE__);
 }
 
 static unsigned int l009_backlight = 100;
-void draw_lock_picture(void) 
+void draw_lock_picture(void)
 {
 	int i,j;
 	unsigned short *p;
@@ -2805,7 +2538,7 @@ void draw_lock_picture(void)
 	p = (unsigned short *)lcd_frame0;
 	q = (unsigned short *)lockpic;
 
-	p = p + 100*480 + 215; 
+	p = p + 100*480 + 215;
 #define PIC_HEIGHT 70
 	for(i = 0; i < PIC_HEIGHT-3; i++) {
 		for(j = 0; j < PIC_HEIGHT; j++) {
@@ -2841,12 +2574,12 @@ static int proc_lcd_backlight_write_proc(
 			struct file *file, const char *buffer,
 			unsigned long count, void *data)
 {
-        l009_backlight =  simple_strtoul(buffer, 0, 10);
+	l009_backlight =  simple_strtoul(buffer, 0, 10);
 	__lcd_set_backlight_level(l009_backlight);	/* We support 8 levels here. */
-        if(l009_backlight == 0)
-          __gpio_clear_pin(GPIO_LCD_VCC_EN_N);
-        else
-          __gpio_set_pin(GPIO_LCD_VCC_EN_N);
+	if(l009_backlight == 0)
+		__gpio_clear_pin(GPIO_LCD_VCC_EN_N);
+	else
+		__gpio_set_pin(GPIO_LCD_VCC_EN_N);
 	return count;
 }
 
@@ -2861,39 +2594,22 @@ static int proc_lcd_flush_write_proc(
 			struct file *file, const char *buffer,
 			unsigned long count, void *data)
 {
-  //printk("%s %d  tvout_flah is %d\n",__FILE__,__LINE__,tvout_flag);
-  if(tvout_flag == 0)
-  {
-    lcd_flush_flag =  simple_strtoul(buffer, 0, 10);
-    //printk("%s %d  lcd_flush_flag is %d\n",__FILE__,__LINE__,lcd_flush_flag);
-#if 0
-    if(lcd_flush_flag == 1)  //start flush	
-    {
-      tvout_640_480 = 0;
-    }	
-    else  //stop flush
-    {
-      tvout_640_480 = 1;
-    }
-#endif
-    //memcpy(lcd_frame01,lcd_frame0,320*240*4);
-    if(lcd_flush_flag == 1)  //start flush	
-    { 
-      dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
-    }
-    else
-    {
-      lprint_dbg("\n");
-      memcpy(lcd_frame01,lcd_frame0,480*272*2);
-      lprint_dbg("\n");
-      //mdelay(500);
-      lprint_dbg("\n");
-      dma_cache_wback((unsigned int)(lcd_frame01), 480 * 272 * 2);
-      dma0_desc0->databuf = virt_to_phys((void *)lcd_frame01);
-    }
-    //jz4750fb_deep_set_mode(jz4750_lcd_info);
-  }
-  return count;
+	//printk("%s %d  tvout_flag is %d\n",__FILE__,__LINE__,tvout_flag);
+	if(tvout_flag == 0) {
+		lcd_flush_flag =  simple_strtoul(buffer, 0, 10);
+		//printk("%s %d  lcd_flush_flag is %d\n",__FILE__,__LINE__,lcd_flush_flag);
+
+		if(lcd_flush_flag == 1) { //start flush
+			dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
+		} else {
+			memcpy(lcd_frame01,lcd_frame0,480*272*2);
+			dma_cache_wback((unsigned int)(lcd_frame01), 480 * 272 * 2);
+			dma0_desc0->databuf = virt_to_phys((void *)lcd_frame01);
+		}
+		//jz4750fb_deep_set_mode(jz4750_lcd_info);
+	}
+
+	return count;
 }
 
 static int proc_tvout_read_proc(
@@ -2909,14 +2625,13 @@ static int proc_tvout_write_proc(
 {
 	unsigned long old_flag;
 	old_flag = tvout_flag;
-	
+
 	tvout_flag =  simple_strtoul(buffer, 0, 10);
-	
+
 	printk("buffer XXXXXXXXXXXXXXXXXXXX---%s---\n",buffer);
 	printk("************* tvout_flag = %lu *************\n",tvout_flag);
 	printk("************* old   flag = %lu *************\n",old_flag);
-	if(old_flag==0  && tvout_flag==1)	//lcd to pal
-	{
+	if(old_flag == 0  && tvout_flag == 1) {	//lcd to pal
 		jz4750lcd_info_switch_to_TVE(PANEL_MODE_TVE_NTSC);
 		jz4750tve_init(PANEL_MODE_TVE_NTSC); /* tve controller init */
 		udelay(100);
@@ -2927,9 +2642,7 @@ static int proc_tvout_write_proc(
 		jz4750fb_deep_set_mode(jz4750_lcd_info);
 		//display_h_color_bar(720, 540, 16);
 		fb_resize_start();
-	}
-	else if(old_flag==1 && tvout_flag==0)  //tvout to lcd
-	{
+	} else if(old_flag == 1 && tvout_flag == 0) { //tvout to lcd
 			jz4750tve_disable_tve();
 			udelay(100);
 			jz4750_lcd_info = &jz4750_lcd_panel;
@@ -2939,21 +2652,15 @@ static int proc_tvout_write_proc(
 			resize_go_out = 1;
 			__lcd_slcd_special_on();
 			__lcd_display_on();
-	}
-	else if(old_flag==1 && tvout_flag==2)  //tvout_2x to tvout_640x480
-	{
+	} else if(old_flag == 1 && tvout_flag == 2) { //tvout_2x to tvout_640x480
 			resize_go_out = 1;
 			tvout_640_480 = 1;
 			jz4750fb_deep_set_mode(jz4750_lcd_info);
-	}	
-	else if(old_flag==2 && tvout_flag==1)  //tvout_640x480 to tvout_2x
-	{
+	} else if(old_flag == 2 && tvout_flag == 1) { //tvout_640x480 to tvout_2x
 			fb_resize_start();
 			tvout_640_480 = 0;
 			jz4750fb_deep_set_mode(jz4750_lcd_info);
 	}
-	else
-	{}	
 
 	return count;
 }
@@ -2970,34 +2677,29 @@ static int __init jz4750fb_init(void)
 		__gpio_as_lcd_16bit();
 	else if (jz4750_lcd_info->panel.cfg & LCD_CFG_MODE_TFT_24BIT)
 		__gpio_as_lcd_24bit();
-	else
-        {
-          printk("attention  __gpio_as_lcd_8bit\n\n\n\n");
-          __gpio_as_lcd_8bit();
+	else {
+		printk("attention  __gpio_as_lcd_8bit\n\n\n\n");
+		__gpio_as_lcd_8bit();
 
-          //__gpio_as_lcd_18bit();
-        }	
-	/* In special mode, we only need init special pin, 
+		//__gpio_as_lcd_18bit();
+        }
+	/* In special mode, we only need init special pin,
 	 * as general lcd pin has init in uboot */
 #if defined(CONFIG_SOC_JZ4750) || defined(CONFIG_SOC_JZ4750D)
 	switch (jz4750_lcd_info->panel.cfg & LCD_CFG_MODE_MASK) {
 	case LCD_CFG_MODE_SPECIAL_TFT_1:
 	case LCD_CFG_MODE_SPECIAL_TFT_2:
 	case LCD_CFG_MODE_SPECIAL_TFT_3:
-          {
-            printk("attention __gpio_as_lcd_special \n\n\n");
-            __gpio_as_lcd_special();
-            break;
-          }
-	default:
-		;
+		printk("attention __gpio_as_lcd_special \n\n\n");
+		__gpio_as_lcd_special();
+		break;
 	}
 #endif
 #endif
 	//maddrone
 	//__gpio_as_slcd_8bit();
 
-	if ( jz4750_lcd_info->osd.fg0.bpp > 16 && 
+	if ( jz4750_lcd_info->osd.fg0.bpp > 16 &&
 	     jz4750_lcd_info->osd.fg0.bpp < 32 ) {
 		jz4750_lcd_info->osd.fg0.bpp = 32;
 	}
@@ -3010,7 +2712,7 @@ static int __init jz4750fb_init(void)
 		jz4750_lcd_info->osd.fg1.bpp = 32;
 		break;
 	default:
-		printk("jz4750fb fg1 not support bpp(%d), force to 32bpp\n", 
+		printk("jz4750fb fg1 not support bpp(%d), force to 32bpp\n",
 		       jz4750_lcd_info->osd.fg1.bpp);
 		jz4750_lcd_info->osd.fg1.bpp = 32;
 	}
@@ -3028,7 +2730,7 @@ static int __init jz4750fb_init(void)
 	jz4750fb_change_clock(jz4750_lcd_info);
 	__lcd_display_pin_init();
 	//__lcd_slcd_special_on();
-	
+
 	cfb = jz4750fb_alloc_fb_info();
 	if (!cfb)
 		goto failed;
@@ -3046,7 +2748,7 @@ static int __init jz4750fb_init(void)
 
 	//move here
 	//__lcd_slcd_special_on();
-	
+
 
 	err = register_framebuffer(&cfb->fb);
 	if (err < 0) {
@@ -3111,15 +2813,15 @@ static int __init jz4750fb_init(void)
 	{
 		//res->owner = THIS_MODULE;
 		res->read_proc = proc_lcd_backlight_read_proc;
-		res->write_proc = proc_lcd_backlight_write_proc;	
-	}	
+		res->write_proc = proc_lcd_backlight_write_proc;
+	}
 
 	res1 = create_proc_entry("jz/tvout", 0, NULL);
 	if(res1)
 	{
 		//res1->owner = THIS_MODULE;
 		res1->read_proc = proc_tvout_read_proc;
-		res1->write_proc = proc_tvout_write_proc;	
+		res1->write_proc = proc_tvout_write_proc;
 	}
 
 
@@ -3128,7 +2830,7 @@ static int __init jz4750fb_init(void)
 	{
 		//res3->owner = THIS_MODULE;
 		res3->read_proc = proc_lcd_flush_read_proc;
-		res3->write_proc = proc_lcd_flush_write_proc;	
+		res3->write_proc = proc_lcd_flush_write_proc;
         }
 
 	//maddrone add ipu driver init
