@@ -56,6 +56,11 @@
  */
 #define GPIO_LCD_PWM		(32*4+22)	/* GPE22 PWM2 */ 
 #define PWM_CHN			2		/* pwm channel */
+
+#define LCD_MAX_BACKLIGHT	100
+#define LCD_MIN_BACKLIGHT	1
+#define LCD_DEFAULT_BACKLIGHT	80
+
 #define LCD_PWM_FULL		101
 /* 100 level: 0,1,...,100 */
 #define __lcd_set_backlight_level(n)			\
