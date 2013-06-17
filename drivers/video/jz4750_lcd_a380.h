@@ -368,6 +368,11 @@ do { \
 	#define SPCK		(32*4+9)       /*LCD_SCL*/
 	#define SPDA		(32*4+1)       /*LCD_SDA*/
 	#define LCD_RET 	(32*4+3)       /*LCD_DISP_N use for lcd reset*/
+#elif  defined(CONFIG_JZ4750_LCD_INNOLUX_PT035TN01_SERIAL)/* board RZX50 */
+	#define SPEN		(32*3+22)       /*LCD_CS*/
+	#define SPCK		(32*4+13)       /*LCD_SCL*/
+	#define SPDA		(32*4+12)       /*LCD_SDA*/
+	#define LCD_RET 	(32*4+2)       /*LCD_DISP_N use for lcd reset*/
 #else
 #error "driver/video/Jzlcd.h, please define SPI pins on your board."
 #endif
@@ -404,7 +409,7 @@ do { \
 
 	#define __spi_write_reg(reg, val) \
 	do {\
-		__spi_write_reg1((reg<<2|2), val); \
+		__spi_write_reg1((reg), val); \
 		udelay(100); \
 	}while(0)
 
@@ -662,6 +667,7 @@ static void SlcdInit(void)
 #else
 #error "Define special lcd pins for your platform."
 #endif
+
 #define __lcd_slcd_pin_init()						\
 	do {								\
 		__gpio_as_output(PIN_RD_N); /* RD#: LCD_REV */		\
@@ -734,9 +740,10 @@ do { \
 } while (0)
 #define __lcd_display_on() \
 do { \
-	__gpio_set_pin(GPIO_LCD_VCC_EN_N);	\
+	__gpio_clear_pin(GPIO_LCD_VCC_EN_N);	\
 	__lcd_special_on();			\
 	__lcd_set_backlight_level(80);		\
+	__gpio_set_pin(GPIO_LCD_VCC_EN_N);	\
 } while (0)
 
 #define __lcd_display_off() \
@@ -745,15 +752,20 @@ do { \
 	__lcd_special_off();	 \
 } while (0)
 
-#elif defined(CONFIG_JZ4750D_A380)/* board A380 */
+#elif defined(CONFIG_JZ4750D_A380) || \
+      defined(CONFIG_JZ4750D_RZX50) /* board A380 or RZX50 */
 #define __lcd_display_pin_init() \
 do { \
 	__gpio_as_output(GPIO_LCD_VCC_EN_N);	 \
+	__gpio_as_output(GPIO_LCD_PWM);	 \
+	__lcd_special_pin_init();	   \
 } while (0)
 #define __lcd_display_on() \
 do { \
+	__lcd_special_on();	\
+	__lcd_set_backlight_level(60);		\
+	mdelay(300); \
 	__gpio_set_pin(GPIO_LCD_VCC_EN_N);	\
-	__lcd_special_on();			\
 } while (0)
 
 #define __lcd_display_off() \

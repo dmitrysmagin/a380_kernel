@@ -207,6 +207,9 @@ struct jz4750lcd_info {
 
 #define __lcd_special_pin_init()		\
 	do {						\
+		__gpio_as_output(SPEN); /* use SPDA */	\
+		__gpio_as_output(SPCK); /* use SPCK */	\
+		__gpio_as_output(SPDA); /* use SPDA */	\
 		__gpio_as_output(LCD_RET);		\
 		udelay(50);				\
 		__gpio_clear_pin(LCD_RET);		\
@@ -365,7 +368,7 @@ do { \
 	#define SPCK		(32*4+9)       /*LCD_SCL*/
 	#define SPDA		(32*4+1)       /*LCD_SDA*/
 	#define LCD_RET 	(32*4+3)       /*LCD_DISP_N use for lcd reset*/
-#elif  defined(CONFIG_JZ4750_LCD_INNOLUX_PT035TN01_SERIAL)/* board L350 */
+#elif  defined(CONFIG_JZ4750_LCD_INNOLUX_PT035TN01_SERIAL)/* board RZX50 */
 	#define SPEN		(32*3+22)       /*LCD_CS*/
 	#define SPCK		(32*4+13)       /*LCD_SCL*/
 	#define SPDA		(32*4+12)       /*LCD_SDA*/
@@ -412,23 +415,23 @@ do { \
 
 	#define __lcd_special_pin_init() \
 	do { \
+		__gpio_as_output(SPEN); /* use SPDA */\
+		__gpio_as_output(SPCK); /* use SPCK */\
+		__gpio_as_output(SPDA); /* use SPDA */\
 		__gpio_as_output(LCD_RET);\
 		udelay(50);\
 		__gpio_clear_pin(LCD_RET);\
 		mdelay(150);\
 		__gpio_set_pin(LCD_RET);\
 	} while (0)
-	#define __lcd_test_mode(val) \
-	do { \
-		__spi_write_reg(0x02,val); \
-	}while(0)
-
 
 	#define __lcd_special_on() \
 	do { \
-		; \
-	} while (0)
-#if 0
+		udelay(50);\
+		__gpio_clear_pin(LCD_RET);\
+		mdelay(150);\
+		__gpio_set_pin(LCD_RET);\
+		mdelay(10);\
 		__spi_write_reg(0x00, 0x03); \
 		__spi_write_reg(0x01, 0x40); \
 		__spi_write_reg(0x02, 0x11); \
@@ -443,7 +446,7 @@ do { \
 		__spi_write_reg(0x0C, 0x20); \
 		__spi_write_reg(0x0D, 0x20); \
 	} while (0)	//reg 0x0a is control the display direction:DB0->horizontal level DB1->vertical level
-#endif
+
 /*		__spi_write_reg(0x02, 0x03); \
 		__spi_write_reg(0x06, 0x40); \
 		__spi_write_reg(0x0a, 0x11); \
@@ -749,7 +752,8 @@ do { \
 	__lcd_special_off();	 \
 } while (0)
 
-#elif defined(CONFIG_JZ4750D_RZX50)/* board RZX50 */
+#elif defined(CONFIG_JZ4750D_A380) || \
+      defined(CONFIG_JZ4750D_RZX50) /* board A380 or RZX50 */
 #define __lcd_display_pin_init() \
 do { \
 	__gpio_as_output(GPIO_LCD_VCC_EN_N);	 \
