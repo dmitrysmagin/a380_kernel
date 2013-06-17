@@ -34,28 +34,8 @@
 #include <asm/processor.h>
 #include <asm/jzsoc.h>
 
-#if defined(CONFIG_FB_JZ4750_LCD_A380)
-#include "jz4750_lcd_a380.h"
-#elif defined(CONFIG_FB_JZ4750_LCD_RZX50)
-#include "jz4750_lcd_rzx50.h"
-#else
 #include "jz4750_lcd.h"
-#endif
-
 #include "jz4750_ipu.h"
-
-
-
-#if 0
-#if defined CONFIG_SOC_JZ4750
-#include <asm/mach-jz4750/jz4750.h>
-#include <asm/mach-jz4750/regs.h>
-#include <asm/mach-jz4750/ops.h>
-#elif defined CONFIG_SOC_JZ4760
-#include <asm/mach-jz4760/jz4760.h>
-#endif
-#endif
-
 
 #define IPU_DBG
 //#undef  IPU_DBG

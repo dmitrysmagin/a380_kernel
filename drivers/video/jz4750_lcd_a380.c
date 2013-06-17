@@ -52,7 +52,7 @@
 
 #include "console/fbcon.h"
 
-#include "jz4750_lcd_a380.h"
+#include "jz4750_lcd.h"
 #include "jz4750_tve.h"
 
 #ifdef CONFIG_JZ4750_SLCD_KGM701A3_TFT_SPFD5420A
