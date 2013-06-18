@@ -65,7 +65,6 @@
 
 //maddrone add
 #include "lockpic.h"
-#include "L009_scale.h"
 
 //maddrone add
 extern unsigned char *vmfbmem_addr;
@@ -589,54 +588,45 @@ static struct task_struct * resize_task;
 unsigned short *frame_dst;
 unsigned short *frame_src;
 
-#define GET_R(temp) temp>>11
-#define GET_G(temp) (temp&0x7e0)>>5
-#define GET_B(temp) (temp&0x1f)
-#define CREATE_RGB(r,g,b) (r << 11) | (g << 5) | b
-
 static void fb2x(void)
 {
+	#define TV_OUT_WEIGHT 640
+	#define TV_OUT_HEIGHT 480
+	#define SCREEN_WEIGHT 400
+	#define SCREEN_HEIGHT 240
+	#define FRACTION_STEP 0x10000
+	unsigned short *lcd_frame_temp;
+	const unsigned int x_fraction = SCREEN_WEIGHT*FRACTION_STEP/TV_OUT_WEIGHT;
+	const unsigned int y_fraction = SCREEN_HEIGHT*FRACTION_STEP/TV_OUT_HEIGHT;
+	unsigned int x_temp = 0;
+	unsigned int y_temp = 0;
 	int i,j;
-	int r,g,b;
-	int r1,g1,b1;
-	int r2,g2,b2;
-	int r3,g3,b3;
-	int r4,g4,b4;
-	int temp = 0;
-	int temp_y = 0;
-	int k = 0;
-	register int tmp_x_y;
 
 	frame_dst = (unsigned short *)lcd_frame01;
 	frame_src = (unsigned short *)lcd_frame0;
 
-	for(i =0; i < 480; i++) {
-		temp_y = y_dest_array[i]*400;
-		for(j = 0; j < 640; j++) {
-			temp = frame_src[x_dest_array[j]+temp_y];
-			r1 = GET_R(temp);
-			g1 = GET_G(temp);
-			b1 = GET_B(temp);
-			temp = frame_src[x_dest_array[j] + 1 + temp_y];
-			r2 = GET_R(temp);
-			g2 = GET_G(temp);
-			b2 = GET_B(temp);
-			temp = frame_src[x_dest_array[j] +temp_y +400];
-			r3 = GET_R(temp);
-			g3 = GET_G(temp);
-			b3 = GET_B(temp);
-			temp = frame_src[x_dest_array[j] + 1 +temp_y +400];
-			r4 = GET_R(temp);
-			g4 = GET_G(temp);
-			b4 = GET_B(temp);
+	y_temp = y_fraction;
 
-			tmp_x_y= i*640+j;
-
-			r =  (u_1_v_1_dest_array[tmp_x_y]*r1+u_v_1_dest_array[tmp_x_y]*r2 + u_1_v_dest_array[tmp_x_y]*r3+ u_v_dest_array[tmp_x_y]*r4) >> 4;
-			g =  (u_1_v_1_dest_array[tmp_x_y]*g1+u_v_1_dest_array[tmp_x_y]*g2 + u_1_v_dest_array[tmp_x_y]*g3+ u_v_dest_array[tmp_x_y]*g4) >> 4;
-			b =  (u_1_v_1_dest_array[tmp_x_y]*b1+u_v_1_dest_array[tmp_x_y]*b2 + u_1_v_dest_array[tmp_x_y]*b3+ u_v_dest_array[tmp_x_y]*b4) >> 4;
-
-			frame_dst[k++] = CREATE_RGB(r,g,b);
+	for(j = 0; j < TV_OUT_HEIGHT; j++) {
+		y_temp += y_fraction;
+		if(y_temp >= FRACTION_STEP) {
+			y_temp -= FRACTION_STEP;
+			//scale horiontal
+			x_temp = x_fraction;
+			for(i = 0; i < TV_OUT_WEIGHT; i++) {
+				x_temp += x_fraction;
+				*frame_dst = *frame_src;
+				if(x_temp >= FRACTION_STEP) {
+					frame_src++;
+					x_temp -= FRACTION_STEP;
+				}
+				frame_dst++;
+			}
+		} else {
+			lcd_frame_temp = frame_dst - TV_OUT_WEIGHT;
+			for(i = 0; i < TV_OUT_WEIGHT; i++) {
+				*frame_dst++ = *lcd_frame_temp++;
+			}
 		}
 	}
 }
