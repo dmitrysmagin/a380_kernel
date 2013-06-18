@@ -715,8 +715,8 @@ static void jz4750lcd_info_switch_to_TVE(int mode)
 		//y = ((TVE_HEIGHT_PAL - h) >> 2) << 1;
 #ifdef TVOUT_2x
 		x = (TVE_WIDTH_NTSC - 640)/2;
-		//y = (TVE_HEIGHT_NTSC- 480)/2;
-		y = 2;//y must be even
+		y = (TVE_HEIGHT_NTSC- 480)/2;
+		y = 2;
 #else
 		x = (TVE_WIDTH_PAL - w)/2;
 		y = (TVE_HEIGHT_PAL - h)/2;
@@ -765,7 +765,7 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 		break;
 	case FBIODISPOFF:
 		__lcd_display_off();
-		#if 1
+
 		if ( jz4750_lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD ||
 			jz4750_lcd_info->panel.cfg & LCD_CFG_TVEN ) /*  */
 			__lcd_clr_ena(); /* Smart lcd and TVE mode only support quick disable */
@@ -781,7 +781,6 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 				printk("LCD disable timeout! REG_LCD_STATE=0x%08xx\n",REG_LCD_STATE);
 			REG_LCD_STATE &= ~LCD_STATE_LDD;
 		}
-		#endif
 		break;
 	case FBIOPRINT_REG:
 		print_lcdc_registers();
@@ -793,24 +792,23 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 		break;
 	case FBIO_SET_MODE:
 		print_dbg("fbio set mode\n");
-		#if 1
+
 		if (copy_from_user(jz4750_lcd_info, argp, sizeof(struct jz4750lcd_info)))
 			return -EFAULT;
 		/* set mode */
 		jz4750fb_set_mode(jz4750_lcd_info);
-		#endif
+
 		break;
 	case FBIO_DEEP_SET_MODE:
 		print_dbg("fbio deep set mode\n");
-		#if 1
+
 		if (copy_from_user(jz4750_lcd_info, argp, sizeof(struct jz4750lcd_info)))
 			return -EFAULT;
-		//jz4750fb_deep_set_mode(jz4750_lcd_info);
-		#endif
+		jz4750fb_deep_set_mode(jz4750_lcd_info);
+
 		break;
 #ifdef CONFIG_FB_JZ4750_TVE
 	case FBIO_MODE_SWITCH:
-		//print_dbg("lcd mode switch between tve and lcd, arg=%lu\n", arg);
 		printk("lcd mode switch between tve and lcd, arg=%lu\n", arg);
 		switch ( arg ) {
 		case PANEL_MODE_TVE_PAL: 	/* switch to TVE_PAL mode */
@@ -872,7 +870,7 @@ static int jz4750fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	unsigned long start;
 	unsigned long off;
 	u32 len;
-	print_dbg("the smem_start is 0x%x\n",cfb->fb.fix.smem_start);
+
 	off = vma->vm_pgoff << PAGE_SHIFT;
 	//fb->fb_get_fix(&fix, PROC_CONSOLE(info), info);
 
@@ -1019,7 +1017,6 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 		var->height = 272;
 		var->width = 480;
 	}
-	print_dbg("var->height is %d var->width is %d\n",var->height,var->width);
 
 	var->bits_per_pixel	    = lcd_info->osd.fg0.bpp;
 
@@ -1161,7 +1158,7 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 
 	cfb->fb.var = *var;
 	cfb->fb.var.activate &= ~FB_ACTIVATE_ALL;
-	print_dbg("cfb->fb.fix.line_length is %d\n",cfb->fb.fix.line_length);
+
 	/*
 	 * Update the old var.  The fbcon drivers still use this.
 	 * Once they are using cfb->fb.var, this can be dropped.
@@ -1519,11 +1516,10 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 	if(lcd_info->panel.cfg & LCD_CFG_TVEN) {
 		unsigned int frame_size0;
 #ifdef TVOUT_2x
-		print_dbg("tvout_640_480 is %d\n",tvout_640_480);
 		if(tvout_640_480)
-		dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
+			dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
 		else
-		dma0_desc0->databuf = virt_to_phys((void *)lcd_frame01);
+			dma0_desc0->databuf = virt_to_phys((void *)lcd_frame01);
 
 		dma0_desc0->frame_id = (unsigned int)0x0000da00; /* DMA0'0 */
 		//maddrone
@@ -1790,8 +1786,7 @@ static void jz4750fb_foreground_resize( struct jz4750lcd_info * lcd_info )
 	 * to simplified operation, fg.y and fg.h should be even number always.
 	 *
 	 */
-	print_dbg("the fg0x is %d fg0y is %d fg0w is %d fgoh is %d\n",lcd_info->osd.fg0.x,lcd_info->osd.fg0.y,lcd_info->osd.fg0.w,lcd_info->osd.fg0.h);
-	print_dbg("the fg1x is %d fg1y is %d fg1w is %d fg1h is %d\n",lcd_info->osd.fg1.x,lcd_info->osd.fg1.y,lcd_info->osd.fg1.w,lcd_info->osd.fg1.h);
+
 	/* Foreground 0  */
 	if ( lcd_info->osd.fg0.x >= lcd_info->panel.w )
 		lcd_info->osd.fg0.x = lcd_info->panel.w;
@@ -1941,7 +1936,6 @@ static void jz4750fb_change_clock( struct jz4750lcd_info * lcd_info )
 		//pclk = 12000000;
 		pclk = 22000000;
 		val = __cpm_get_pllout2() / pclk; /* pclk */
-		printk("carlos tve: pllout2 = %d plck is %d\n", __cpm_get_pllout2(),pclk);
 		val--;
 		dprintk("ratio: val = %d\n", val);
 		if ( val > 0x7ff ) {
@@ -2014,22 +2008,9 @@ static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info )
 	int cnt = 0xfffe;
 
 	printk("In jz4750fb_deep_set_mode  \n");
-	print_dbg("\n");
 
 	__lcd_set_dis(); /* regular disable */
-#define NORMAL_DISABLE 0
-#define  QUICH_DISABLE 0
-#if QUICH_DISABLE
-	while(!__lcd_quick_disable_done() && cnt > 1) {
-		cnt--;
-	}
-#elif  NORMAL_DISABLE
-	while(!__lcd_disable_done() && cnt > 1) {
-		cnt--;
-	}
-#endif
 	mdelay(50);
-	print_dbg("cnt is %d\n",cnt);
 	//__slcd_disable_dma();   //maddrone add
 	lcd_info->osd.fg_change = FG_CHANGE_ALL; /* change FG0, FG1 size, postion??? */
 	jz4750fb_descriptor_init(lcd_info);
@@ -2362,10 +2343,8 @@ static int proc_lcd_flush_write_proc(
 			struct file *file, const char *buffer,
 			unsigned long count, void *data)
 {
-	//printk("%s %d  tvout_flag is %d\n",__FILE__,__LINE__,tvout_flag);
 	if(tvout_flag == 0) {
 		lcd_flush_flag =  simple_strtoul(buffer, 0, 10);
-		//printk("%s %d  lcd_flush_flag is %d\n",__FILE__,__LINE__,lcd_flush_flag);
 
 		if(lcd_flush_flag == 1) { //start flush
 			dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
@@ -2374,7 +2353,6 @@ static int proc_lcd_flush_write_proc(
 			dma_cache_wback((unsigned int)(lcd_frame01), 480 * 272 * 2);
 			dma0_desc0->databuf = virt_to_phys((void *)lcd_frame01);
 		}
-		//jz4750fb_deep_set_mode(jz4750_lcd_info);
 	}
 
 	return count;
@@ -2506,11 +2484,6 @@ static int __init jz4750fb_init(void)
 	err = jz4750fb_map_smem(cfb);
 	if (err)
 		goto failed;
-
-	// logo display could be put here
-	//int p = 0;
-	//for(; p < 240; p++)
-	//	memcpy((unsigned char *)lcd_frame0 + p * 480*2,(unsigned char *)l009_bootpic + p * 400*2, 400 * 2);
 
 	jz4750fb_deep_set_mode( jz4750_lcd_info );
 
