@@ -183,8 +183,12 @@ static int proc_amp_write_proc(
 			//printk("sound on\n");
 			if(hp_in == 0)
 			__gpio_set_pin(GPIO_AMPEN);
+
+#ifdef CONFIG_JZ4750D_A380
+			__gpio_set_pin(GPIO_HP_OFF);
+#else /* CONFIG_JZ4750D_RZX50 */
 			__gpio_clear_pin(GPIO_HP_OFF);
-		//	__gpio_set_pin(GPIO_HP_OFF);
+#endif
 			is_close_amp_hp = 0;
 
 		}
@@ -194,9 +198,12 @@ static int proc_amp_write_proc(
 			//if(hp_in == 0)
 			__gpio_clear_pin(GPIO_AMPEN);
 
+#ifdef CONFIG_JZ4750D_A380
+			__gpio_clear_pin(GPIO_HP_OFF);
+#else /* CONFIG_JZ4750D_RZX50 */
 			__gpio_set_pin(GPIO_HP_OFF);
 			__gpio_set_pin(GPIO_HP_OFF);
-		//	__gpio_clear_pin(GPIO_HP_OFF);
+#endif
 			is_close_amp_hp = 1;
 
 		}
