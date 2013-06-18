@@ -1358,8 +1358,11 @@ static int jz_i2s_ioctl_mixdev(struct inode *inode, struct file *file, unsigned 
         {
           //clear the amp and hp pin 
           __gpio_clear_pin(GPIO_AMPEN);
-          //__gpio_clear_pin(GPIO_HP_OFF);
+#ifdef CONFIG_JZ4750D_A380
+          __gpio_clear_pin(GPIO_HP_OFF);
+#else /* CONFIG_JZ4750D_RZX50 */
           __gpio_set_pin(GPIO_HP_OFF);
+#endif
         }
         else if(val > 0 && (last_val == 0 || is_close_amp_hp))
         {
@@ -1370,8 +1373,11 @@ static int jz_i2s_ioctl_mixdev(struct inode *inode, struct file *file, unsigned 
             __gpio_set_pin(GPIO_AMPEN);
 
           }
-          //__gpio_set_pin(GPIO_HP_OFF);
+#ifdef CONFIG_JZ4750D_A380
+          __gpio_set_pin(GPIO_HP_OFF);
+#else /* CONFIG_JZ4750D_RZX50 */
           __gpio_clear_pin(GPIO_HP_OFF);
+#endif
         }
         last_val = val; 
 		codec_ioctrl(codec, CODEC_SET_VOLUME, val);
