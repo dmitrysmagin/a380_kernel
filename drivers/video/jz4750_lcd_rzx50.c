@@ -835,7 +835,8 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 
 		if (copy_from_user(jz4750_lcd_info, argp, sizeof(struct jz4750lcd_info)))
 			return -EFAULT;
-		jz4750fb_deep_set_mode(jz4750_lcd_info);
+		// this causes mplayer to freeze, investigate later
+		//jz4750fb_deep_set_mode(jz4750_lcd_info);
 
 		break;
 #ifdef CONFIG_FB_JZ4750_TVE
