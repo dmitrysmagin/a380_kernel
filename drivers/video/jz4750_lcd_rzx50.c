@@ -1964,7 +1964,6 @@ static void jz4750fb_change_clock( struct jz4750lcd_info * lcd_info )
 		REG_CPM_LPCDR  |= CPM_LPCDR_LTCS;  //maddrone add
 		REG_CPM_CPCCR |= CPM_CPCCR_CE ; /* update divide */
 	} else {		/* LCDC output to  LCD panel */
-		pclk = 22000000;
 		val = __cpm_get_pllout2() / pclk; /* pclk */
 		val--;
 		dprintk("ratio: val = %d\n", val);
@@ -2516,7 +2515,7 @@ static int __init jz4750fb_init(void)
 	__lcd_clr_ena();
 
 	/* Configure SLCD module for setting smart lcd control registers */
-#if 0
+#ifdef CONFIG_FB_JZ4750_SLCD
 		__lcd_display_on();
 		__lcd_as_smart_lcd();
 		__slcd_disable_dma();
