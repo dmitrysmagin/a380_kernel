@@ -194,9 +194,6 @@ static void jz_kbd_poll (struct input_polled_dev *dev)
 		{
 			if (!__gpio_get_pin(jz_button[i].gpio)) s |= m;
 		}
-		else if(i == 11)
-		{
-		}
 		else
 		{
 			if (__gpio_get_pin(jz_button[i].gpio)) s |= m;
