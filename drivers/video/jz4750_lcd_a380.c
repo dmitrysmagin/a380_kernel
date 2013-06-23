@@ -1074,9 +1074,9 @@ static struct fb_ops jz4750fb_ops = {
 	.fb_set_par 		= jz4750fb_set_par,
 	.fb_blank		= jz4750fb_blank,
 	.fb_pan_display		= jz4750fb_pan_display,
-	.fb_fillrect		= cfb_fillrect,
-	.fb_copyarea		= cfb_copyarea,
-	.fb_imageblit		= cfb_imageblit,
+	.fb_fillrect		= sys_fillrect,
+	.fb_copyarea		= sys_copyarea,
+	.fb_imageblit		= sys_imageblit,
 	.fb_mmap		= jz4750fb_mmap,
 	.fb_ioctl		= jz4750fb_ioctl,
 };
