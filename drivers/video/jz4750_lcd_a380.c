@@ -933,11 +933,61 @@ static int jz4750fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	return 0;
 }
 
+#define MAKENAME(X,Y) #X "x" #Y
+
+static struct fb_videomode video_modes[] = {
+	{
+		.name = MAKENAME(SCREEN_WIDTH, SCREEN_HEIGHT),
+		.xres = SCREEN_WIDTH,
+		.yres = SCREEN_HEIGHT,
+		.vmode = FB_VMODE_NONINTERLACED,
+	},
+};
+
 /* checks var and eventually tweaks it to something supported,
  * DO NOT MODIFY PAR */
 static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
-	//printk("jz4750fb_check_var, not implement\n");
+	struct fb_videomode *mode = &video_modes[0];
+
+	printk("Requesting mode %i x %i x %i\n",
+		var->xres,
+		var->yres,
+		var->bits_per_pixel);
+
+	if (var->bits_per_pixel != 16)
+		return -EINVAL;
+
+	if (var->xres != mode->xres)
+		return -EINVAL;
+
+	if (var->yres != mode->yres)
+		return -EINVAL;
+
+	printk("Found working mode: %s\n", mode->name);
+
+	fb_videomode_to_var(var, mode);
+
+	/* Reserve space for double buffering. */
+	var->yres_virtual = var->yres * 2;
+
+	if (var->bits_per_pixel == 16) {
+		var->transp.length = 0;
+		var->blue.length = var->red.length = 5;
+		var->green.length = 6;
+		var->transp.offset = 0;
+		var->red.offset = 11;
+		var->green.offset = 5;
+		var->blue.offset = 0;
+	} else {
+		var->transp.offset = 24;
+		var->red.offset = 16;
+		var->green.offset = 8;
+		var->blue.offset = 0;
+		var->transp.length = var->red.length =
+		var->green.length = var->blue.length = 8;
+	}
+
 	return 0;
 }
 
