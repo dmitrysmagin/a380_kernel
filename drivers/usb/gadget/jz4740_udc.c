@@ -29,7 +29,6 @@
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/interrupt.h>
-#include <linux/timer.h>
 #include <linux/proc_fs.h>
 #include <linux/usb.h>
 #include <linux/usb/gadget.h>
@@ -41,10 +40,6 @@
 #include <asm/jzsoc.h>
 
 #include "jz4740_udc.h"
-
-#ifdef CONFIG_JZ_UDC_HOTPLUG
-#include "udc_hotplug.c"
-#endif
 
 //#define DEBUG(fmt,args...) printk(KERN_DEBUG fmt , ## args)
 //#define DEBUG(fmt,args...) printk(fmt , ## args)
@@ -62,11 +57,22 @@
 # define DEBUG_SETUP(fmt,args...) do {} while(0)
 #endif
 
+//#undef DEBUG
+//#define DEBGU printk
+
+static unsigned int udc_debug = 0; /* 0: normal mode, 1: test udc cable type mode */
+
+module_param(udc_debug, int, 0);
+MODULE_PARM_DESC(udc_debug, "test udc cable or power type");
+
 static unsigned int use_dma = 1;   /* 1: use DMA, 0: use PIO */
 
 module_param(use_dma, int, 0);
 MODULE_PARM_DESC(use_dma, "DMA mode enable flag");
 
+#ifdef CONFIG_JZ_UDC_HOTPLUG
+extern int jz_udc_active; /* 0: No actions; 1: Have actions */
+#endif
 
 /*
  *  Local definintions.
@@ -93,26 +99,10 @@ static char *state_names[] = {
 };
 #endif
 
-//#define TEST_ON_WIN7
-#ifdef TEST_ON_WIN7
-/* used for WIN7 OR VISTA TEST */
-static unsigned int out_flag = 0;
-struct timer_list irq_timer;
-static void irq_timer_func(unsigned long data)
-{
-
-	if (out_flag) {
-		out_flag = 0;
-		printk(" PC removed???.\n");
-	}
-}
-#endif
-
-
 /*
  * Local declarations.
  */
-static int jz4740_ep_enable(struct usb_ep *_ep, 
+static int jz4740_ep_enable(struct usb_ep *_ep,
 			    const struct usb_endpoint_descriptor *desc);
 static int jz4740_ep_disable(struct usb_ep *_ep);
 static struct usb_request *jz4740_alloc_request(struct usb_ep *_ep, gfp_t gfp_flags);
@@ -124,7 +114,7 @@ static int jz4740_set_halt(struct usb_ep *_ep, int value);
 static int jz4740_fifo_status(struct usb_ep *_ep);
 static void jz4740_fifo_flush(struct usb_ep *_ep);
 
-static void jz4740_ep0_kick(struct jz4740_udc *dev, struct jz4740_ep *ep, struct usb_request *req);
+static void jz4740_ep0_kick(struct jz4740_udc *dev, struct jz4740_ep *ep);
 static void jz4740_handle_ep0(struct jz4740_udc *dev, u32 intr);
 
 static void done(struct jz4740_ep *ep, struct jz4740_request *req,
@@ -158,7 +148,6 @@ static struct usb_ep_ops jz4740_ep_ops = {
 	.fifo_status	= jz4740_fifo_status,
 	.fifo_flush	= jz4740_fifo_flush,
 };
-
 
 /*-------------------------------------------------------------------------*/
 
@@ -235,7 +224,7 @@ static __inline__ void usb_clearl(u32 port, u32 val)
 static __inline__ int write_packet(struct jz4740_ep *ep,
 				   struct jz4740_request *req, int max)
 {
-	u8 *buf;	
+	u8 *buf;
 	int length, nlong, nbyte;
 	volatile u32 *fifo = (volatile u32 *)ep->fifo;
 
@@ -261,13 +250,12 @@ static __inline__ int write_packet(struct jz4740_ep *ep,
 	return length;
 }
 
-static __inline__ int read_packet(struct jz4740_ep *ep, 
+static __inline__ int read_packet(struct jz4740_ep *ep,
 				  struct jz4740_request *req, int count)
 {
 	u8 *buf;
 	int length, nlong, nbyte;
 	volatile u32 *fifo = (volatile u32 *)ep->fifo;
-	char *tmp = req->req.buf;
 
 	buf = req->req.buf + req->req.actual;
 	prefetchw(buf);
@@ -288,10 +276,6 @@ static __inline__ int read_packet(struct jz4740_ep *ep,
 		*buf++ = *((volatile u8 *)fifo);
 	}
 
-#ifdef  TEST_ON_WIN7
-	if (tmp[15] == 0x35)
-		out_flag = 1;
-#endif
 	return length;
 }
 
@@ -411,49 +395,9 @@ static void udc_enable(struct jz4740_udc *dev)
 	 * transistor on and pull the USBDP pin HIGH.
 	 */
 	usb_setb(USB_REG_POWER, USB_POWER_SOFTCONN);
-
-	
 }
 
 /*-------------------------------------------------------------------------*/
-#ifdef CONFIG_JZ_UDC_HOTPLUG
-static int jz4740_udc_uh_event(struct notifier_block *n, unsigned long val, void *data)
-{
-	struct jz4740_udc *dev = the_controller;
-	unsigned long flags;
-	
-	int state = *((int *)data);
-
-	if (!dev || !dev->driver)
-		return 0;
-
-	switch (val) {
-		case UH_NOTIFY_CABLE_STATE:
-			switch (state) {
-				case UH_CABLE_STATE_OFFLINE:
-				case UH_CABLE_STATE_POWER:
-					spin_lock_irqsave(&dev->lock, flags);
-					stop_activity(dev, dev->driver);
-					spin_unlock_irqrestore(&dev->lock, flags);
-
-					udc_disable(dev);
-
-					break;
-
-				case UH_CABLE_STATE_USB:
-					udc_enable(dev);
-
-					break;
-			}
-	}
-
-	return 0;
-}
-
-static struct notifier_block jz4740_udc_nb = {
-	.notifier_call = jz4740_udc_uh_event,
-};
-#endif
 
 /* keeping it simple:
  * - one bus driver, initted first;
@@ -497,22 +441,18 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 		return retval;
 	}
 
-#ifdef CONFIG_JZ_UDC_HOTPLUG
-	uh_register_notifier(&jz4740_udc_nb);
-#else
 	/* then enable host detection and ep0; and we're ready
 	 * for set_configuration as well as eventual disconnect.
 	 */
 	udc_enable(dev);
-#endif
-
-	DEBUG("%s: registered gadget driver '%s'\n", dev->gadget.name, 
+	DEBUG("%s: registered gadget driver '%s'\n", dev->gadget.name,
 	      driver->driver.name);
 
 	return 0;
 }
 
 EXPORT_SYMBOL(usb_gadget_register_driver);
+
 
 static void stop_activity(struct jz4740_udc *dev,
 			  struct usb_gadget_driver *driver)
@@ -547,6 +487,7 @@ static void stop_activity(struct jz4740_udc *dev,
 	udc_reinit(dev);
 }
 
+
 /*
  * Unregister entry point for the peripheral controller driver.
  */
@@ -559,10 +500,6 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 		return -ENODEV;
 	if (!driver || driver != dev->driver)
 		return -EINVAL;
-
-#ifdef CONFIG_JZ_UDC_HOTPLUG
-	uh_unregister_notifier(&jz4740_udc_nb);
-#endif
 
 	spin_lock_irqsave(&dev->lock, flags);
 	dev->driver = 0;
@@ -603,7 +540,7 @@ static void kick_dma(struct jz4740_ep *ep, struct jz4740_request *req)
 
 		usb_writel(USB_REG_ADDR1, physaddr);
 		usb_writel(USB_REG_COUNT1, count);
-		usb_writel(USB_REG_CNTL1, USB_CNTL_ENA | USB_CNTL_DIR_IN | USB_CNTL_MODE_1 | 
+		usb_writel(USB_REG_CNTL1, USB_CNTL_ENA | USB_CNTL_DIR_IN | USB_CNTL_MODE_1 |
 			   USB_CNTL_INTR_EN | USB_CNTL_BURST_16 | USB_CNTL_EP(ep_index(ep)));
 	}
 	else { /* Bulk-OUT transfer using DMA channel 2 */
@@ -618,7 +555,7 @@ static void kick_dma(struct jz4740_ep *ep, struct jz4740_request *req)
 
 		usb_writel(USB_REG_ADDR2, physaddr);
 		usb_writel(USB_REG_COUNT2, count);
-		usb_writel(USB_REG_CNTL2, USB_CNTL_ENA | USB_CNTL_MODE_1 | 
+		usb_writel(USB_REG_CNTL2, USB_CNTL_ENA | USB_CNTL_MODE_1 |
 			   USB_CNTL_INTR_EN | USB_CNTL_BURST_16 | USB_CNTL_EP(ep_index(ep)));
 	}
 }
@@ -722,9 +659,10 @@ static int read_fifo(struct jz4740_ep *ep, struct jz4740_request *req)
 		u32 dma_count;
 
 		/* DMA interrupt generated due to a packet less than MAXP loaded into the FIFO */
+
 		dma_count = usb_readl(ep->reg_addr) - physaddr;
 		req->req.actual += dma_count;
-		
+
 		/* Disable interrupt and DMA */
 		pio_irq_disable(ep);
 		usb_writel(USB_REG_CNTL2, 0);
@@ -996,7 +934,7 @@ static void jz4740_out_epn(struct jz4740_udc *dev, u32 ep_idx, u32 intr)
 		 * PIO mode starts here ...
 		 */
 
-		while ((csr = usb_readb(ep->csr)) & 
+		while ((csr = usb_readb(ep->csr)) &
 		       (USB_OUTCSR_OUTPKTRDY | USB_OUTCSR_SENTSTALL)) {
 			DEBUG("%s: %x\n", __FUNCTION__, csr);
 
@@ -1225,10 +1163,9 @@ static int jz4740_queue(struct usb_ep *_ep, struct usb_request *_req,
 
 		if (unlikely(ep_index(ep) == 0)) {
 			/* EP0 */
-			usb_set_index(0);
 			list_add_tail(&req->queue, &ep->queue);
-			jz4740_ep0_kick(dev, ep, _req);
-			goto done;
+			jz4740_ep0_kick(dev, ep);
+			req = 0;
 		} else if (use_dma) {
 			/* DMA */
 			kick_dma(ep, req);
@@ -1258,7 +1195,7 @@ static int jz4740_queue(struct usb_ep *_ep, struct usb_request *_req,
 	/* pio or dma irq handler advances the queue. */
 	if (likely(req != 0))
 		list_add_tail(&req->queue, &ep->queue);
-done:
+
 	spin_unlock_irqrestore(&dev->lock, flags);
 
 	return 0;
@@ -1430,10 +1367,6 @@ static int write_fifo_ep0(struct jz4740_ep *ep, struct jz4740_request *req)
 
 	max = ep_maxpacket(ep);
 
-	if (req->req.length == 0) {
-		is_last = 1;
-		goto done;
-	}
 	count = write_packet(ep, req, max);
 
 	/* last packet is usually short (or a zlp) */
@@ -1450,7 +1383,6 @@ static int write_fifo_ep0(struct jz4740_ep *ep, struct jz4740_request *req)
 		  ep->ep.name, count,
 		  is_last ? "/L" : "", req->req.length - req->req.actual, req);
 
-done:
 	/* requests complete when all IN data is in the FIFO */
 	if (is_last) {
 		done(ep, req, 0);
@@ -1488,7 +1420,7 @@ static int read_fifo_ep0(struct jz4740_ep *ep, struct jz4740_request *req)
 {
 	u32 csr;
 	u8 *buf;
-	unsigned bufferspace, count, is_short = 0;
+	unsigned bufferspace, count, is_short;
 	volatile u8 *fifo = (volatile u8 *)ep->fifo;
 
 	DEBUG_EP0("%s\n", __FUNCTION__);
@@ -1497,8 +1429,6 @@ static int read_fifo_ep0(struct jz4740_ep *ep, struct jz4740_request *req)
 	if (!(csr & USB_CSR0_OUTPKTRDY))
 		return 0;
 
-	if (req->req.length == 0)
-		goto done;
 	buf = req->req.buf + req->req.actual;
 	prefetchw(buf);
 	bufferspace = req->req.length - req->req.actual;
@@ -1532,7 +1462,6 @@ static int read_fifo_ep0(struct jz4740_ep *ep, struct jz4740_request *req)
 			bufferspace--;
 		}
 	}
-done:
 
 	/* completion */
 	if (is_short || req->req.actual == req->req.length) {
@@ -1564,7 +1493,7 @@ static void udc_set_address(struct jz4740_udc *dev, unsigned char address)
  *              set USB_CSR0_SVDOUTPKTRDY | USB_CSR0_DATAEND | USB_CSR0_SENDSTALL bits
  *      - else
  *              set USB_CSR0_SVDOUTPKTRDY bit
- 				if last set USB_CSR0_DATAEND bit
+                if last set USB_CSR0_DATAEND bit
  */
 static void jz4740_ep0_out(struct jz4740_udc *dev, u32 csr)
 {
@@ -1580,6 +1509,13 @@ static void jz4740_ep0_out(struct jz4740_udc *dev, u32 csr)
 		req = list_entry(ep->queue.next, struct jz4740_request, queue);
 
 	if (req) {
+		if (req->req.length == 0) {
+			DEBUG_EP0("ZERO LENGTH OUT!\n");
+/*			usb_setb(USB_REG_CSR0, (USB_CSR0_SVDOUTPKTRDY | USB_CSR0_DATAEND)); */
+			usb_setb(USB_REG_CSR0, (USB_CSR0_SVDOUTPKTRDY));
+			dev->ep0state = WAIT_FOR_SETUP;
+			return;
+		}
 		ret = read_fifo_ep0(ep, req);
 		if (ret) {
 			/* Done! */
@@ -1618,6 +1554,11 @@ static int jz4740_ep0_in(struct jz4740_udc *dev, u32 csr)
 		return 0;
 	}
 
+	if (req->req.length == 0) {
+		usb_setb(USB_REG_CSR0, (USB_CSR0_INPKTRDY | USB_CSR0_DATAEND));
+		dev->ep0state = WAIT_FOR_SETUP;
+		return 1;
+	}
 
 	if (req->req.length - req->req.actual == EP0_MAXPACKETSIZE) {
 		/* Next write will end with the packet size, */
@@ -1739,7 +1680,6 @@ static void jz4740_ep0_setup(struct jz4740_udc *dev, u32 csr)
 	struct jz4740_ep *ep = &dev->ep[0];
 	struct usb_ctrlrequest ctrl;
 	int i;
-	int clear = 1;
 
 	DEBUG_SETUP("%s: %x\n", __FUNCTION__, csr);
 
@@ -1817,11 +1757,11 @@ static void jz4740_ep0_setup(struct jz4740_udc *dev, u32 csr)
 				jz4740_set_halt(&qep->ep, 0);
 			}
 			spin_lock(&dev->lock);
-			
+
 			usb_set_index(0);
 
 			/* Reply with a ZLP on next IN token */
-			usb_setb(USB_REG_CSR0, 
+			usb_setb(USB_REG_CSR0,
 				 (USB_CSR0_SVDOUTPKTRDY | USB_CSR0_DATAEND));
 			return;
 		}
@@ -1831,12 +1771,8 @@ static void jz4740_ep0_setup(struct jz4740_udc *dev, u32 csr)
 		break;
 	}
 
-	if (clear) {
-		DEBUG_EP0("Clear OUTPKTRDY.\n");
-		usb_setb(USB_REG_CSR0, USB_CSR0_SVDOUTPKTRDY);
-	}
 	/* gadget drivers see class/vendor specific requests,
-	 * {SET,GET}_{INTERFACE,DESCRIPTOR,CONFIGURATION}, 
+	 * {SET,GET}_{INTERFACE,DESCRIPTOR,CONFIGURATION},
 	 * and more.
 	 */
 	if (likely((u32)dev->driver)) {
@@ -1859,6 +1795,9 @@ static void jz4740_ep0_setup(struct jz4740_udc *dev, u32 csr)
 		}
 		else {
 			DEBUG_SETUP("gadget driver setup ok (%d)\n", ctrl.wLength);
+			if (!ctrl.wLength) {
+				usb_setb(USB_REG_CSR0, USB_CSR0_SVDOUTPKTRDY);
+			}
 		}
 	}
 }
@@ -1980,25 +1919,29 @@ static void jz4740_handle_ep0(struct jz4740_udc *dev, u32 intr)
 	}
 }
 
-static void jz4740_ep0_kick(struct jz4740_udc *dev, struct jz4740_ep *ep, struct usb_request *req)
+static void jz4740_ep0_kick(struct jz4740_udc *dev, struct jz4740_ep *ep)
 {
 	u32 csr;
 
+	usb_set_index(0);
 	csr = usb_readb(USB_REG_CSR0);
 
 	DEBUG_EP0("%s: %x\n", __FUNCTION__, csr);
+
+	/* Clear "out packet ready" */
+	usb_setb(USB_REG_CSR0, USB_CSR0_SVDOUTPKTRDY);
 
 	if (ep_is_in(ep)) {
 		dev->ep0state = DATA_STATE_XMIT;
 		jz4740_ep0_in(dev, csr);
 	} else {
 		dev->ep0state = DATA_STATE_RECV;
-		/* out request will wait for the interrupt except the zero length state */
-		if (!req->length)
-			jz4740_ep0_out(dev, csr);
+		jz4740_ep0_out(dev, csr);
 	}
 }
 
+/** Handle USB RESET interrupt
+ */
 static void jz4740_handle_reset(struct jz4740_udc *dev)
 {
 	udc_set_address(dev, 0);
@@ -2019,8 +1962,8 @@ static void jz4740_handle_reset(struct jz4740_udc *dev)
 	usb_setb(USB_REG_INTRUSBE, USB_INTR_RESET);
 
 	dev->ep0state = WAIT_FOR_SETUP;
-	
-	dev->gadget.speed = (usb_readb(USB_REG_POWER) & USB_POWER_HSMODE) ? 
+
+	dev->gadget.speed = (usb_readb(USB_REG_POWER) & USB_POWER_HSMODE) ?
 		USB_SPEED_HIGH : USB_SPEED_FULL;
 
 	DEBUG_SETUP("%s: address = %d, speed = %s\n", __FUNCTION__, dev->usb_address,
@@ -2044,9 +1987,10 @@ static void jz4740_handle_suspend(struct jz4740_udc *dev)
 	if (dev->gadget.speed != USB_SPEED_UNKNOWN
 			&& dev->driver && dev->driver->suspend)
 		dev->driver->suspend(&dev->gadget);
-	
+
 	return;
 }
+
 
 /*
  *	jz4740 usb device interrupt handler.
@@ -2054,8 +1998,6 @@ static void jz4740_handle_suspend(struct jz4740_udc *dev)
 static irqreturn_t jz4740_udc_irq(int irq, void *_dev)
 {
 	struct jz4740_udc *dev = _dev;
-
-	int do_keep_alive = 1;
 
 	u32 intr_usb = usb_readb(USB_REG_INTRUSB) & 0x7; /* mask SOF */
 	u32 intr_in  = usb_readw(USB_REG_INTRIN);
@@ -2065,23 +2007,34 @@ static irqreturn_t jz4740_udc_irq(int irq, void *_dev)
 	if (!intr_usb && !intr_in && !intr_out && !intr_dma)
 		return IRQ_HANDLED;
 
-	DEBUG("intr_out = %x intr_in=%x intr_usb=%x\n", 
+	DEBUG("intr_out = %x intr_in=%x intr_usb=%x\n",
 	      intr_out, intr_in, intr_usb);
 
 	spin_lock(&dev->lock);
 
 	/* Check for resume from suspend mode */
-	if ((intr_usb & USB_INTR_RESUME) && 
+	if ((intr_usb & USB_INTR_RESUME) &&
 	    (usb_readb(USB_REG_INTRUSBE) & USB_INTR_RESUME)) {
 		DEBUG("USB resume\n");
 		jz4740_handle_resume(dev);
-
-		do_keep_alive = 0;
 	}
 
 	/* Check for system interrupts */
 	if (intr_usb & USB_INTR_RESET) {
 		DEBUG("USB reset\n");
+#ifdef CONFIG_JZ_UDC_HOTPLUG
+		jz_udc_active = 1;
+                printk("%s %d jz_udc_active is %d\n",__FILE__,__LINE__,jz_udc_active);
+
+#endif
+		if (udc_debug) {
+			/* We have tested the cable type, disable module and
+			 * disconnect from host right now.
+			 */
+			udc_disable(dev);
+			spin_unlock(&dev->lock);
+			return IRQ_HANDLED;
+		}
 		jz4740_handle_reset(dev);
 	}
 
@@ -2101,10 +2054,6 @@ static irqreturn_t jz4740_udc_irq(int irq, void *_dev)
 	/* Check for Bulk-OUT DMA interrupt */
 	if (intr_dma & 0x2) {
 		int ep_num;
-#ifdef TEST_ON_WIN7
-		if (out_flag)
-			out_flag = 0;
-#endif
 		ep_num = (usb_readl(USB_REG_CNTL2) >> 4) & 0xf;
 		jz4740_out_epn(dev, ep_num, intr_out);
 	}
@@ -2126,25 +2075,18 @@ static irqreturn_t jz4740_udc_irq(int irq, void *_dev)
 	}
 
 	/* Check for suspend mode */
-	if ((intr_usb & USB_INTR_SUSPEND) && 
+	if ((intr_usb & USB_INTR_SUSPEND) &&
 	    (usb_readb(USB_REG_INTRUSBE) & USB_INTR_SUSPEND)) {
 		DEBUG("USB suspend\n");
-		jz4740_handle_suspend(dev);
 
-		do_keep_alive = 0;
+		jz4740_handle_suspend(dev);
 	}
 
 #ifdef CONFIG_JZ_UDC_HOTPLUG
-	if (do_keep_alive)
-		uh_alive();
+	jz_udc_active = 1;
 #endif
-
+//printk("%s %d jz_udc_active is %d\n",__FILE__,__LINE__,jz_udc_active);
 	spin_unlock(&dev->lock);
-
-#ifdef	TEST_ON_WIN7
-	if (out_flag == 1)
-		mod_timer(&irq_timer, 400+jiffies);
-#endif
 	return IRQ_HANDLED;
 }
 
@@ -2254,8 +2196,6 @@ static struct jz4740_udc udc_dev = {
 	},
 };
 
-
-
 static int jz4740_udc_probe(struct platform_device *pdev)
 {
 	struct jz4740_udc *dev = &udc_dev;
@@ -2263,14 +2203,11 @@ static int jz4740_udc_probe(struct platform_device *pdev)
 
 	DEBUG("%s\n", __FUNCTION__);
 
-#ifdef 	TEST_ON_WIN7
-	setup_timer(&irq_timer, irq_timer_func, 0);
-#endif
-
 	spin_lock_init(&dev->lock);
 	the_controller = dev;
 
 	dev->dev = &pdev->dev;
+	device_initialize(&dev->gadget.dev);
 	dev->gadget.dev.parent = &pdev->dev;
 
 //	strcpy (dum->gadget.dev.init_name, "gadget");
@@ -2291,12 +2228,6 @@ static int jz4740_udc_probe(struct platform_device *pdev)
 
 	printk(KERN_INFO "%s\n", driver_desc);
 	printk(KERN_INFO "version: " DRIVER_VERSION "\n");
-	
-#ifdef CONFIG_JZ_UDC_HOTPLUG
-	uh_setup(pdev);
-
-	printk(KERN_INFO "Support UDC Hotplug.\n");
-#endif
 
 	return 0;
 }
@@ -2308,11 +2239,10 @@ static int jz4740_udc_remove(struct platform_device *pdev)
 
 	if (dev->driver)
 		return -EBUSY;
-	
-	udc_disable(dev);
 
-#ifdef CONFIG_JZ_UDC_HOTPLUG
-	uh_cleanup(pdev);
+	udc_disable(dev);
+#ifdef	UDC_PROC_FILE
+	remove_proc_entry(proc_node_name, NULL);
 #endif
 
 	free_irq(IRQ_UDC, dev);
@@ -2333,6 +2263,8 @@ static struct platform_driver udc_driver = {
 		.owner	= THIS_MODULE,
 	},
 };
+
+
 
 static struct platform_device		the_udc_pdev = {
 	.name		= (char *) gadget_name,
@@ -2355,9 +2287,6 @@ static void __exit udc_exit (void)
 {
 	platform_driver_unregister(&udc_driver);
 	platform_device_unregister(&the_udc_pdev);
-#ifdef TEST_ON_WIN7
-	del_timer(&irq_timer);
-#endif
 }
 
 module_init(udc_init);
