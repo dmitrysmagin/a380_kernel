@@ -665,7 +665,7 @@ void config_dma_trans_mode(spinlock_t lock, audio_dma_type* dma, int sound_data_
 	unsigned long	flags;
 
 	ENTER();
-	AUDIO_LOCK(lock, flags);
+	AUDIO_LOCK(&lock, flags);
 	curmode = *dma->trans_mode;
 	
 	if (dma->rw) {
@@ -708,7 +708,7 @@ void config_dma_trans_mode(spinlock_t lock, audio_dma_type* dma, int sound_data_
 		}
 	}
 
-	AUDIO_UNLOCK(lock, flags);
+	AUDIO_UNLOCK(&lock, flags);
 	DUMP_DMA(dma->ch, __FUNCTION__);
 	DPRINT_DMA("dma_trans = %d\n", dma->onetrans_bit);
 	LEAVE();
@@ -865,9 +865,9 @@ int audio_get_endpoint_freesize(audio_pipe *endpoint, audio_buf_info *info)
 	int count;
 	unsigned long flags;
 
-	AUDIO_LOCK(endpoint->lock, flags);
+	AUDIO_LOCK(&endpoint->lock, flags);
 	count = get_audio_freenodecount(endpoint->mem);
-	AUDIO_UNLOCK(endpoint->lock, flags);
+	AUDIO_UNLOCK(&endpoint->lock, flags);
 	info->fragments = count;
 	info->fragstotal = endpoint->fragstotal;
 	info->fragsize = endpoint->fragsize;
@@ -882,14 +882,14 @@ void audio_clear_endpoint(audio_pipe *endpoint)
 	unsigned long flags;
 
 	ENTER();
-	AUDIO_LOCK(endpoint->lock, flags);
+	AUDIO_LOCK(&endpoint->lock, flags);
 	while (!is_null_use_audio_node(endpoint->mem)) {
 		pusenode = get_audio_usenode(endpoint->mem);
 		if (pusenode) {
 			put_audio_freenode(endpoint->mem, pusenode);
 		}
 	}
-	AUDIO_UNLOCK(endpoint->lock, flags);
+	AUDIO_UNLOCK(&endpoint->lock, flags);
 	LEAVE();
 }
 
@@ -901,9 +901,9 @@ void audio_sync_endpoint(audio_pipe *endpoint)
 	ENTER();
 
 	do {
-		AUDIO_LOCK(endpoint->lock, flags);
+		AUDIO_LOCK(&endpoint->lock, flags);
 		isnull = is_null_use_audio_node(endpoint->mem);
-		AUDIO_UNLOCK(endpoint->lock, flags);
+		AUDIO_UNLOCK(&endpoint->lock, flags);
 		if (!isnull) {
 			//printk("&&&& audio_sync_endpoint\n");
 			schedule_timeout(1);
@@ -920,17 +920,17 @@ void audio_close_endpoint(audio_pipe *endpoint, int mode)
 
 	ENTER();
 
-	AUDIO_LOCK(endpoint->lock, flags);
+	AUDIO_LOCK(&endpoint->lock, flags);
 	is_use_list_null = is_null_use_audio_node(endpoint->mem);
 	trans = endpoint->trans_state & PIPE_TRANS;
-	AUDIO_UNLOCK(endpoint->lock, flags);
+	AUDIO_UNLOCK(&endpoint->lock, flags);
 
 	if (is_use_list_null) {
 		// Wait savenode trans complete
 		while (trans) {
-			AUDIO_LOCK(endpoint->lock, flags);
+			AUDIO_LOCK(&endpoint->lock, flags);
 			trans = endpoint->trans_state & PIPE_TRANS;
-			AUDIO_UNLOCK(endpoint->lock, flags);
+			AUDIO_UNLOCK(&endpoint->lock, flags);
 			DPRINT("waiting savenode\n");
 			if (trans) {
 				schedule_timeout(10);
@@ -955,25 +955,25 @@ void audio_close_endpoint(audio_pipe *endpoint, int mode)
 		audio_sync_endpoint(endpoint);
 		// wait savenode trans finish
 		while (trans) {
-			AUDIO_LOCK(endpoint->lock, flags);
+			AUDIO_LOCK(&endpoint->lock, flags);
 			trans = endpoint->trans_state & PIPE_TRANS;
-			AUDIO_UNLOCK(endpoint->lock, flags);
+			AUDIO_UNLOCK(&endpoint->lock, flags);
 			//printk("waiting savenode\n");
 			if (trans) {
 				schedule_timeout(10);
 			}
 		}
 
-		AUDIO_LOCK(endpoint->lock, flags);
+		AUDIO_LOCK(&endpoint->lock, flags);
 		DUMP_LIST((audio_head *)endpoint->mem);
 		DUMP_NODE(endpoint->savenode, "SN");
-		AUDIO_UNLOCK(endpoint->lock, flags);
+		AUDIO_UNLOCK(&endpoint->lock, flags);
 	} else {
 		// FORCE_STOP routine, both replay and record mode could run
 		audio_node *pusenode;
 
 		// Shutdown DMA immediately and clear lists forcely.
-		AUDIO_LOCK(endpoint->lock, flags);
+		AUDIO_LOCK(&endpoint->lock, flags);
 
 		endpoint->trans_state &= ~PIPE_TRANS;
 		audio_stop_dma_node(&endpoint->dma);
@@ -1008,7 +1008,7 @@ void audio_close_endpoint(audio_pipe *endpoint, int mode)
 		DUMP_LIST((audio_head *)endpoint->mem);
 		DUMP_NODE(endpoint->savenode, "SN");
 
-		AUDIO_UNLOCK(endpoint->lock, flags);
+		AUDIO_UNLOCK(&endpoint->lock, flags);
 	}
 
 _L_AUDIO_CLOSE_EP_RET:
@@ -1033,7 +1033,7 @@ static void handle_in_endpoint_work(audio_pipe *endpoint)
 
 	ENTER();
 
-	AUDIO_LOCK(endpoint->lock, flags);
+	AUDIO_LOCK(&endpoint->lock, flags);
 	if (endpoint->savenode) {
 		DPRINT_Q("\nIIII RRRR QQQQ >>>>\n");
 		DUMP_LIST((audio_head *)endpoint->mem);
@@ -1075,7 +1075,7 @@ static void handle_in_endpoint_work(audio_pipe *endpoint)
 	DUMP_NODE(endpoint->savenode, "SN");
 	DPRINT_Q("IIII RRRR QQQQ <<<<\n\n");
 
-	AUDIO_UNLOCK(endpoint->lock, flags);
+	AUDIO_UNLOCK(&endpoint->lock, flags);
 
 	LEAVE();
 }
@@ -1095,7 +1095,7 @@ static void handle_out_endpoint_work(audio_pipe *endpoint)
 
 	ENTER();
 
-	AUDIO_LOCK(endpoint->lock, flags);
+	AUDIO_LOCK(&endpoint->lock, flags);
 	DPRINT_IRQ("%s endpoint->savenode = 0x%08x\n", __FUNCTION__, (unsigned int)endpoint->savenode);
 
 	if (endpoint->savenode) {
@@ -1125,7 +1125,7 @@ static void handle_out_endpoint_work(audio_pipe *endpoint)
 		DPRINT_IRQ("!!!! Stop AIC !\n");
 	}
 
-	AUDIO_UNLOCK(endpoint->lock, flags);
+	AUDIO_UNLOCK(&endpoint->lock, flags);
 	LEAVE();
 }
 
@@ -2518,9 +2518,9 @@ static inline int endpoint_put_userdata(audio_pipe *endpoint, const char __user 
 	ENTER();
 	DPRINT("<<<< put_userdata\n");
 
-	AUDIO_LOCK(endpoint->lock, flags);
+	AUDIO_LOCK(&endpoint->lock, flags);
 	node = get_audio_freenode(endpoint->mem);
-	AUDIO_UNLOCK(endpoint->lock, flags);
+	AUDIO_UNLOCK(&endpoint->lock, flags);
 
 	// For non-block mode
 	if (endpoint->is_non_block && !node) {
@@ -2532,10 +2532,10 @@ static inline int endpoint_put_userdata(audio_pipe *endpoint, const char __user 
 	while (!node) {
 		DPRINT("wait ----------\n");
 
-		AUDIO_LOCK(endpoint->lock, flags);
+		AUDIO_LOCK(&endpoint->lock, flags);
 		DUMP_LIST((audio_head *)endpoint->mem);
 		DUMP_NODE(endpoint->savenode, "SN");
-		AUDIO_UNLOCK(endpoint->lock, flags);
+		AUDIO_UNLOCK(&endpoint->lock, flags);
 
 		// wait available node
 		do {
@@ -2544,10 +2544,10 @@ static inline int endpoint_put_userdata(audio_pipe *endpoint, const char __user 
 				printk("There is no available node???\n");
 		}while(err == -ERESTARTSYS);
 
-		AUDIO_LOCK(endpoint->lock, flags);
+		AUDIO_LOCK(&endpoint->lock, flags);
 		node = get_audio_freenode(endpoint->mem);
 		endpoint->avialable_couter = 0;
-		AUDIO_UNLOCK(endpoint->lock, flags);
+		AUDIO_UNLOCK(&endpoint->lock, flags);
 	}
 
 	if (copy_from_user((void *)node->pBuf, buffer, count)) {
@@ -2557,9 +2557,9 @@ static inline int endpoint_put_userdata(audio_pipe *endpoint, const char __user 
 	dma_cache_wback_inv((unsigned long)node->pBuf,(unsigned long)count);
 	node->start = 0;
 	node->end = count;
-	AUDIO_LOCK(endpoint->lock, flags);
+	AUDIO_LOCK(&endpoint->lock, flags);
 	put_audio_usenode(endpoint->mem, node);
-	AUDIO_UNLOCK(endpoint->lock, flags);
+	AUDIO_UNLOCK(&endpoint->lock, flags);
 
 	LEAVE();
 
@@ -2640,7 +2640,7 @@ static ssize_t jz_audio_write(struct file *file, const char __user *buffer, size
 	if (usecount > 0) {
 		unsigned long	flags;
 		audio_node	*node;
-		AUDIO_LOCK(pout_endpoint->lock, flags);
+		AUDIO_LOCK(&pout_endpoint->lock, flags);
 		if ((pout_endpoint->trans_state & PIPE_TRANS) == 0) {
 			node = get_audio_usenode(pout_endpoint->mem);
 			if (node) {
@@ -2651,7 +2651,7 @@ static ssize_t jz_audio_write(struct file *file, const char __user *buffer, size
 				}	
 			}
 		}
-		AUDIO_UNLOCK(pout_endpoint->lock, flags);
+		AUDIO_UNLOCK(&pout_endpoint->lock, flags);
 	}
 
 	DPRINT("----write data usecount = %d, count = %d\n", usecount, count);
@@ -2678,9 +2678,9 @@ static inline int endpoint_get_userdata(audio_pipe *endpoint, const char __user 
 
 	ENTER();
 
-	AUDIO_LOCK(endpoint->lock, flags);
+	AUDIO_LOCK(&endpoint->lock, flags);
 	node = get_audio_usenode(endpoint->mem);
-	AUDIO_UNLOCK(endpoint->lock, flags);
+	AUDIO_UNLOCK(&endpoint->lock, flags);
 
 	DPRINT(">>>> %s mode\n", endpoint->is_non_block ? "non block" : "block");
 
@@ -2696,10 +2696,10 @@ static inline int endpoint_get_userdata(audio_pipe *endpoint, const char __user 
 			return -1;
 		}
 
-		AUDIO_LOCK(endpoint->lock, flags);
+		AUDIO_LOCK(&endpoint->lock, flags);
 		DUMP_LIST((audio_head *)endpoint->mem);
 		DUMP_NODE(endpoint->savenode, "SN");
-		AUDIO_UNLOCK(endpoint->lock, flags);
+		AUDIO_UNLOCK(&endpoint->lock, flags);
 
 		DPRINT("record stereo ... wait pipe_sem ----------\n");
 
@@ -2712,10 +2712,10 @@ static inline int endpoint_get_userdata(audio_pipe *endpoint, const char __user 
 				printk("There is no available node\n");
 		}while(err == -ERESTARTSYS); 
 
-		AUDIO_LOCK(endpoint->lock, flags);
+		AUDIO_LOCK(&endpoint->lock, flags);
 		node = get_audio_usenode(endpoint->mem);
 		endpoint->avialable_couter = 0;
-		AUDIO_UNLOCK(endpoint->lock, flags);
+		AUDIO_UNLOCK(&endpoint->lock, flags);
 	}
 
 	if (node && (node_buff_cnt = node->end - node->start)) {
@@ -2791,7 +2791,7 @@ static ssize_t jz_audio_read(struct file *file, char __user *buffer, size_t coun
 
 	pin_endpoint->is_non_block = file->f_flags & O_NONBLOCK;
 
-	AUDIO_LOCK(pin_endpoint->lock, flags);
+	AUDIO_LOCK(&pin_endpoint->lock, flags);
 
 	DUMP_LIST((audio_head *)pin_endpoint->mem);
 	DUMP_NODE(pin_endpoint->savenode, "SN");
@@ -2815,7 +2815,7 @@ static ssize_t jz_audio_read(struct file *file, char __user *buffer, size_t coun
 			}
 		}
 	}
-	AUDIO_UNLOCK(pin_endpoint->lock, flags);
+	AUDIO_UNLOCK(&pin_endpoint->lock, flags);
 
 	DUMP_AIC_REGS(__FUNCTION__);
 	DUMP_CODEC_REGS(__FUNCTION__);

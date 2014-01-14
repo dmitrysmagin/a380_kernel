@@ -1158,7 +1158,7 @@ static irqreturn_t dlv_codec_irq(int irq, void *dev_id)
 {
 	unsigned char reg_9;
 
-	spin_lock(dlv_irq_lock);
+	spin_lock(&dlv_irq_lock);
 
 	/* Clear interrupt flag */
 	reg_9 = dlv_read_reg(9);
@@ -1179,7 +1179,7 @@ static irqreturn_t dlv_codec_irq(int irq, void *dev_id)
 	reg_8 = dlv_read_reg(8);
 	printk("reg_8 = %x, reg_9 = %x\n", reg_8, reg_9);
 */
-	spin_unlock(dlv_irq_lock);
+	spin_unlock(&dlv_irq_lock);
 	return IRQ_HANDLED;
 }
 
