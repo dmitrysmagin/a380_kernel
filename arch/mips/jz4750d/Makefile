@@ -22,4 +22,4 @@ obj-$(CONFIG_PM)			+= pm.o
 
 # CPU Frequency scaling support
 
-obj-$(CONFIG_CPU_FREQ_JZ)       += cpufreq.o
+obj-$(CONFIG_CPU_FREQ)       += cpufreq.o
