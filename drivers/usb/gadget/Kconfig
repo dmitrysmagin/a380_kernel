@@ -764,14 +764,6 @@ config USB_MASS_STORAGE
 	  a dynamically linked module called "g_file_storage".  If unsure,
 	  consider File-backed Storage Gadget.
 
-config UDC_USE_LB_CACHE
-	bool "enable lb cache"
-	depends on USB_FILE_STORAGE && (SOC_JZ4740 || SOC_JZ4750 || SOC_JZ4750D)
-	default y
-	help
-	  say "y" to enable lb cache and UDC work in faster speed.
-	  say "n" to disable lb cache and UDC work in normal speed.
-
 config USB_G_SERIAL
 	tristate "Serial Gadget (with CDC ACM and CDC OBEX support)"
 	help
