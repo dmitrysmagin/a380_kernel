@@ -281,7 +281,7 @@ static int jz4750_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct jz4750_runtime_data *prtd = runtime->private_data;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct jz4750_pcm_dma_params *dma = rtd->dai->cpu_dai->dma_data;
+	struct jz4750_pcm_dma_params *dma = rtd->dai->cpu_dai->playback.dma_data; // or 'capture' ?
 	size_t totbytes = params_buffer_bytes(params);
 	int ret;
 

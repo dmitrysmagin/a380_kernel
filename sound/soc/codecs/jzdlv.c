@@ -10,11 +10,13 @@
 #include <linux/delay.h>
 #include <linux/pm.h>
 #include <linux/platform_device.h>
+#include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
+#include <sound/soc-dai.h>
 #include <sound/initval.h>
 
 #include "../jz4750/jz4750-pcm.h"
@@ -550,7 +552,7 @@ static int jzdlv_pcm_trigger(struct snd_pcm_substream *substream, int cmd, struc
 
 static int jzdlv_pcm_prepare(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
-	/*struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	/*struct snd_soc_pcm_runtime *rtd = substream->drv_data;
 	struct snd_soc_device *socdev = rtd->socdev;
 	struct snd_soc_codec *codec = socdev->card->codec; */
 
@@ -589,7 +591,7 @@ static int jzdlv_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 		int clk_id, unsigned int freq, int dir)
 {
 	struct snd_soc_codec *codec = codec_dai->codec;
-	struct jzdlv_data *jzdlv = codec->private_data;
+	struct jzdlv_data *jzdlv = codec->drvdata;
 
 	jzdlv->sysclk = freq;
 	return 0;
@@ -928,7 +930,7 @@ static int jzdlv_remove(struct platform_device *pdev)
 
 	snd_soc_free_pcms(socdev);
 	snd_soc_dapm_free(socdev);
-	kfree(codec->private_data);
+	kfree(codec->drvdata);
 	kfree(codec);
 
 	return 0;
@@ -949,7 +951,7 @@ static int __init jzdlv_init(void)
 	
 	int rv;
 	
-	codec->private_data = &jzdlv_data;
+	codec->drvdata = &jzdlv_data;
 	rv = jzdlv_soc_codec_setup(codec);
 	if (rv)
 		return rv;

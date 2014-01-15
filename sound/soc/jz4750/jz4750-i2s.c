@@ -134,14 +134,14 @@ static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
 	jz4750_snd_rx_ctrl(0);
 	write_codec_file_bit(5, 0, 7);//PMR1.SB_DAC->0
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		cpu_dai->dma_data = &jz4750_i2s_pcm_stereo_out;
+		cpu_dai->playback.dma_data = &jz4750_i2s_pcm_stereo_out;
 		
 		if (channels == 1)
 			__aic_enable_mono2stereo();
 		else
 			__aic_disable_mono2stereo();
 	} else
-		rtd->dai->cpu_dai->dma_data = &jz4750_i2s_pcm_stereo_in;
+		rtd->dai->cpu_dai->capture.dma_data = &jz4750_i2s_pcm_stereo_in;
 
 #if 1
 	switch (channels) {
