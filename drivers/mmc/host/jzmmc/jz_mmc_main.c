@@ -448,7 +448,7 @@ static int jz_mmc_suspend(struct platform_device *dev, pm_message_t state)
 
 	if (mmc) {
 		if (mmc->card && mmc->card->type != MMC_TYPE_SDIO) {
-			ret = mmc_suspend_host(mmc, state);
+			ret = mmc_suspend_host(mmc);
 		}
 
 	}

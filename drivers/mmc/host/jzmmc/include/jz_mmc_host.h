@@ -11,7 +11,7 @@
 #ifndef __JZ_MMC_HOST_H__
 #define __JZ_MMC_HOST_H__
 
-//#include <linux/semaphore.h>
+#include <linux/semaphore.h>
 #include <asm/jzsoc.h>
 #include <linux/device.h>
 
