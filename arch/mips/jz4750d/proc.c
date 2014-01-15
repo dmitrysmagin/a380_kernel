@@ -319,8 +319,8 @@ static void ipu_add_wired_entry(unsigned long pid,
 	entrylo0 |= 0x6 | (0 << 3);
 
 	do_each_thread(g, p) {
-		if (p->pid == pid )
-			g_asid = p->mm->context[0];
+		if (p->pid == pid)
+			g_asid = p->mm->context.asid[0];
 	} while_each_thread(g, p);
 	
 	local_irq_save(flags);
