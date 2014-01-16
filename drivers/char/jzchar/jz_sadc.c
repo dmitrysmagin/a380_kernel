@@ -341,13 +341,13 @@ static unsigned long transform_to_screen_y(struct jz_ts_t *ts, unsigned long y)
  */
 static int sadc_open(struct inode *inode, struct file *filp);
 static int sadc_release(struct inode *inode, struct file *filp);
-static int sadc_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg);
+static long sadc_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 
 static struct file_operations sadc_fops =
 {
-	open:		sadc_open,
-	release:	sadc_release,
-	ioctl:		sadc_ioctl
+	open:           sadc_open,
+	release:        sadc_release,
+	unlocked_ioctl: sadc_ioctl
 };
 
 static int sadc_open(struct inode *inode, struct file *filp)
@@ -362,7 +362,7 @@ static int sadc_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static int sadc_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
+static long sadc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	switch (cmd) {
 	default:

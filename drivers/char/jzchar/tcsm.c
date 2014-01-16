@@ -47,7 +47,7 @@ static int tcsm_open(struct inode *inode, struct file *filp);
 static int tcsm_release(struct inode *inode, struct file *filp);
 static ssize_t tcsm_read(struct file *filp, char *buf, size_t size, loff_t *l);
 static ssize_t tcsm_write(struct file *filp, const char *buf, size_t size, loff_t *l);
-static int tcsm_ioctl (struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg);
+static long tcsm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 
 static struct file_operations tcsm_fops =
 {
@@ -55,7 +55,7 @@ static struct file_operations tcsm_fops =
 	release:	tcsm_release,
 	read:		tcsm_read,
 	write:		tcsm_write,
-	ioctl:		tcsm_ioctl,
+	unlocked_ioctl:	tcsm_ioctl,
 };
 
 static int tcsm_open(struct inode *inode, struct file *filp)
@@ -90,7 +90,7 @@ static ssize_t tcsm_write(struct file *filp, const char *buf, size_t size, loff_
 	return -1;
 }
 
-static int tcsm_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
+static long tcsm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
 	printk("tcsm: ioctl is not implemented\n");

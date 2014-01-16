@@ -75,16 +75,15 @@ static ssize_t jz_char_read(struct file *, char *, size_t, loff_t *);
 static ssize_t jz_char_write(struct file *, const char *, size_t, loff_t *);
 static int jz_char_open(struct inode *, struct file *);
 static int jz_char_release(struct inode *, struct file *);
-static int jz_char_ioctl(struct inode *, struct file *,
-			   unsigned int, unsigned long);
+static long jz_char_ioctl(struct file *, unsigned int, unsigned long);
 
 static struct file_operations jz_char_fops =
 {
-	read:    jz_char_read,
-	write:   jz_char_write,
-	ioctl:   jz_char_ioctl,
-	open:    jz_char_open,
-	release: jz_char_release
+	read:            jz_char_read,
+	write:           jz_char_write,
+	unlocked_ioctl:  jz_char_ioctl,
+	open:            jz_char_open,
+	release:         jz_char_release
 };
 
 static int __init jz_char_family_init(void)
@@ -127,12 +126,12 @@ static int jz_char_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static int jz_char_ioctl(struct inode *inode, struct file *filp,
+static long jz_char_ioctl(struct file *filp,
 			  unsigned int cmd, unsigned long arg)
 {
 	jz_char_dev_t *dev = (jz_char_dev_t *)filp->private_data;
-	if (dev->fops->ioctl)
-		return dev->fops->ioctl(inode, filp, cmd, arg);
+	if (dev->fops->unlocked_ioctl)
+		return dev->fops->unlocked_ioctl(filp, cmd, arg);
 	return 0;
 }
 

@@ -1186,7 +1186,7 @@ elan_release(struct inode * inode, struct file * filp)
 	return 0;
 }
 
-static int elan_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
+static long elan_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 		static elan_packet_t pkt;
 		void __user *argp = (void __user *)arg;
@@ -1477,9 +1477,9 @@ static int elan_ioctl(struct inode *inode, struct file *file, unsigned int cmd, 
 
 static struct file_operations elan_fops = {
 	owner:          THIS_MODULE,
-	ioctl:          elan_ioctl,
-	open:			elan_open,
-	release:		elan_release,
+	unlocked_ioctl: elan_ioctl,
+	open:           elan_open,
+	release:        elan_release,
 };
 
 static struct miscdevice elan_dev = {

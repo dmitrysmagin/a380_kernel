@@ -367,7 +367,7 @@ static int fm_release(struct inode *inode, struct file *filp)
 }
 
 static unsigned int area_flag = 0;   //2 : japen  1 : other
-static int fm_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
+static long fm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int threshold = 2;
 	int seek=0;
@@ -567,7 +567,7 @@ static struct file_operations fm_fops = {
 	.open    = fm_open,
 	.read    = fm_read,
 	.write   = fm_write,
-	.ioctl   = fm_ioctl,
+	.unlocked_ioctl   = fm_ioctl,
 	.release = fm_release,
 };
 
