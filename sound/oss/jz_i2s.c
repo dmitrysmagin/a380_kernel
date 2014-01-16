@@ -1274,7 +1274,7 @@ static int jz_i2s_write_mixdev(struct file *file, const char __user *buffer, siz
  * Support OSS IOCTL interfaces for /dev/mixer
  * Support IOCTL interfaces for /dev/mixer defined in include/msm_audio.h
  */
-static int jz_i2s_ioctl_mixdev(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
+static long jz_i2s_ioctl_mixdev(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct i2s_codec *codec = (struct i2s_codec *)file->private_data;
 	long	val = 0;
@@ -1494,7 +1494,7 @@ static int jz_i2s_ioctl_mixdev(struct inode *inode, struct file *file, unsigned 
 static struct file_operations jz_i2s_mixer_fops = 
 {
 	owner:		THIS_MODULE,
-	ioctl:		jz_i2s_ioctl_mixdev,
+	unlocked_ioctl:	jz_i2s_ioctl_mixdev,
 	open:		jz_i2s_open_mixdev,
 	write:		jz_i2s_write_mixdev,
 };
@@ -2138,7 +2138,7 @@ static int jz_audio_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int jz_audio_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
+static long jz_audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	long	rc = -EINVAL;
 	int	val = 0;
@@ -2857,7 +2857,7 @@ static struct file_operations jz_i2s_audio_fops = {
 	release:	jz_audio_release,
 	write:		jz_audio_write,
 	read:		jz_audio_read,
-	ioctl:		jz_audio_ioctl
+	unlocked_ioctl:	jz_audio_ioctl
 };
 
 static void __init attach_jz_i2s(struct jz_i2s_controller_info *controller)
