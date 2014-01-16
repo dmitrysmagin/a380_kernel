@@ -7,6 +7,7 @@
 #include <linux/fs.h>
 #include <linux/types.h>
 #include <linux/sched.h>
+#include <linux/smp_lock.h>
 
 MODULE_AUTHOR("caijicheng<caijicheng2006@163.com>");
 MODULE_DESCRIPTION("RDA5807P radio Driver");
@@ -367,7 +368,7 @@ static int fm_release(struct inode *inode, struct file *filp)
 }
 
 static unsigned int area_flag = 0;   //2 : japen  1 : other
-static long fm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+static int fm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int threshold = 2;
 	int seek=0;
@@ -542,6 +543,18 @@ static long fm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	return 0;
 }
 
+static long
+fm_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int ret;
+
+	lock_kernel();
+	ret = fm_ioctl(file, cmd, arg);
+	unlock_kernel();
+
+	return ret;
+}
+
 /*
 static irqreturn_t amplifier_handle(int irq, void *dev_id)
 {
@@ -567,7 +580,7 @@ static struct file_operations fm_fops = {
 	.open    = fm_open,
 	.read    = fm_read,
 	.write   = fm_write,
-	.unlocked_ioctl   = fm_ioctl,
+	.unlocked_ioctl   = fm_unlocked_ioctl,
 	.release = fm_release,
 };
 

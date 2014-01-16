@@ -7,6 +7,7 @@
 #include <linux/fs.h>
 #include <linux/poll.h>
 #include <linux/string.h>
+#include <linux/smp_lock.h>
 #include <asm/uaccess.h>
 #include <asm/irq.h>
 #include <asm/io.h>
@@ -1186,7 +1187,8 @@ elan_release(struct inode * inode, struct file * filp)
 	return 0;
 }
 
-static long elan_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+static int
+elan_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 		static elan_packet_t pkt;
 		void __user *argp = (void __user *)arg;
@@ -1475,9 +1477,21 @@ static long elan_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		return 0;
 }
 
+static long
+elan_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int ret;
+
+	lock_kernel();
+	ret = elan_ioctl(file, cmd, arg);
+	unlock_kernel();
+
+	return ret;
+}
+
 static struct file_operations elan_fops = {
 	owner:          THIS_MODULE,
-	unlocked_ioctl: elan_ioctl,
+	unlocked_ioctl: elan_unlocked_ioctl,
 	open:           elan_open,
 	release:        elan_release,
 };
