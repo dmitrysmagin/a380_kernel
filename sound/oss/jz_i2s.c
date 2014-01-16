@@ -24,6 +24,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/mutex.h>
 #include <linux/mm.h>
+#include <linux/smp_lock.h>
 #include <asm/hardirq.h>
 #include <asm/jzsoc.h>
 #include "sound_config.h"
@@ -1274,7 +1275,8 @@ static int jz_i2s_write_mixdev(struct file *file, const char __user *buffer, siz
  * Support OSS IOCTL interfaces for /dev/mixer
  * Support IOCTL interfaces for /dev/mixer defined in include/msm_audio.h
  */
-static long jz_i2s_ioctl_mixdev(struct file *file, unsigned int cmd, unsigned long arg)
+static int
+jz_i2s_ioctl_mixdev(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct i2s_codec *codec = (struct i2s_codec *)file->private_data;
 	long	val = 0;
@@ -1491,10 +1493,23 @@ static long jz_i2s_ioctl_mixdev(struct file *file, unsigned int cmd, unsigned lo
 	return rc;
 }
 
+static long
+jz_i2s_unlocked_ioctl_mixdev(struct file *file,
+			     unsigned int cmd, unsigned long arg)
+{
+	int ret;
+
+	lock_kernel();
+	ret = jz_i2s_ioctl_mixdev(file, cmd, arg);
+	unlock_kernel();
+
+	return ret;
+}
+
 static struct file_operations jz_i2s_mixer_fops = 
 {
 	owner:		THIS_MODULE,
-	unlocked_ioctl:	jz_i2s_ioctl_mixdev,
+	unlocked_ioctl:	jz_i2s_unlocked_ioctl_mixdev,
 	open:		jz_i2s_open_mixdev,
 	write:		jz_i2s_write_mixdev,
 };
