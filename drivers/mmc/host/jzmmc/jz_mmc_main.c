@@ -377,6 +377,8 @@ static int jz_mmc_probe(struct platform_device *pdev)
 	mmc->f_max = SD_CLOCK_HIGH;
 	mmc->ocr_avail = plat->ocr_mask;
 	mmc->caps |= host->plat->max_bus_width;
+	if (host->plat->nonremovable)
+		mmc->caps |= MMC_CAP_NONREMOVABLE;
 	mmc->max_phys_segs = NR_SG;
 	mmc->max_blk_size = 4095;
 	mmc->max_blk_count = 65535;
