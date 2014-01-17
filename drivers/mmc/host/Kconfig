@@ -153,25 +153,6 @@ config JZ_SYSTEM_AT_CARD
 
 	  If unsure,say N.
 
-config JZ_MSC0_MBR_OFFSET_8MB
-    tristate "MBR at 8MB OFFSET for controller 0(abandonment)"
-    depends on SOC_JZ4750 || SOC_JZ4750D || SOC_JZ4760 || SOC_JZ4760B
-    depends on JZ_MSC0
-    help
-      This selects MBR at 8MB OFFSET for controller 0,it's old method.
-
-	If unsure,say N.
-
-config JZ_BOOT_FROM_MSC0
-    tristate "Boot from Ingenic Multimedia/SD/SDIO Card Interface 0 support"
-    depends on SOC_JZ4750 || SOC_JZ4750D || SOC_JZ4760 || SOC_JZ4760B
-    depends on JZ_MSC0 && JZ_MSC0_MBR_OFFSET_8MB
-    default y
-    help
-      This selects boot from the Multimedia/SD/SDIO Card.
-
-      If unsure,say N.
-
 config JZ_RECOVERY
     tristate "Ingenic Liunx Recovery tool support"
     depends on SOC_JZ4750D || SOC_JZ4760 || SOC_JZ4760B
