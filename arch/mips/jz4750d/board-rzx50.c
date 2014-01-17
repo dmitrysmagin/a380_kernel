@@ -126,15 +126,21 @@ struct jz_mmc_platform_data cetus_sd_data = {
 	.support_sdio   = 1,
 #endif
 	.ocr_mask	= MMC_VDD_32_33 | MMC_VDD_33_34,
-//	.status_irq	= MSC0_HOTPLUG_IRQ,
-//	.detect_pin     = GPIO_SD0_CD_N,
+#ifdef CONFIG_JZ_SYSTEM_AT_CARD
+	.status_irq	= 0,
+	.detect_pin     = 0,
+	.nonremovable   = 1,
+#else
+	.status_irq	= MSC0_HOTPLUG_IRQ,
+	.detect_pin     = GPIO_SD0_CD_N,
+#endif
 	.init           = cetus_sd_gpio_init,
 	.power_on       = cetus_sd_power_on,
 	.power_off      = cetus_sd_power_off,
 	.cpm_start	= cetus_sd_cpm_start,
 	.status		= cetus_sd_status,
 	.plug_change	= cetus_sd_plug_change,
-	//.write_protect  = cetus_sd_get_wp,
+	.write_protect  = cetus_sd_get_wp,
 	.max_bus_width  = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED | MMC_CAP_4_BIT_DATA,
 #ifdef CONFIG_JZ_MSC0_BUS_1
 	.bus_width      = 1,

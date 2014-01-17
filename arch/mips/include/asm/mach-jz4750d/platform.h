@@ -22,6 +22,7 @@ struct jz_mmc_platform_data {
 	unsigned char bus_width;
 	unsigned int max_bus_width;
 	unsigned int detect_pin;
+	unsigned nonremovable:1;
 
 	unsigned char msc_irq;
 	unsigned char dma_rxid;
