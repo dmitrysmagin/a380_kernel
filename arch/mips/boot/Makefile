@@ -40,3 +40,13 @@ quiet_cmd_srec = OBJCOPY $@
       cmd_srec = $(OBJCOPY) -S -O srec $(strip-flags) $(VMLINUX) $@
 $(obj)/vmlinux.srec: $(VMLINUX) FORCE
 	$(call if_changed,srec)
+
+targets += uImage
+$(obj)/uImage: $(VMLINUX) $(obj)/vmlinux.bin FORCE
+	rm -f $(obj)/vmlinux.bin.gz
+	gzip -9 $(obj)/vmlinux.bin
+	mkimage -A mips -O linux -T kernel -C gzip \
+		-a 0x80010000 \
+		-e $(shell sh ./$(obj)/tools/entry $(NM) $(VMLINUX) ) \
+		-n 'Linux-$(KERNELRELEASE)' \
+		-d $(obj)/vmlinux.bin.gz $(obj)/uImage
