@@ -1,85 +1,56 @@
 /*
- *  linux/arch/mips/boot/compressed/head.S
+ * This file is subject to the terms and conditions of the GNU General Public
+ * License.  See the file "COPYING" in the main directory of this archive
+ * for more details.
  *
- *  Copyright (C) 2005-2008 Ingenic Semiconductor Inc.
+ * Copyright (C) 1994, 1995 Waldorf Electronics
+ * Written by Ralf Baechle and Andreas Busse
+ * Copyright (C) 1995 - 1999 Ralf Baechle
+ * Copyright (C) 1996 Paul M. Antoine
+ * Modified for DECStation and hence R3000 support by Paul M. Antoine
+ * Further modifications by David S. Miller and Harald Koerfgen
+ * Copyright (C) 1999 Silicon Graphics, Inc.
  */
 
 #include <asm/asm.h>
-#include <asm/cacheops.h>
-#include <asm/cachectl.h>
 #include <asm/regdef.h>
 
-#define IndexInvalidate_I       0x00
-#define IndexWriteBack_D        0x01
-
 	.set noreorder
-	LEAF(startup)
-startup:
-	move	s0, a0		/* Save the boot loader transfered args */
+	.cprestore
+	LEAF(start)
+start:
+	/* Save boot rom start args */
+	move	s0, a0
 	move	s1, a1
 	move	s2, a2
 	move	s3, a3
 
-	la	a0, _edata
-	la	a1, _end
-1:	sw	zero, 0(a0)	/* Clear BSS section */
-	bne	a1, a0, 1b
-	addu	a0, 4
+	/* Clear BSS */
+	PTR_LA	a0, _edata
+	PTR_LA	a2, _end
+1:	sw	zero, 0(a0)
+	bne	a2, a0, 1b
+	 addiu	a0, a0, 4
 
-	la	sp, (.stack + 8192)
+	PTR_LA	a0, (.heap)          /* heap address */
+	PTR_LA  sp, (.stack + 8192)  /* stack address */
 
-	la	a0, __image_begin
-	la	a1, IMAGESIZE
-	la	a2, LOADADDR
-	la	ra, 1f
-	la	k0, decompress_kernel
+	PTR_LA	ra, 2f
+	PTR_LA	k0, decompress_kernel
 	jr	k0
-	nop
-1:
-
+	 nop
+2:
 	move	a0, s0
 	move	a1, s1
 	move	a2, s2
 	move	a3, s3
-	li	k0, KERNEL_ENTRY
+	PTR_LI	k0, KERNEL_ENTRY
 	jr	k0
-	nop
-2:
-	b 32
-	END(startup)
-
-
-	LEAF(flushcaches)
-	la	t0, 1f
-	la	t1, 0xa0000000
-	or	t0, t0, t1
-	jr	t0
-	nop
-1:
-	li	k0, 0x80000000  # start address
-	li	k1, 0x80004000  # end address (16KB I-Cache)
-	subu	k1, 128
-
-2:
-	.set mips3
-	cache	IndexWriteBack_D, 0(k0)
-	cache	IndexWriteBack_D, 32(k0)
-	cache	IndexWriteBack_D, 64(k0)
-	cache	IndexWriteBack_D, 96(k0)
-	cache	IndexInvalidate_I, 0(k0)
-	cache	IndexInvalidate_I, 32(k0)
-	cache	IndexInvalidate_I, 64(k0)
-	cache	IndexInvalidate_I, 96(k0)
-	.set mips0
-
-	bne	k0, k1, 2b
-	addu	k0, k0, 128
-	la	t0, 3f
-	jr	t0
-	nop
+	 nop
 3:
-	jr	ra
-	nop
-	END(flushcaches)
+	b	3b
+	 nop
+	END(start)
 
+	.comm .heap,BOOT_HEAP_SIZE,4
 	.comm .stack,4096*2,4

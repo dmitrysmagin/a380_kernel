@@ -7,9 +7,6 @@
 # Copyright (C) 2004  Maciej W. Rozycki
 #
 
-# This one must match the LOADADDR in arch/mips/Makefile!
-LOADADDR=0x80010000
-
 #
 # Some DECstations need all possible sections of an ECOFF executable
 #
@@ -21,46 +18,25 @@ endif
 # Drop some uninteresting sections in the kernel.
 # This is only relevant for ELF kernels but doesn't hurt a.out
 #
-drop-sections	= .reginfo .mdebug .comment .note .pdr .options .MIPS.options
-strip-flags	= $(addprefix --remove-section=,$(drop-sections))
+drop-sections := .reginfo .mdebug .comment .note .pdr .options .MIPS.options
+strip-flags   := $(addprefix --remove-section=,$(drop-sections))
 
-VMLINUX = vmlinux
+hostprogs-y := elf2ecoff
 
-all: vmlinux.ecoff vmlinux.srec addinitrd uImage zImage
+targets := vmlinux.ecoff
+quiet_cmd_ecoff = ECOFF   $@
+      cmd_ecoff = $(obj)/elf2ecoff $(VMLINUX) $@ $(e2eflag)
+$(obj)/vmlinux.ecoff: $(obj)/elf2ecoff $(VMLINUX) FORCE
+	$(call if_changed,ecoff)
 
-vmlinux.ecoff: $(obj)/elf2ecoff $(VMLINUX)
-	$(obj)/elf2ecoff $(VMLINUX) $(obj)/vmlinux.ecoff $(E2EFLAGS)
+targets += vmlinux.bin
+quiet_cmd_bin = OBJCOPY $@
+      cmd_bin = $(OBJCOPY) -O binary $(strip-flags) $(VMLINUX) $@
+$(obj)/vmlinux.bin: $(VMLINUX) FORCE
+	$(call if_changed,bin)
 
-$(obj)/elf2ecoff: $(obj)/elf2ecoff.c
-	$(HOSTCC) -o $@ $^
-
-vmlinux.bin: $(VMLINUX)
-	$(OBJCOPY) -O binary $(strip-flags) $(VMLINUX) $(obj)/vmlinux.bin
-
-vmlinux.srec: $(VMLINUX)
-	$(OBJCOPY) -S -O srec $(strip-flags) $(VMLINUX) $(obj)/vmlinux.srec
-
-$(obj)/addinitrd: $(obj)/addinitrd.c
-	$(HOSTCC) -o $@ $^
-
-uImage: $(VMLINUX) vmlinux.bin
-	rm -f $(obj)/vmlinux.bin.gz
-	gzip -9 $(obj)/vmlinux.bin
-	mkimage -A mips -O linux -T kernel -C gzip \
-		-a $(LOADADDR) -e $(shell sh ./$(obj)/tools/entry $(NM) $(VMLINUX) ) \
-		-n 'Linux-$(KERNELRELEASE)' \
-		-d $(obj)/vmlinux.bin.gz $(obj)/uImage
-	@echo '  Kernel: arch/mips/boot/$@ is ready'
-
-zImage:
-	$(Q)$(MAKE) $(build)=$(obj)/compressed loadaddr=$(LOADADDR) $@
-	@echo '  Kernel: arch/mips/boot/compressed/$@ is ready'
-
-clean-files += addinitrd \
-	       elf2ecoff \
-	       vmlinux.bin \
-	       vmlinux.ecoff \
-	       vmlinux.srec \
-	       vmlinux.bin.gz \
-	       uImage \
-	       zImage
+targets += vmlinux.srec
+quiet_cmd_srec = OBJCOPY $@
+      cmd_srec = $(OBJCOPY) -S -O srec $(strip-flags) $(VMLINUX) $@
+$(obj)/vmlinux.srec: $(VMLINUX) FORCE
+	$(call if_changed,srec)
