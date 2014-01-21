@@ -201,6 +201,7 @@ config SOC_JZ4750D
 	#select HAVE_CLK
 	#select GENERIC_IRQ_CHIP
 	select CPU_SUPPORTS_CPUFREQ
+	select MIPS_CPUFREQ
 	select JZSOC
 	select JZRISC
 
