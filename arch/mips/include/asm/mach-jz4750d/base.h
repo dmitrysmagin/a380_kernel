@@ -12,6 +12,8 @@
 /*
  * Define the module base addresses
  */
+#define JZ4750D_CPM_BASE_ADDR	0x10000000
+
 #define CPM_BASE	0xB0000000
 #define INTC_BASE	0xB0001000
 #define TCU_BASE	0xB0002000

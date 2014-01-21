@@ -198,7 +198,7 @@ config SOC_JZ4750D
 	#select ARCH_REQUIRE_GPIOLIB
 	select SYS_HAS_EARLY_PRINTK
 	#select HAVE_PWM
-	#select HAVE_CLK
+	select HAVE_CLK
 	#select GENERIC_IRQ_CHIP
 	select CPU_SUPPORTS_CPUFREQ
 	select MIPS_CPUFREQ

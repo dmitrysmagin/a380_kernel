@@ -28,6 +28,13 @@
 
 #include <asm/jzsoc.h>
 
+#include "clock.h"
+
+struct jz4750d_clock_board_data jz4750d_clock_bdata = {
+	.ext_rate = 24000000,
+	.rtc_rate = 32768,
+};
+
 void __init board_msc_init(void);
 
 extern int jz_add_msc_devices(unsigned int controller, struct jz_mmc_platform_data *plat);
