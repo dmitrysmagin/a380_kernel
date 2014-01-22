@@ -75,36 +75,6 @@ static struct platform_device jz_usb_gdt_device = {
 	.resource	= jz_usb_gdt_resources,
 };
 
-/** MMC/SD controller **/
-#if 0
-/** MMC/SD controller **/
-static struct resource jz_mmc_resources[] = {
-	[0] = {
-		.start          = CPHYSADDR(MSC_BASE),
-		.end            = CPHYSADDR(MSC_BASE) + 0x10000 - 1,
-		.flags          = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start          = IRQ_MSC0,
-		.end            = IRQ_MSC0,
-		.flags          = IORESOURCE_IRQ,
-	}
-};
-
-static u64 jz_mmc_dmamask =  ~(u32)0;
-
-static struct platform_device jz_mmc_device = {
-	.name = "jz-mmc",
-	.id = 0,
-	.dev = {
-		.dma_mask               = &jz_mmc_dmamask,
-		.coherent_dma_mask      = 0xffffffff,
-	},
-	.num_resources  = ARRAY_SIZE(jz_mmc_resources),
-	.resource       = jz_mmc_resources,
-};
-
-#else
 /** MMC/SD controller MSC0**/
 static struct resource jz_msc0_resources[] = {
 	{
@@ -188,7 +158,6 @@ int __init jz_add_msc_devices(unsigned int controller, struct jz_mmc_platform_da
 
 	return platform_device_register(pdev);
 }
-#endif
 
 /** I2C controller **/
 #if 0
@@ -247,7 +216,6 @@ static struct platform_device vogue_snd_device = {
 static struct platform_device *jz_platform_devices[] __initdata = {
 	&jz_lcd_device,
 	&jz_usb_gdt_device,
-	//&jz_mmc_device,
 	//&jz_i2c_device,
 	&vogue_snd_device,
 };
