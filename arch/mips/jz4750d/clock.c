@@ -774,6 +774,7 @@ static void clk_register_clks(void)
 	size_t i;
 
 	clk_add(&jz_clk_ext.clk);
+	clk_add(&jz_clk_ext_half);
 	clk_add(&jz_clk_rtc.clk);
 	clk_add(&jz_clk_pll);
 	clk_add(&jz_clk_pll_half);
