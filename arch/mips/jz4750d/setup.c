@@ -43,12 +43,9 @@
 #include <asm/keyboard.h>
 #endif
 
-jz_clocks_t jz_clocks;
+#include "reset.h"
 
-extern void jz_restart(char *);
-extern void jz_halt(void);
-extern void jz_power_off(void);
-extern void jz_time_init(void);
+jz_clocks_t jz_clocks;
 
 static void __init sysclocks_setup(void)
 {
@@ -166,9 +163,7 @@ void __init plat_mem_setup(void)
 	iomem_resource.start	= 0x00000000;
 	iomem_resource.end	= 0xffffffff;
 
-	_machine_restart = jz_restart;
-	_machine_halt = jz_halt;
-	pm_power_off = jz_power_off;
+	jz4750d_reset_init();
 
 	jz_soc_setup();
 	jz_serial_setup();

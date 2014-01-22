@@ -44,3 +44,12 @@ void jz_power_off(void)
 {
 	jz_halt();
 }
+
+void jz4750d_reset_init(void)
+{
+	_machine_restart = jz_restart;
+	_machine_halt = jz_halt;
+	pm_power_off = jz_power_off;
+
+}
+
