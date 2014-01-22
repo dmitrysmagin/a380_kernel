@@ -176,5 +176,3 @@ const char *get_system_type(void)
 {
 	return "JZ4750D";
 }
-
-

@@ -74,6 +74,10 @@ void __init prom_free_prom_memory(void)
 
 void __init prom_init(void)
 {
+	prom_argc = (int) fw_arg0;
+	prom_argv = (char **) fw_arg1;
+	prom_envp = (char **) fw_arg2;
+
 	prom_init_cmdline();
 	mips_machtype = MACH_INGENIC_JZ4750D;
 }
@@ -89,4 +93,3 @@ void prom_putchar(char c)
 
 	*uart_tdr = (u8)c;
 }
-
