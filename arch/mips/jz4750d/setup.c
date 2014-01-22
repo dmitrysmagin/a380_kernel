@@ -45,7 +45,6 @@
 
 jz_clocks_t jz_clocks;
 
-extern char * __init prom_getcmdline(void);
 extern void jz_restart(char *);
 extern void jz_halt(void);
 extern void jz_power_off(void);
@@ -159,10 +158,6 @@ static void __init jz_serial_setup(void)
 
 void __init plat_mem_setup(void)
 {
-	char *argptr;
-
-	argptr = prom_getcmdline();
-
 	/* IO/MEM resources. Which will be the addtion value in `inX' and
 	 * `outX' macros defined in asm/io.h */
 	set_io_port_base(0);
@@ -177,5 +172,14 @@ void __init plat_mem_setup(void)
 
 	jz_soc_setup();
 	jz_serial_setup();
+
+	/* FIXME: Add memory size detection */
+	add_memory_region(0, 0x04000000 /* 64M */, BOOT_MEM_RAM);
 }
+
+const char *get_system_type(void)
+{
+	return "JZ4750D";
+}
+
 
