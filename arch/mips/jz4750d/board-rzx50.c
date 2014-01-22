@@ -19,7 +19,6 @@
 #include <linux/console.h>
 #include <linux/delay.h>
 #include <linux/mmc/host.h>
-#include <linux/spi/spi.h>
 
 #include <asm/cpu.h>
 #include <asm/bootinfo.h>
@@ -38,7 +37,6 @@ struct jz4750d_clock_board_data jz4750d_clock_bdata = {
 void __init board_msc_init(void);
 
 extern int jz_add_msc_devices(unsigned int controller, struct jz_mmc_platform_data *plat);
-extern int __init jz_add_spi_devices(unsigned int host_id, struct spi_board_info *board_info, int board_num);
 
 #define CONFIG_JZ_ROOTFS_IN_SD
 static void cetus_sd_gpio_init(struct device *dev)
@@ -236,28 +234,6 @@ struct jz_mmc_platform_data cetus_tf_data = {
 	.bus_width      = 4,
 #endif
 };
-
-/* SPI devices */
-struct spi_board_info jz_spi0_board_info[] = {
-	[0] = {
-		.modalias	= "spidev0",
-		.bus_num	= SPI0_BUS,
-		.chip_select	= SPI_CHIPSELECT_NUM_A,
-		.max_speed_hz	= 120000,
-	},
-	[1] = {
-		.modalias	= "spitest",
-		.bus_num	= SPI0_BUS,
-		.chip_select	= SPI_CHIPSELECT_NUM_B,
-		.max_speed_hz	= 2500000,
-	},
-};
-
-void __init board_spi_init(void)
-{
-	jz_add_spi_devices(0, jz_spi0_board_info,
-				ARRAY_SIZE(jz_spi0_board_info));
-}
 
 static void __init board_cpm_setup(void)
 {

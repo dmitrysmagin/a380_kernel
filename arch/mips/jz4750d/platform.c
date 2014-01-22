@@ -16,7 +16,6 @@
 
 #include <asm/jzsoc.h>
 #include <../sound/oss/jz_audio.h>
-#include <linux/spi/spi.h>
 
 extern void __init board_msc_init(void);
 
@@ -243,88 +242,6 @@ static struct platform_device vogue_snd_device = {
       .platform_data = &vogue_snd_endpoints,
     },
 };
-///////////////////////////////////////////////////////////
-
-#define __BUILD_JZ_SPI_PLATFORM_DEV(ssi_id) 	\
-											\
-struct jz47xx_spi_info spi##ssi_id##_info_cfg = {		\
-	.chnl = ssi_id,										\
-	.bus_num = ssi_id,									\
-	.is_pllclk = 1,										\
-	.num_chipselect = MAX_SPI_CHIPSELECT_NUM,		\
-};					\
-static struct resource jz_spi##ssi_id##_resource[] = {	\
-	[0] = {												\
-		.start          = CPHYSADDR(SSI_BASE) + 0x1000*(ssi_id) ,			\
-		.end            = CPHYSADDR(SSI_BASE) + 0x1000*((ssi_id)+1) - 1,	\
-		.flags 			= IORESOURCE_MEM,				\
-	},									\
-	[1] = {								\
-		.start = IRQ_SSI,		\
-		.end   = IRQ_SSI,		\
-		.flags = IORESOURCE_IRQ,		\
-	},									\
-};	\
-static u64 jz_spi##ssi_id##_dmamask =  ~(u32)0;			\
-struct platform_device jz_spi##ssi_id##_device = {		\
-	.name		  = "jz47xx-spi",						\
-	.id		  = ssi_id,									\
-	.num_resources	  = ARRAY_SIZE(jz_spi##ssi_id##_resource),			\
-	.resource	  = jz_spi##ssi_id##_resource,							\
-        .dev              = {											\
-                .dma_mask = &jz_spi##ssi_id##_dmamask,					\
-                .coherent_dma_mask = 0xffffffffUL,						\
-                .platform_data = & spi##ssi_id##_info_cfg,				\
-        },																\
-};
-
-
-#ifdef CONFIG_JZ_SPI0
-__BUILD_JZ_SPI_PLATFORM_DEV(0)
-#endif
-#if 0
-#ifdef CONFIG_JZ_SPI1
-__BUILD_JZ_SPI_PLATFORM_DEV(1)
-#endif
-#endif
-
-static struct platform_device *jz_spi_devices[] __initdata = {
-#ifdef CONFIG_JZ_SPI0
-	&jz_spi0_device,
-#else
-	NULL,
-#endif
-#if 0
-#ifdef CONFIG_JZ_SPI1
-	&jz_spi1_device,
-#else
-	NULL,
-#endif
-#endif
-};
-
-int __init jz_add_spi_devices(unsigned int host_id, struct spi_board_info *board_info,int board_num)
-{
-
-	struct platform_device	*pdev;
-	struct jz47xx_spi_info	*host_info;
-	
-	if (JZ_SPI_ID_INVALID(host_id))
-		return -EINVAL;
-	pdev = jz_spi_devices[host_id];
-	if (NULL == pdev)
-		return -EINVAL;
-
-	host_info = (struct jz47xx_spi_info *)pdev->dev.platform_data;
-	host_info->board_info = board_info;
-	host_info->board_size = board_num;
-#ifndef CONFIG_JZ_SPI_BOARD_INFO_REGISTER
-	spi_register_board_info(board_info,board_num);	
-#endif
-
-	return platform_device_register(pdev);
-}
-
 
 /* All */
 static struct platform_device *jz_platform_devices[] __initdata = {
@@ -335,11 +252,10 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 	&vogue_snd_device,
 };
 
-extern void __init board_spi_init(void);
 static int __init jz_platform_init(void)
 {
 	board_msc_init();
-	//board_spi_init();
+
 	return platform_add_devices(jz_platform_devices, ARRAY_SIZE(jz_platform_devices));
 }
 
