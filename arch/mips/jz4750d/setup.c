@@ -46,7 +46,6 @@
 jz_clocks_t jz_clocks;
 
 extern char * __init prom_getcmdline(void);
-extern void __init jz_board_setup(void);
 extern void jz_restart(char *);
 extern void jz_halt(void);
 extern void jz_power_off(void);
@@ -54,7 +53,6 @@ extern void jz_time_init(void);
 
 static void __init sysclocks_setup(void)
 {
-#ifndef CONFIG_MIPS_JZ_EMURUS /* FPGA */
 	jz_clocks.cclk = __cpm_get_cclk();
 	jz_clocks.hclk = __cpm_get_hclk();
 	jz_clocks.pclk = __cpm_get_pclk();
@@ -66,28 +64,13 @@ static void __init sysclocks_setup(void)
 	jz_clocks.mscclk = __cpm_get_mscclk(0);
 	jz_clocks.extalclk = __cpm_get_extalclk();
 	jz_clocks.rtcclk = __cpm_get_rtcclk();
-#else
 
-#define FPGACLK 8000000
-
-	jz_clocks.cclk = FPGACLK;
-	jz_clocks.hclk = FPGACLK;
-	jz_clocks.pclk = FPGACLK;
-	jz_clocks.mclk = FPGACLK;
-	jz_clocks.h1clk = FPGACLK;
-	jz_clocks.pixclk = FPGACLK;
-	jz_clocks.i2sclk = FPGACLK;
-	jz_clocks.usbclk = FPGACLK;
-	jz_clocks.mscclk = FPGACLK;
-	jz_clocks.extalclk = FPGACLK;
-	jz_clocks.rtcclk = FPGACLK;
-#endif
-
-	printk("CPU clock: %dMHz, System clock: %dMHz, Peripheral clock: %dMHz, Memory clock: %dMHz\n",
-	       (jz_clocks.cclk + 500000) / 1000000,
-	       (jz_clocks.hclk + 500000) / 1000000,
-	       (jz_clocks.pclk + 500000) / 1000000,
-	       (jz_clocks.mclk + 500000) / 1000000);
+	printk("CPU clock: %dMHz, System clock: %dMHz, "
+		"Peripheral clock: %dMHz, Memory clock: %dMHz\n",
+		(jz_clocks.cclk + 500000) / 1000000,
+		(jz_clocks.hclk + 500000) / 1000000,
+		(jz_clocks.pclk + 500000) / 1000000,
+		(jz_clocks.mclk + 500000) / 1000000);
 }
 
 static void __init soc_cpm_setup(void)
@@ -194,6 +177,5 @@ void __init plat_mem_setup(void)
 
 	jz_soc_setup();
 	jz_serial_setup();
-	jz_board_setup();
 }
 

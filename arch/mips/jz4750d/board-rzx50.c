@@ -27,6 +27,7 @@
 
 #include <asm/jzsoc.h>
 #include <asm/mach-jz4750d/platform.h>
+#include <../sound/oss/jz_audio.h>
 
 #include "clock.h"
 
@@ -78,15 +79,6 @@ static unsigned int cetus_sd_status(struct device *dev)
 #endif
 }
 
-#if 0
-static void cetus_sd_plug_change(int state)
-{
-	if(state == CARD_INSERTED)
-		__gpio_as_irq_high_level(MSC0_HOTPLUG_PIN); /* wait remove */
-	else
-		__gpio_as_irq_low_level(MSC0_HOTPLUG_PIN); /* wait insert */
-}
-#else
 static void cetus_sd_plug_change(int state)
 {
 #ifndef CONFIG_JZ_ROOTFS_IN_SD
@@ -96,7 +88,6 @@ static void cetus_sd_plug_change(int state)
 		__gpio_as_irq_fall_edge(MSC0_HOTPLUG_PIN);
 #endif
 }
-#endif
 
 static unsigned int cetus_sd_get_wp(struct device *dev)
 {
@@ -189,27 +180,13 @@ static unsigned int cetus_tf_status(struct device *dev)
 	return (!status);
 }
 
-#if 0
 static void cetus_tf_plug_change(int state)
 {
-	if(state == CARD_INSERTED)
-		__gpio_as_irq_low_level(MSC1_HOTPLUG_PIN);
-	else
-		__gpio_as_irq_high_level(MSC1_HOTPLUG_PIN);
-}
-#else
-static void cetus_tf_plug_change(int state)
-{
-  if(MSC1_HOTPLUG_PIN)
-  {
-  //printk("%d:%s state is %d\n",__LINE__,__FILE__,state);
 	if(state == CARD_INSERTED)
 		__gpio_as_irq_fall_edge(MSC1_HOTPLUG_PIN);
 	else
 		__gpio_as_irq_rise_edge(MSC1_HOTPLUG_PIN);
-  }
 }
-#endif
 
 struct jz_mmc_platform_data cetus_tf_data = {
 #ifndef CONFIG_JZ_MSC1_SDIO_SUPPORT
@@ -234,13 +211,56 @@ struct jz_mmc_platform_data cetus_tf_data = {
 #endif
 };
 
-static void __init board_cpm_setup(void)
-{
-	/* Stop unused module clocks here.
-	 * We have started all module clocks at arch/mips/jz4750d/setup.c.
-	 */
+//////////////////////////////////////////////////////////
+static struct snd_endpoint snd_endpoints_list[] = {
+	{
+		.name	= "HANDSET",
+		.id	= 0
+	},
+	{
+		.name	= "SPEAKER",
+		.id	= 1
+	},
+	{
+		.name	= "HEADSET",
+		.id	= 2
+	},
+};
 
-	/* TODO (maddrone) stop cpms to save power */
+static struct jz_snd_endpoints vogue_snd_endpoints = {
+	.endpoints = snd_endpoints_list,
+	.num = ARRAY_SIZE(snd_endpoints_list),
+};
+
+struct platform_device vogue_snd_device = {
+	.name = "mixer",
+	.id = -1,
+	.dev = {
+		.platform_data = &vogue_snd_endpoints,
+	},
+};
+
+/* All */
+static struct platform_device *jz_platform_devices[] __initdata = {
+	&jz_lcd_device,
+	&jz_usb_gdt_device,
+	//&jz_i2c_device,
+	&vogue_snd_device,
+	&jz_msc0_device,
+	&jz_msc1_device,
+};
+
+static int __init rzx50_init_platform_devices(void)
+{
+#ifdef CONFIG_JZ_MSC0
+	jz_msc0_device.dev.platform_data = &cetus_sd_data;
+#endif
+
+#ifdef CONFIG_JZ_MSC1
+	jz_msc1_device.dev.platform_data = &cetus_tf_data;
+#endif
+
+	return platform_add_devices(jz_platform_devices, ARRAY_SIZE(jz_platform_devices));
 }
 
 static void __init board_gpio_setup(void)
@@ -251,25 +271,19 @@ static void __init board_gpio_setup(void)
 	__gpio_as_output(GPIO_CHARGE);
 	__gpio_set_pin(GPIO_CHARGE);
 #endif
-	/*
-	 * Initialize SDRAM pins
-	 */
-}
-void __init board_msc_init(void)
-{
-#ifdef CONFIG_JZ_MSC0
-	jz_msc0_device.dev.platform_data = &cetus_sd_data;
-#endif
-
-#ifdef CONFIG_JZ_MSC1
-	jz_msc1_device.dev.platform_data = &cetus_tf_data;
-#endif
 }
 
-void __init jz_board_setup(void)
+static int __init jz_board_setup(void)
 {
 	printk("Ritmix RZX50 board setup %s %s\n",__DATE__,__TIME__);
 
-	board_cpm_setup();
 	board_gpio_setup();
+
+	if (rzx50_init_platform_devices())
+		panic("Failed to initialize platform devices");
+
+	return 0;
 }
+
+arch_initcall(jz_board_setup);
+

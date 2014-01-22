@@ -16,9 +16,6 @@
 
 #include <asm/jzsoc.h>
 #include <asm/mach-jz4750d/platform.h>
-#include <../sound/oss/jz_audio.h>
-
-extern void __init board_msc_init(void);
 
 /*** LCD controller ***/
 static struct resource jz_lcd_resources[] = {
@@ -170,44 +167,3 @@ struct platform_device jz_i2c_device = {
 };
 #endif
 
-//////////////////////////////////////////////////////////
-#define SND(num, desc) { .name = desc, .id = num }
-static struct snd_endpoint snd_endpoints_list[] = {
- SND(0, "HANDSET"),
- SND(1, "SPEAKER"),
- SND(2, "HEADSET"),
-
-};
-#undef SND
-
-static struct jz_snd_endpoints vogue_snd_endpoints = {
-      .endpoints = snd_endpoints_list,
-      .num = ARRAY_SIZE(snd_endpoints_list),
-};
-
-struct platform_device vogue_snd_device = {
-    .name = "mixer",
-    .id = -1,
-    .dev = {
-      .platform_data = &vogue_snd_endpoints,
-    },
-};
-
-/* All */
-static struct platform_device *jz_platform_devices[] __initdata = {
-	&jz_lcd_device,
-	&jz_usb_gdt_device,
-	//&jz_i2c_device,
-	&vogue_snd_device,
-	&jz_msc0_device,
-	&jz_msc1_device,
-};
-
-static int __init jz_platform_init(void)
-{
-	board_msc_init();
-
-	return platform_add_devices(jz_platform_devices, ARRAY_SIZE(jz_platform_devices));
-}
-
-arch_initcall(jz_platform_init);
