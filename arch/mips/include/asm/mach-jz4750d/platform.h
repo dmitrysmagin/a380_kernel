@@ -1,6 +1,14 @@
 #ifndef __JZ4750D_PLATFORM_H__
 #define __JZ4750D_PLATFORM_H__
 
+#include <linux/platform_device.h>
+
+extern struct platform_device jz_lcd_device;
+extern struct platform_device jz_usb_gdt_device;
+extern struct platform_device jz_msc0_device;
+extern struct platform_device jz_msc1_device;
+extern struct platform_device jz_i2c_device;
+
 /* msc */
 #define CARD_INSERTED 1
 #define CARD_REMOVED 0

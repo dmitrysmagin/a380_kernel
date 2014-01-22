@@ -15,11 +15,10 @@
 #include <linux/resource.h>
 
 #include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/platform.h>
 #include <../sound/oss/jz_audio.h>
 
 extern void __init board_msc_init(void);
-
-int __init jz_add_msc_devices(unsigned int controller, struct jz_mmc_platform_data *plat);
 
 /*** LCD controller ***/
 static struct resource jz_lcd_resources[] = {
@@ -37,7 +36,7 @@ static struct resource jz_lcd_resources[] = {
 
 static u64 jz_lcd_dmamask = ~(u32)0;
 
-static struct platform_device jz_lcd_device = {
+struct platform_device jz_lcd_device = {
 	.name           = "jz-lcd",
 	.id             = 0,
 	.dev = {
@@ -64,7 +63,7 @@ static struct resource jz_usb_gdt_resources[] = {
 
 static u64 udc_dmamask = ~(u32)0;
 
-static struct platform_device jz_usb_gdt_device = {
+struct platform_device jz_usb_gdt_device = {
 	.name		= "jz-udc",
 	.id		= 0,
 	.dev = {
@@ -96,7 +95,7 @@ static struct resource jz_msc0_resources[] = {
 
 static u64 jz_msc0_dmamask =  ~(u32)0;
 
-static struct platform_device jz_msc0_device = {
+struct platform_device jz_msc0_device = {
 	.name = "jz-msc",
 	.id = 0,
 	.dev = {
@@ -129,7 +128,7 @@ static struct resource jz_msc1_resources[] = {
 
 static u64 jz_msc1_dmamask =  ~(u32)0;
 
-static struct platform_device jz_msc1_device = {
+struct platform_device jz_msc1_device = {
 	.name = "jz-msc",
 	.id = 1,
 	.dev = {
@@ -139,25 +138,6 @@ static struct platform_device jz_msc1_device = {
 	.num_resources  = ARRAY_SIZE(jz_msc1_resources),
 	.resource       = jz_msc1_resources,
 };
-
-static struct platform_device *jz_msc_devices[] __initdata = {
-	&jz_msc0_device,
-	&jz_msc1_device,
-};
-
-int __init jz_add_msc_devices(unsigned int controller, struct jz_mmc_platform_data *plat)
-{
-	struct platform_device	*pdev;
-
-	if (controller < 0 || controller > 1)
-		return -EINVAL;
-
-	pdev = jz_msc_devices[controller];
-
-	pdev->dev.platform_data = plat;
-
-	return platform_device_register(pdev);
-}
 
 /** I2C controller **/
 #if 0
@@ -177,7 +157,8 @@ static struct resource jz_i2c_resources[] = {
 };
 
 static u64 jz_i2c_dmamask =  ~(u32)0;
-static struct platform_device jz_i2c_device = {
+
+struct platform_device jz_i2c_device = {
 	.name = "jz_i2c",
 	.id = 0,
 	.dev = {
@@ -204,7 +185,7 @@ static struct jz_snd_endpoints vogue_snd_endpoints = {
       .num = ARRAY_SIZE(snd_endpoints_list),
 };
 
-static struct platform_device vogue_snd_device = {
+struct platform_device vogue_snd_device = {
     .name = "mixer",
     .id = -1,
     .dev = {
@@ -218,6 +199,8 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 	&jz_usb_gdt_device,
 	//&jz_i2c_device,
 	&vogue_snd_device,
+	&jz_msc0_device,
+	&jz_msc1_device,
 };
 
 static int __init jz_platform_init(void)

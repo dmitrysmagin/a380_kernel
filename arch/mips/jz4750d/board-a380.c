@@ -26,6 +26,7 @@
 #include <asm/reboot.h>
 
 #include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/platform.h>
 
 #include "clock.h"
 
@@ -35,8 +36,6 @@ struct jz4750d_clock_board_data jz4750d_clock_bdata = {
 };
 
 void __init board_msc_init(void);
-
-extern int jz_add_msc_devices(unsigned int controller, struct jz_mmc_platform_data *plat);
 
 #define CONFIG_JZ_ROOTFS_IN_SD
 static void cetus_sd_gpio_init(struct device *dev)
@@ -251,14 +250,15 @@ static void __init board_gpio_setup(void)
 	 * Initialize SDRAM pins
 	 */
 }
+
 void __init board_msc_init(void)
 {
 #ifdef CONFIG_JZ_MSC0
-	jz_add_msc_devices(0, &cetus_sd_data);
+	jz_msc0_device.dev.platform_data = &cetus_sd_data;
 #endif
 
 #ifdef CONFIG_JZ_MSC1
-	jz_add_msc_devices(1, &cetus_tf_data);
+	jz_msc1_device.dev.platform_data = &cetus_tf_data;
 #endif
 }
 
