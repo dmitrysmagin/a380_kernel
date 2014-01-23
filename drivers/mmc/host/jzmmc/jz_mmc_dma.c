@@ -13,7 +13,9 @@
 #include <linux/scatterlist.h>
 #include <linux/mmc/core.h>
 #include <linux/mmc/host.h>
+
 #include <asm/jzsoc.h>
+
 #include "include/jz_mmc_dma.h"
 #include "include/jz_mmc_host.h"
 

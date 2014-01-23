@@ -17,7 +17,10 @@
 #include <linux/mmc/host.h>
 #include <linux/scatterlist.h>
 
+#include <asm/mach-jz4750d/jz4750d_mmc.h>
+
 #include <asm/jzsoc.h>
+
 #include "include/jz_mmc_msc.h"
 #include "include/jz_mmc_pio.h"
 
@@ -161,46 +164,19 @@ void jz_mmc_set_clock(struct jz_mmc_host *host, int rate)
 	 * bad stabilization.
 	*/
 
-	// Cause there is only ONE devider in CPM, the clock must only <= 24MHz
-#if !defined(CONFIG_SOC_JZ4750) && !defined(CONFIG_SOC_JZ4750D)
-#if 0
-	if (rate > SD_CLOCK_FAST) {
-		cpm_set_clock(CGU_MSCCLK, 48 * 1000 * 1000);
-		clkrt = msc_calc_clkrt(0, rate);
-	} else {
-		cpm_set_clock(CGU_MSCCLK, 24 * 1000 * 1000);
-		clkrt = msc_calc_clkrt(1, rate);
-	}
-#else
 	if (rate > SD_CLOCK_FAST) {
 		rate = SD_CLOCK_FAST;
-		cpm_set_clock(CGU_MSCCLK, 24 * 1000 * 1000);
-		clkrt = msc_calc_clkrt(1, rate);
-	} else {
-		cpm_set_clock(CGU_MSCCLK, 24 * 1000 * 1000);
-		clkrt = msc_calc_clkrt(1, rate);
-	}
-#endif
-	REG_MSC_CLKRT(host->pdev_id) = clkrt;
-#else
-		/* __cpm_select_msc_clk_high will select 48M clock for MMC/SD card
-	 * perhaps this will made some card with bad quality init fail,or
-	 * bad stabilization.
-	*/
-	if (rate > SD_CLOCK_FAST) {
-		rate = SD_CLOCK_FAST;
-		__cpm_select_msc_clk_high(host->pdev_id,1);	/* select clock source from CPM */
-
-		//		__cpm_select_msc_clk(host->pdev_id,1);	/* select clock source from CPM */
+		//__cpm_select_msc_clk_high(host->pdev_id,1);	/* select clock source from CPM */
+		clk_set_rate(host->clk, 48 * 1000 * 1000);
 		clkrt = msc_calc_clkrt(0, rate);
 	} else {
-		__cpm_select_msc_clk(host->pdev_id,1);	/* select clock source from CPM */
+		//__cpm_select_msc_clk(host->pdev_id,1);	/* select clock source from CPM */
+		clk_set_rate(host->clk, 24 * 1000 * 1000);
 		clkrt = msc_calc_clkrt(1, rate);
 	}
 
 	// printk("clock rate = %d\n", __cpm_get_mscclk(0));
 	REG_MSC_CLKRT(host->pdev_id) = clkrt;
-#endif
 }
 
 static void jz_mmc_enable_irq(struct jz_mmc_host *host, unsigned int mask)

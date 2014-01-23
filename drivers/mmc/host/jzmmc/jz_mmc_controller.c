@@ -13,7 +13,10 @@
 #include <linux/mmc/sdio.h>
 #include <linux/scatterlist.h>
 
+#include <asm/mach-jz4750d/jz4750d_mmc.h>
+
 #include <asm/jzsoc.h>
+
 #include "include/jz_mmc_msc.h"
 #include "include/jz_mmc_controller.h"
 

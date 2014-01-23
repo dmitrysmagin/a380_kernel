@@ -11,9 +11,11 @@
 #ifndef __JZ_MMC_HOST_H__
 #define __JZ_MMC_HOST_H__
 
-#include <linux/semaphore.h>
-#include <asm/jzsoc.h>
+#include <linux/clk.h>
 #include <linux/device.h>
+#include <linux/semaphore.h>
+
+#include <asm/mach-jz4750d/dma.h>
 
 #define JZ_MSC_USE_DMA 1
 //#define JZ_MSC_USE_PIO 1
@@ -22,15 +24,10 @@
 //#define USE_DMA_UNCACHE
 //#define MSC_DEBUG_DMA
 
+#define JZ_MSC_DMA_DESC jz_dma_desc_8word
+
 #ifdef CONFIG_SOC_JZ4760
-
-#define JZ_MSC_DMA_DESC jz_dma_desc_8word
 #define USE_DMA_BUSRT_64
-
-#else
-
-#define JZ_MSC_DMA_DESC jz_dma_desc_8word
-
 #endif
 
 #define MMC_CLOCK_SLOW    400000      /* 400 kHz for initial setup */
@@ -50,6 +47,8 @@
 struct jz_mmc_host {
 	struct mmc_host *mmc;
 	struct semaphore mutex;
+
+	struct clk *clk;
 
 	/* host resources */
 	//void __iomem *base;

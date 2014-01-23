@@ -12,6 +12,7 @@
 #include <linux/init.h>
 #include <linux/ioport.h>
 #include <linux/platform_device.h>
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/dma-mapping.h>
@@ -26,89 +27,16 @@
 #include <linux/scatterlist.h>
 #include <asm/io.h>
 #include <asm/scatterlist.h>
+
+#include <asm/mach-jz4750d/jz4750d_mmc.h>
+
 #include <asm/jzsoc.h>
+
 #include "include/jz_mmc_host.h"
 #include "include/jz_mmc_controller.h"
 
 struct jz_mmc_controller controller[JZ_MAX_MSC_NUM];
-int is_permission = 0;
 
-int jz_mmc_get_permission(struct mmc_host *mmc, struct mmc_request *mrq){
-	int sector,up_limit,down_limit;
-	
-	if (!mmc_card_blockaddr(mmc->card)){
-		up_limit = 16384 << 9 ;
-		down_limit = 512;
-	}
-	else{
-		up_limit = 16384 ;		
-		down_limit = 1;
-	}
-	sector = mrq->cmd->arg;
-	
-	if(sector>down_limit && sector<up_limit){
-		return 1;
-		//return is_permission;
-	}else{
-		return 1;
-	}
-}
-#ifdef CONFIG_JZ_RECOVERY
-/* add partitions info for recovery */
-static ssize_t jz_mmc_partitions_show(struct device *dev,struct device_attribute *attr, char *buf)
-{
-	int i;
-	struct jz_mmc_platform_data *pdata = dev->platform_data;
-	ssize_t count = 0;
-
-	if(pdata->num_partitions == 0) {
-		count = sprintf(buf, "null\n");
-		return count;
-	}
-
-	for(i=0;i<pdata->num_partitions;i++)
-		count += sprintf(buf+count, "%s %x %x %d\n",
-				pdata->partitions[i].name,
-				pdata->partitions[i].saddr,
-				pdata->partitions[i].len,
-				pdata->partitions[i].type);
-
-	return count;
-}
-
-
-static ssize_t jz_mmc_permission_set(struct device *dev, struct device_attribute *attr,
-			  const char *buf, size_t count)
-{
-	struct jz_mmc_platform_data *pdata = dev->platform_data;
-
-	if (buf == NULL)
-		return count;
-
-	if (strcmp(buf, "RECOVERY_MODE") == 0) {
-		printk("host->permission: MMC_BOOT_AREA_PROTECTED->MMC_BOOT_AREA_OPENED\n");
-		pdata->permission = MMC_BOOT_AREA_OPENED;
-	} else {
-		printk("host->permission: MMC_BOOT_AREA_OPENED->MMC_BOOT_AREA_PROTECTED\n");
-		pdata->permission = MMC_BOOT_AREA_PROTECTED;
-	}
-
-	return count;
-}
-
-static DEVICE_ATTR(partitions, S_IRUSR | S_IRGRP | S_IROTH, jz_mmc_partitions_show, NULL);
-static DEVICE_ATTR(recovery_permission, S_IWUSR, NULL, jz_mmc_permission_set);
-
-static struct attribute *jz_mmc_attributes[] = {
-	&dev_attr_partitions.attr,
-	&dev_attr_recovery_permission.attr,
-	NULL
-};
-
-static const struct attribute_group jz_mmc_attr_group = {
-	.attrs = jz_mmc_attributes,
-};
-#endif
 void jz_mmc_finish_request(struct jz_mmc_host *host, struct mmc_request *mrq)
 {
 	host->curr_mrq = NULL;
@@ -141,22 +69,6 @@ static void jz_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		mmc_request_done(mmc, mrq);
 		return;
 	}
-
-#if 0
-//#if defined(CONFIG_JZ_SYSTEM_AT_CARD)
-	if(host->pdev_id == 0 ){
-		if (mrq->data && (mrq->data->flags & MMC_DATA_WRITE)){
-			if(!jz_mmc_get_permission(mmc, mrq) && mrq->cmd->opcode != 6) {
-				mrq->cmd->error = -EIO;
-				mrq->data->bytes_xfered = 0;
-				
-					up(&host->mutex);
-					mmc_request_done(mmc, mrq);
-					return;
-			}
-		}
-	}
-#endif
 
 	BUG_ON (host->curr_mrq);
 	host->curr_mrq = mrq;
@@ -193,8 +105,8 @@ static void jz_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	//void *dev;
 
 	if(!functions) {
-//		printk("%s: functions is NULL!\n", __FUNCTION__);
-		while(1);
+		printk(KERN_ERR "%s: functions is NULL!\n", __FUNCTION__);
+		return;
 	}
 
 	if (ios->clock) {
@@ -282,25 +194,6 @@ void msc_dump_host_info(void) {
 EXPORT_SYMBOL(msc_dump_host_info);
 #endif	/* MSC_DEBUG_DMA */
 
-static ssize_t mmc_permission_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", is_permission);
-}
-
-static ssize_t mmc_permission_store(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
-{
-	int permis;
-
-	permis = simple_strtol(buf, NULL, 10);
-	is_permission = permis;
-	printk("%d\n",is_permission);
-	return count;
-}
-
-static DEVICE_ATTR(permission, S_IWUSR | S_IRUGO, mmc_permission_show, mmc_permission_store);
-
 static int jz_mmc_probe(struct platform_device *pdev)
 {
 	struct jz_mmc_platform_data *plat = pdev->dev.platform_data;
@@ -313,6 +206,8 @@ static int jz_mmc_probe(struct platform_device *pdev)
 	struct resource *dmares = NULL;
 	int i;
 
+	char clk_name[5];
+
 	if (pdev == NULL) {
 		printk(KERN_ERR "%s: pdev is NULL\n", __func__);
 		return -EINVAL;
@@ -324,8 +219,6 @@ static int jz_mmc_probe(struct platform_device *pdev)
 
 	if (JZ_MSC_ID_INVALID(pdev->id))
 		return -EINVAL;
-
-	plat->cpm_start(&pdev->dev);
 
 	if (pdev->resource == NULL || pdev->num_resources < 2) {
 		printk(KERN_ERR "%s: Invalid resource\n", __func__);
@@ -354,6 +247,14 @@ static int jz_mmc_probe(struct platform_device *pdev)
 	host->pdev_id = pdev->id;
 	host->plat = plat;
 	host->mmc = mmc;
+
+	sprintf(clk_name, "mmc%i", pdev->id);
+	host->clk = clk_get(&pdev->dev, clk_name);
+	if (IS_ERR(host->clk))
+		return -ENXIO;
+
+	clk_enable(host->clk);
+
 #if 0			      /* Lutts */
 	// base address of MSC controller
 	host->base = ioremap(memres->start, PAGE_SIZE);
@@ -401,15 +302,6 @@ static int jz_mmc_probe(struct platform_device *pdev)
 	msc_hosts[host->pdev_id] = host;
 #endif
 
-	if(host->pdev_id == 0){
-#if defined(CONFIG_JZ_SYSTEM_AT_CARD)
-		device_create_file(&pdev->dev, &dev_attr_permission);
-#endif
-	}
-	
-#ifdef CONFIG_JZ_RECOVERY
-	sysfs_create_group(&pdev->dev.kobj, &jz_mmc_attr_group);
-#endif
 	printk("JZ %s driver registered\n", mmc_hostname(host->mmc));
 
 	return 0;
@@ -433,6 +325,8 @@ static int jz_mmc_remove(struct platform_device *pdev)
 
 		functions->deinit(host, pdev);
 
+		clk_put(host->clk);
+
 		mmc_remove_host(mmc);
 		mmc_free_host(mmc);
 	}
@@ -453,6 +347,7 @@ static int jz_mmc_suspend(struct platform_device *dev, pm_message_t state)
 			ret = mmc_suspend_host(mmc);
 		}
 
+		clk_disable(host->clk);
 	}
 	return ret;
 }
@@ -487,19 +382,20 @@ static struct platform_driver jz_msc_driver = {
 
 static int __init jz_mmc_init(void)
 {
-	int ret = 0;
+        int ret = 0;
 
-	ret = platform_driver_register(&jz_msc_driver);
-	return ret;
+        ret = platform_driver_register(&jz_msc_driver);
+        return ret;
 }
 
 static void __exit jz_mmc_exit(void)
 {
-	platform_driver_unregister(&jz_msc_driver);
+        platform_driver_unregister(&jz_msc_driver);
 }
 
 module_init(jz_mmc_init);
 module_exit(jz_mmc_exit);
+
 
 MODULE_DESCRIPTION("JZ47XX SD/Multimedia Card Interface Driver");
 MODULE_LICENSE("GPL");
