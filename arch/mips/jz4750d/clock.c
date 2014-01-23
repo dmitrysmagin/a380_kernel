@@ -40,7 +40,7 @@
 #define JZ_REG_CLOCK_CIM	0x7C
 
 #define JZ_CLOCK_CTRL_I2S_SRC_PLL	BIT(31)
-#define JZ_CLOCK_CTRL_ECS	BIT(30)
+#define JZ_CLOCK_CTRL_ECS		BIT(30)
 #define JZ_CLOCK_CTRL_UDC_SRC_PLL	BIT(29)
 #define JZ_CLOCK_CTRL_UDIV_MASK		0x1f800000
 #define JZ_CLOCK_CTRL_CHANGE_ENABLE	BIT(22)
@@ -69,6 +69,14 @@
 #define JZ_CLOCK_GATE_UART1	BIT(14)
 #define JZ_CLOCK_GATE_UART2	BIT(15)
 #define JZ_CLOCK_GATE_MMC1	BIT(16) /* MSC1 */
+#define JZ_CLOCK_GATE_TSSI	BIT(17)
+#define JZ_CLOCK_GATE_TVE	BIT(18)
+#define JZ_CLOCK_GATE_MC	BIT(19)
+#define JZ_CLOCK_GATE_ME	BIT(20)
+#define JZ_CLOCK_GATE_DB	BIT(21)
+#define JZ_CLOCK_GATE_IDCT	BIT(22)
+#define JZ_CLOCK_GATE_AHB1	BIT(23)
+#define JZ_CLOCK_GATE_AUX_CPU	BIT(24)
 
 #define JZ_CLOCK_I2S_DIV_MASK		0x01ff
 
@@ -540,7 +548,7 @@ static struct divided_clk jz4750d_clock_divided_clks[] = {
 		.clk = {
 			.name = "i2s",
 			.parent = &jz_clk_ext_half,
-			.gate_bit = JZ4750D_CLK_NOT_GATED, //JZ_CLOCK_GATE_I2S,
+			.gate_bit = JZ_CLOCK_GATE_AIC,
 			.ops = &jz_clk_i2s_ops,
 		},
 		.reg = JZ_REG_CLOCK_I2S,
@@ -560,7 +568,7 @@ static struct divided_clk jz4750d_clock_divided_clks[] = {
 		.clk = {
 			.name = "lcd_pclk",
 			.parent = &jz_clk_pll_half,
-			.gate_bit = JZ4750D_CLK_NOT_GATED,
+			.gate_bit = JZ_CLOCK_GATE_LCD,
 			.ops = &jz_clk_divided_ops,
 		},
 		.reg = JZ_REG_CLOCK_LCD,
