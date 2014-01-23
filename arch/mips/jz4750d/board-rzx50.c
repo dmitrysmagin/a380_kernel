@@ -28,7 +28,6 @@
 #include <asm/jzsoc.h>
 #include <asm/mach-jz4750d/jz4750d_mmc.h>
 #include <asm/mach-jz4750d/platform.h>
-#include <../sound/oss/jz_audio.h>
 
 #include "serial.h"
 #include "clock.h"
@@ -142,41 +141,11 @@ struct jz_mmc_platform_data cetus_tf_data = {
 	.bus_width      = 1,
 };
 
-//////////////////////////////////////////////////////////
-static struct snd_endpoint snd_endpoints_list[] = {
-	{
-		.name	= "HANDSET",
-		.id	= 0
-	},
-	{
-		.name	= "SPEAKER",
-		.id	= 1
-	},
-	{
-		.name	= "HEADSET",
-		.id	= 2
-	},
-};
-
-static struct jz_snd_endpoints vogue_snd_endpoints = {
-	.endpoints = snd_endpoints_list,
-	.num = ARRAY_SIZE(snd_endpoints_list),
-};
-
-struct platform_device vogue_snd_device = {
-	.name = "mixer",
-	.id = -1,
-	.dev = {
-		.platform_data = &vogue_snd_endpoints,
-	},
-};
-
 /* All */
 static struct platform_device *jz_platform_devices[] __initdata = {
 	&jz_lcd_device,
 	&jz_usb_gdt_device,
 	//&jz_i2c_device,
-	&vogue_snd_device,
 	&jz_msc0_device,
 	&jz_msc1_device,
 };
