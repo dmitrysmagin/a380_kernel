@@ -5,7 +5,7 @@
 # Object file lists.
 
 obj-y += prom.o irq.o time.o reset.o setup.o dma.o \
-	platform.o i2c.o clock.o
+	platform.o i2c.o clock.o serial.o
 
 obj-$(CONFIG_DEBUG_FS)		+= clock-debugfs.o
 obj-$(CONFIG_PROC_FS)		+= proc.o

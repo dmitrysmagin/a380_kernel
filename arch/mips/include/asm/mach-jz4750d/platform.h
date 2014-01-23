@@ -9,6 +9,8 @@ extern struct platform_device jz_msc0_device;
 extern struct platform_device jz_msc1_device;
 extern struct platform_device jz_i2c_device;
 
+void jz4750d_serial_device_register(void);
+
 /* msc */
 #define CARD_INSERTED 1
 #define CARD_REMOVED 0

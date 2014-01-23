@@ -260,6 +260,8 @@ static int __init a380_init_platform_devices(void)
 	jz_msc1_device.dev.platform_data = &cetus_tf_data;
 #endif
 
+	jz4750d_serial_device_register();
+
 	return platform_add_devices(jz_platform_devices, ARRAY_SIZE(jz_platform_devices));
 }
 

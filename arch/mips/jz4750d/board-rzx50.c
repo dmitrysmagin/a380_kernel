@@ -29,6 +29,7 @@
 #include <asm/mach-jz4750d/platform.h>
 #include <../sound/oss/jz_audio.h>
 
+#include "serial.h"
 #include "clock.h"
 
 struct jz4750d_clock_board_data jz4750d_clock_bdata = {
@@ -259,6 +260,8 @@ static int __init rzx50_init_platform_devices(void)
 #ifdef CONFIG_JZ_MSC1
 	jz_msc1_device.dev.platform_data = &cetus_tf_data;
 #endif
+
+	jz4750d_serial_device_register();
 
 	return platform_add_devices(jz_platform_devices, ARRAY_SIZE(jz_platform_devices));
 }

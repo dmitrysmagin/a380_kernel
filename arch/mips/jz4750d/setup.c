@@ -20,15 +20,14 @@
  *
  */
 #include <linux/init.h>
-#include <linux/string.h>
-#include <linux/kernel.h>
 #include <linux/io.h>
-#include <linux/irq.h>
 #include <linux/ioport.h>
-#include <linux/tty.h>
-#include <linux/serial.h>
-#include <linux/serial_core.h>
-#include <linux/serial_8250.h>
+#include <linux/kernel.h>
+//#include <linux/irq.h>
+//#include <linux/tty.h>
+//#include <linux/serial.h>
+//#include <linux/serial_core.h>
+//#include <linux/serial_8250.h>
 
 #include <asm/cpu.h>
 #include <asm/bootinfo.h>
@@ -112,7 +111,7 @@ static void __init jz_soc_setup(void)
 
 static void __init jz_serial_setup(void)
 {
-#ifdef CONFIG_SERIAL_8250
+#if 0 //def CONFIG_SERIAL_8250
 	struct uart_port s;
 	REG8(UART0_FCR) |= UARTFCR_UUE; /* enable UART module */
 	memset(&s, 0, sizeof(s));
@@ -166,7 +165,7 @@ void __init plat_mem_setup(void)
 	jz4750d_reset_init();
 
 	jz_soc_setup();
-	jz_serial_setup();
+	//jz_serial_setup();
 
 	/* FIXME: Add memory size detection */
 	add_memory_region(0, 0x04000000 /* 64M */, BOOT_MEM_RAM);
