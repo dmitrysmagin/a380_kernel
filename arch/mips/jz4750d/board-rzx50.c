@@ -26,6 +26,7 @@
 #include <asm/reboot.h>
 
 #include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/jz4750d_mmc.h>
 #include <asm/mach-jz4750d/platform.h>
 #include <../sound/oss/jz_audio.h>
 
