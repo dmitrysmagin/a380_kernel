@@ -23,11 +23,6 @@
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <linux/kernel.h>
-//#include <linux/irq.h>
-//#include <linux/tty.h>
-//#include <linux/serial.h>
-//#include <linux/serial_core.h>
-//#include <linux/serial_8250.h>
 
 #include <asm/cpu.h>
 #include <asm/bootinfo.h>
@@ -109,49 +104,6 @@ static void __init jz_soc_setup(void)
 	soc_dmac_setup();
 }
 
-static void __init jz_serial_setup(void)
-{
-#if 0 //def CONFIG_SERIAL_8250
-	struct uart_port s;
-	REG8(UART0_FCR) |= UARTFCR_UUE; /* enable UART module */
-	memset(&s, 0, sizeof(s));
-	s.flags = UPF_BOOT_AUTOCONF | UPF_SKIP_TEST;
-	s.iotype = SERIAL_IO_MEM;
-	s.regshift = 2;
-	s.uartclk = jz_clocks.extalclk ;
-
-	s.line = 0;
-	s.membase = (u8 *)UART0_BASE;
-	s.irq = IRQ_UART0;
-	if (early_serial_setup(&s) != 0) {
-		printk(KERN_ERR "Serial ttyS0 setup failed!\n");
-	}
-
-	s.line = 1;
-	s.membase = (u8 *)UART1_BASE;
-	s.irq = IRQ_UART1;
-	if (early_serial_setup(&s) != 0) {
-		printk(KERN_ERR "Serial ttyS1 setup failed!\n");
-	}
-
-	s.line = 2;
-	s.membase = (u8 *)UART2_BASE;
-	s.irq = IRQ_UART2;
-
-	if (early_serial_setup(&s) != 0) {
-		printk(KERN_ERR "Serial ttyS2 setup failed!\n");
-	}
-/*
-	s.line = 3;
-	s.membase = (u8 *)UART3_BASE;
-	s.irq = IRQ_UART3;
-	if (early_serial_setup(&s) != 0) {
-		printk(KERN_ERR "Serial ttyS3 setup failed!\n");
-	}
-*/
-#endif
-}
-
 void __init plat_mem_setup(void)
 {
 	/* IO/MEM resources. Which will be the addtion value in `inX' and
@@ -165,7 +117,6 @@ void __init plat_mem_setup(void)
 	jz4750d_reset_init();
 
 	jz_soc_setup();
-	//jz_serial_setup();
 
 	/* FIXME: Add memory size detection */
 	add_memory_region(0, 0x04000000 /* 64M */, BOOT_MEM_RAM);
