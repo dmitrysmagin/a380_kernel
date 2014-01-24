@@ -17,12 +17,6 @@
 #include <linux/pm.h>
 #include <linux/kthread.h>
 #include <linux/poll.h>
-#include <asm/irq.h>
-#include <asm/pgtable.h>
-#include <asm/system.h>
-#include <asm/uaccess.h>
-#include <asm/processor.h>
-#include <asm/jzsoc.h>
 #include <linux/types.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
@@ -30,8 +24,16 @@
 #include <linux/miscdevice.h>
 #include <linux/proc_fs.h>
 
-#include "a380_elan_pad.h"
+#include <asm/irq.h>
+#include <asm/pgtable.h>
+#include <asm/system.h>
+#include <asm/uaccess.h>
+#include <asm/processor.h>
 
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+
+#include "a380_elan_pad.h"
 
 unsigned int elan_key_val = 0;
 

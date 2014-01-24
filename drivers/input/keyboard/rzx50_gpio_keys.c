@@ -21,8 +21,10 @@
 #include <linux/sysrq.h>
 #include <linux/sched.h>
 
-#include <asm/jzsoc.h>
 #include <linux/proc_fs.h>
+
+#include <asm/mach-jz4750d/board-rzx50.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
 
 #define SCAN_INTERVAL		(20)	/* (ms) */
 #define POWER_INTERVAL		(2000)	/* (ms) */
