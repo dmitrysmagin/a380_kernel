@@ -21,13 +21,26 @@
 #include <linux/kobject.h>
 #include <linux/miscdevice.h>
 #include <linux/proc_fs.h>
+#include <linux/interrupt.h>
+#include <linux/delay.h>
 
-#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_udc.h>
+
+// Remove later
+#if defined CONFIG_JZ4750D_A380
+  #include <asm/mach-jz4750d/board-a380.h>
+#elif defined CONFIG_JZ4750D_RZX50
+  #include <asm/mach-jz4750d/board-rzx50.h>
+#endif
+
 #include "jzchars.h"
 
-#ifndef GPIO_UDC_HOTPLUG
-#define GPIO_UDC_HOTPLUG 86
-#endif
+//#ifndef GPIO_UDC_HOTPLUG
+//#define GPIO_UDC_HOTPLUG 86
+//#endif
 
 #define UDC_HOTPLUG_PIN   GPIO_UDC_HOTPLUG
 #define UDC_HOTPLUG_IRQ   (IRQ_GPIO_0 + UDC_HOTPLUG_PIN)

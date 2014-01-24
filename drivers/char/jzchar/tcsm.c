@@ -31,7 +31,6 @@
 #include <asm/irq.h>
 #include <asm/thread_info.h>
 #include <asm/uaccess.h>
-#include <asm/jzsoc.h>
 
 #include "jzchars.h"
 

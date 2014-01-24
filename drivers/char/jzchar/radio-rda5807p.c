@@ -8,7 +8,9 @@
 #include <linux/sched.h>
 #include <linux/smp_lock.h>
 
-#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/jz4750d_aic.h>
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
 #include <asm/mach-jz4750d/i2c.h>
 
 MODULE_AUTHOR("caijicheng<caijicheng2006@163.com>");

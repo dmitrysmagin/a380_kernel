@@ -1,4 +1,7 @@
-#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_ssi.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/delay.h>

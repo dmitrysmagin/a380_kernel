@@ -8,13 +8,16 @@
 #include <linux/poll.h>
 #include <linux/string.h>
 #include <linux/smp_lock.h>
+#include <linux/kthread.h>
+#include <linux/interrupt.h>
+
 #include <asm/uaccess.h>
 #include <asm/irq.h>
 #include <asm/io.h>
-#include <asm/jzsoc.h>
-#include <linux/kthread.h>
 
-
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+#include <asm/mach-jz4750d/i2c.h>
 
 
 #define SPI_CS  (32 * 4 + 18)

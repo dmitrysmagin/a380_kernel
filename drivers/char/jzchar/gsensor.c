@@ -28,12 +28,23 @@
 #include <linux/spinlock.h>
 #include <linux/poll.h>
 #include <linux/spinlock.h>
-#include <asm/irq.h>
-#include <asm/uaccess.h>
 #include <linux/proc_fs.h>
 
-#include <asm/jzsoc.h>
+#include <asm/irq.h>
+#include <asm/uaccess.h>
+
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/jz4750d_wdt.h>
 #include <asm/mach-jz4750d/i2c.h>
+
+// Remove later
+#if defined CONFIG_JZ4750D_A380
+  #include <asm/mach-jz4750d/board-a380.h>
+#elif defined CONFIG_JZ4750D_RZX50
+  #include <asm/mach-jz4750d/board-rzx50.h>
+#endif
 
 #include "jzchars.h"
 

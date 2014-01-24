@@ -34,10 +34,19 @@
 #include <linux/seq_file.h>
 #include <linux/kthread.h>
 
-
 #include <asm/irq.h>
 #include <asm/uaccess.h>
-#include <asm/jzsoc.h>
+
+#include <asm/mach-jz4750d/jz4750d_sadc.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+
+// Remove later
+#if defined CONFIG_JZ4750D_A380
+  #include <asm/mach-jz4750d/board-a380.h>
+#elif defined CONFIG_JZ4750D_RZX50
+  #include <asm/mach-jz4750d/board-rzx50.h>
+#endif
 
 #include "jzchars.h"
 #include "jz_ts.h"
