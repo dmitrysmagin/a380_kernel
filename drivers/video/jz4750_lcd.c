@@ -41,9 +41,13 @@
 #include <asm/system.h>
 #include <asm/uaccess.h>
 #include <asm/processor.h>
-#include <asm/jzsoc.h>
-
 #include "console/fbcon.h"
+
+#include <asm/mach-jz4750d/jz4750d_lcdc.h>
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+#include <asm/mach-jz4750d/jz4750d_tcu.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
 
 #include "jz4750_lcd.h"
 #include "jz4750_tve.h"

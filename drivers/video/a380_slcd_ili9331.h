@@ -1,8 +1,6 @@
 #ifndef _A380_ILI9331_H_
 #define _A380_ILI9331_H_
 
-#include <asm/jzsoc.h>
-
 #if defined (CONFIG_JZ4750_SLCD_A380_ILI9331)
 #define WR_GRAM_CMD	0x22
 

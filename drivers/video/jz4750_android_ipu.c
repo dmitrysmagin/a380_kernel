@@ -20,8 +20,6 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
-
-#include <asm/irq.h>
 #include <linux/signal.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
@@ -32,7 +30,10 @@
 #include <asm/system.h>
 #include <asm/uaccess.h>
 #include <asm/processor.h>
-#include <asm/jzsoc.h>
+
+#include <asm/mach-jz4750d/jz4750d_lcdc.h>
+#include <asm/mach-jz4750d/jz4750d_ipu.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
 
 #include "jz4750_lcd.h"
 #include "jz4750_ipu.h"

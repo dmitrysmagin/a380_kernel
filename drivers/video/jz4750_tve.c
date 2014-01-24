@@ -15,7 +15,8 @@
  */
 
 
-#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/jz4750d_tve.h>
+
 #include "jz4750_tve.h"
 
 #if 0
