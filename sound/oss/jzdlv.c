@@ -16,7 +16,6 @@
 #include <linux/workqueue.h>
 #include <linux/sound.h>
 #include <linux/slab.h>
-//#include <sound/driver.h>
 #include <sound/core.h>
 #include <sound/initval.h>
 #include <linux/proc_fs.h>
@@ -25,10 +24,13 @@
 #include <linux/mutex.h>
 #include <linux/mm.h>
 #include <asm/hardirq.h>
-#include <asm/jzsoc.h>
+
+#include <asm/mach-jz4750d/jz4750d_aic.h>
+#include <asm/mach-jz4750d/jz4750d_dmac.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/dma.h>
 
 #include "sound_config.h"
-
 #include "jz_audio.h"
 #include "jz_codec.h"
 #include "jz_i2s_dbg.h"

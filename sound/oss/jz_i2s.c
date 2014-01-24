@@ -16,7 +16,6 @@
 #include <linux/delay.h>
 #include <linux/sound.h>
 #include <linux/slab.h>
-//#include <sound/driver.h>
 #include <sound/core.h>
 #include <sound/initval.h>
 #include <linux/proc_fs.h>
@@ -25,13 +24,25 @@
 #include <linux/mutex.h>
 #include <linux/mm.h>
 #include <linux/smp_lock.h>
-#include <asm/hardirq.h>
-#include <asm/jzsoc.h>
-#include "sound_config.h"
-
 #include <linux/miscdevice.h>
 #include <linux/platform_device.h>
-//#include <linux/msm_audio.h>
+
+#include <asm/hardirq.h>
+
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+#include <asm/mach-jz4750d/jz4750d_aic.h>
+#include <asm/mach-jz4750d/jz4750d_dmac.h>
+#include <asm/mach-jz4750d/dma.h>
+
+// Remove later
+#if defined CONFIG_JZ4750D_A380
+  #include <asm/mach-jz4750d/board-a380.h>
+#elif defined CONFIG_JZ4750D_RZX50
+  #include <asm/mach-jz4750d/board-rzx50.h>
+#endif
+
+#include "sound_config.h"
 #include "jz_codec.h"
 #include "jz_i2s_dbg.h"
 
