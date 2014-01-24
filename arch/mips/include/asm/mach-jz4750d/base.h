@@ -58,8 +58,8 @@
 #define IPU_BASE	0xB3080000
 
 // AHB1 bus devices
-#define ME_BASE		0xB3090000 // or MC ?
-#define MC_BASE		0xB30A0000 // or ME ?
+#define MC_BASE		0xB3090000
+#define ME_BASE		0xB30A0000
 #define DEBLK_BASE	0xB30B0000
 #define IDCT_BASE	0xB30C0000
 #define BCH_BASE	0xB30D0000

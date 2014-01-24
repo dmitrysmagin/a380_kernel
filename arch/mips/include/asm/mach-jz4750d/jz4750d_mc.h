@@ -17,7 +17,7 @@
 
 #include <asm/mach-jz4750d/jz4750d_regs.h>
 
-#define MC_BASE		0xB30A0000
+#define MC_BASE		0xB3090000
 
 /*************************************************************************
  * MC (Motion Compensation)

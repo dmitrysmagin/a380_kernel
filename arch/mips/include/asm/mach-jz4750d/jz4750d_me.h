@@ -17,7 +17,7 @@
 
 #include <asm/mach-jz4750d/jz4750d_regs.h>
 
-#define ME_BASE		0xB3090000
+#define ME_BASE		0xB30A0000
 
 /*************************************************************************
  * ME (Motion Estimation)
