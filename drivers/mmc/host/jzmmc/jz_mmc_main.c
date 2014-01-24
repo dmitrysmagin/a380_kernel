@@ -16,6 +16,7 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/dma-mapping.h>
+
 #include <linux/mmc/host.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
@@ -25,12 +26,13 @@
 #include <linux/signal.h>
 #include <linux/pm.h>
 #include <linux/scatterlist.h>
+
 #include <asm/io.h>
 #include <asm/scatterlist.h>
 
 #include <asm/mach-jz4750d/jz4750d_mmc.h>
-
-#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/jz4750d_msc.h>
+#include <asm/mach-jz4750d/jz4750d_dmac.h>
 
 #include "include/jz_mmc_host.h"
 #include "include/jz_mmc_controller.h"

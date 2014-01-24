@@ -11,8 +11,8 @@
 #include <linux/mmc/host.h>
 
 #include <asm/mach-jz4750d/jz4750d_mmc.h>
-
-#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/jz4750d_msc.h>
+#include <asm/mach-jz4750d/jz4750d_dmac.h>
 
 #include "include/jz_mmc_gpio.h"
 #include "include/jz_mmc_msc.h"
