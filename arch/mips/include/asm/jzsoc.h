@@ -39,15 +39,4 @@
 #include <asm/mach-jz4750l/jz4750l.h>
 #endif
 
-/*
- * Generic I/O routines
- */
-#define readb(addr)	(*(volatile unsigned char *)(addr))
-#define readw(addr)	(*(volatile unsigned short *)(addr))
-#define readl(addr)	(*(volatile unsigned int *)(addr))
-
-#define writeb(b,addr)	((*(volatile unsigned char *)(addr)) = (b))
-#define writew(b,addr)	((*(volatile unsigned short *)(addr)) = (b))
-#define writel(b,addr)	((*(volatile unsigned int *)(addr)) = (b))
-
 #endif /* __ASM_JZSOC_H__ */
