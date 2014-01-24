@@ -30,8 +30,10 @@
 #include <linux/spinlock.h>
 #include <asm/irq.h>
 #include <asm/uaccess.h>
-#include <asm/jzsoc.h>
 #include <linux/proc_fs.h>
+
+#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/i2c.h>
 
 #include "jzchars.h"
 

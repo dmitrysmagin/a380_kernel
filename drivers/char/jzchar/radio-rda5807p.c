@@ -1,13 +1,15 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
-#include <asm/jzsoc.h>
 #include <linux/delay.h>
 #include <linux/miscdevice.h>
 #include <linux/fs.h>
 #include <linux/types.h>
 #include <linux/sched.h>
 #include <linux/smp_lock.h>
+
+#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/i2c.h>
 
 MODULE_AUTHOR("caijicheng<caijicheng2006@163.com>");
 MODULE_DESCRIPTION("RDA5807P radio Driver");
