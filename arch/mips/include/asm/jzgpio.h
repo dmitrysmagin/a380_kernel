@@ -12,7 +12,8 @@
 #ifndef __ASM_MIPS_JZGPIO_H__
 #define __ASM_MIPS_JZGPIO_H__
 
-#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
 
 static inline int gpio_request(unsigned gpio, const char *label)
 {
