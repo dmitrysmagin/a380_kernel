@@ -25,7 +25,10 @@
 #include <asm/mipsregs.h>
 #include <asm/reboot.h>
 
-#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/board-a380.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+
 #include <asm/mach-jz4750d/jz4750d_mmc.h>
 #include <asm/mach-jz4750d/platform.h>
 

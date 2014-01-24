@@ -15,11 +15,12 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
-
 #include <linux/cpufreq.h>
 
-#include <asm/jzsoc.h>
 #include <asm/processor.h>
+
+#include <asm/mach-jz4750d/jz4750d_emc.h>
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
 
 #define dprintk(msg...) cpufreq_debug_printk(CPUFREQ_DEBUG_DRIVER, \
 						"cpufreq-jz4750d", msg)

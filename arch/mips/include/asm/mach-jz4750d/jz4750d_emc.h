@@ -15,6 +15,10 @@
 #ifndef __ASM_JZ4750D_EMC_H__
 #define __ASM_JZ4750D_EMC_H__
 
+#include <asm/mach-jz4750d/jz4750d_regs.h>
+
+#define EMC_BASE	0xB3010000
+
 /*************************************************************************
  * EMC (External Memory Controller)
  *************************************************************************/

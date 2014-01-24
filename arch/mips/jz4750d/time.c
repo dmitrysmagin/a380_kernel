@@ -24,8 +24,12 @@
 #include <linux/interrupt.h>
 #include <linux/time.h>
 #include <linux/clockchips.h>
+
 #include <asm/time.h>
-#include <asm/jzsoc.h>
+
+#include <asm/mach-jz4750d/jz4750d_tcu.h>
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
 
 /* This is for machines which generate the exact clock. */
 

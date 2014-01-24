@@ -15,6 +15,13 @@
 #ifndef __ASM_JZ4750D_UART_H__
 #define __ASM_JZ4750D_UART_H__
 
+#include <asm/mach-jz4750d/jz4750d_regs.h>
+
+#define UART0_BASE	0xB0030000
+#define UART1_BASE	0xB0031000
+#define UART2_BASE	0xB0032000
+#define UART3_BASE	0xB0033000
+
 /*************************************************************************
  * UART
  *************************************************************************/

@@ -23,10 +23,12 @@
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/delay.h>
+
 #include <asm/uaccess.h>
 #include <asm/addrspace.h>
 
-#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_i2c.h>
 #include <asm/mach-jz4750d/i2c.h>
 
 /* I2C protocol */

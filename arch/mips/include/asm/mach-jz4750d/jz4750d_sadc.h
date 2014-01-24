@@ -15,6 +15,10 @@
 #ifndef __ASM_JZ4750D_SADC_H__
 #define __ASM_JZ4750D_SADC_H__
 
+#include <asm/mach-jz4750d/jz4750d_regs.h>
+
+#define SADC_BASE	0xB0070000
+
 /*************************************************************************
  * SADC (Smart A/D Controller)
  *************************************************************************/

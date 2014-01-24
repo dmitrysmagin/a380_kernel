@@ -29,9 +29,13 @@
 #include <linux/proc_fs.h>
 #include <linux/page-flags.h>
 #include <linux/sched.h>
+
 #include <asm/uaccess.h>
 #include <asm/pgtable.h>
-#include <asm/jzsoc.h>
+
+#include <asm/mach-jz4750d/jz4750d_emc.h>
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
 
 //#define DEBUG 1
 #undef DEBUG

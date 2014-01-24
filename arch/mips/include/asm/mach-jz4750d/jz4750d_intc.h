@@ -15,6 +15,12 @@
 #ifndef __ASM_JZ4750D_INTC_H__
 #define __ASM_JZ4750D_INTC_H__
 
+#include <asm/mach-jz4750d/jz4750d_regs.h>
+#include <asm/mach-jz4750d/jz4750d_dmac.h>
+#include <asm/mach-jz4750d/jz4750d_sadc.h>
+
+#define	INTC_BASE	0xB0001000
+
 /*************************************************************************
  * INTC (Interrupt Controller)
  *************************************************************************/

@@ -16,9 +16,6 @@
 #ifndef __ASM_JZ4750_H__
 #define __ASM_JZ4750_H__
 
-#include <asm/mach-jz4750d/base.h>
-#include <asm/mach-jz4750d/jz4750d_regs.h>
-
 #include <asm/mach-jz4750d/jz4750d_cpm.h>
 #include <asm/mach-jz4750d/jz4750d_gpio.h>
 #include <asm/mach-jz4750d/jz4750d_intc.h>

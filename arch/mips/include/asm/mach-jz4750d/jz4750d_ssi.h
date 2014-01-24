@@ -15,6 +15,10 @@
 #ifndef __ASM_JZ4750D_SSI_H__
 #define __ASM_JZ4750D_SSI_H__
 
+#include <asm/mach-jz4750d/jz4750d_regs.h>
+
+#define SSI_BASE	0xB0043000
+
 /*************************************************************************
  * SSI (Synchronous Serial Interface)
  *************************************************************************/

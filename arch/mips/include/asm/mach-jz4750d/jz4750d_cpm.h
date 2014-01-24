@@ -15,6 +15,10 @@
 #ifndef __ASM_JZ4750D_CPM_H__
 #define __ASM_JZ4750D_CPM_H__
 
+#include <asm/mach-jz4750d/jz4750d_regs.h>
+
+#define CPM_BASE	0xB0000000
+
 #ifndef JZ_EXTAL
 #define JZ_EXTAL		24000000	/* 24 MHz */
 #endif

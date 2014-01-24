@@ -15,6 +15,10 @@
 #ifndef __ASM_JZ4750D_OTP_H__
 #define __ASM_JZ4750D_OTP_H__
 
+#include <asm/mach-jz4750d/jz4750d_regs.h>
+
+#define OTP_BASE	0xB3012000
+
 /*************************************************************************
  * OTP (One Time Programmable Module)
  *************************************************************************/

@@ -27,10 +27,23 @@
 #include <linux/interrupt.h>
 #include <linux/proc_fs.h>
 #include <linux/sysctl.h>
+#include <linux/delay.h>
 #include <linux/suspend.h>
 
 #include <asm/cacheops.h>
-#include <asm/jzsoc.h>
+
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_rtc.h>
+#include <asm/mach-jz4750d/jz4750d_emc.h>
+
+// Remove later
+#if defined CONFIG_JZ4750D_A380
+  #include <asm/mach-jz4750d/board-a380.h>
+#elif defined CONFIG_JZ4750D_RZX50
+  #include <asm/mach-jz4750d/board-rzx50.h>
+#endif
 
 #undef DEBUG
 //#define DEBUG

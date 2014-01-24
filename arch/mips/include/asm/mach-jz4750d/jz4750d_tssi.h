@@ -15,6 +15,10 @@
 #ifndef __ASM_JZ4750D_EMC_H__
 #define __ASM_JZ4750D_EMC_H__
 
+#include <asm/mach-jz4750d/jz4750d_regs.h>
+
+#define TSSI_BASE	0xB0073000
+
 /*************************************************************************
  * TSSI MPEG 2-TS slave interface
  *************************************************************************/

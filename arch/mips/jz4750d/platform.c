@@ -16,9 +16,14 @@
 #include <linux/serial_core.h>
 #include <linux/serial_8250.h>
 
-#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/jz4750d_lcdc.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/jz4750d_udc.h>
+#include <asm/mach-jz4750d/jz4750d_msc.h>
+
 #include <asm/mach-jz4750d/platform.h>
 #include <asm/mach-jz4750d/base.h>
+#include <asm/mach-jz4750d/dma.h>
 //#include <asm/mach-jz4750d/irq.h>
 
 #include "serial.h"

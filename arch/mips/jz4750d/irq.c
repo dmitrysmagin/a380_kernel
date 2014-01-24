@@ -31,7 +31,10 @@
 #include <asm/io.h>
 #include <asm/mipsregs.h>
 #include <asm/system.h>
-#include <asm/jzsoc.h>
+
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/jz4750d_dmac.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
 
 /*
  * INTC irq type

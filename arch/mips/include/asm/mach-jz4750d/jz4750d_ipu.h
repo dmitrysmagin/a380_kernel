@@ -15,6 +15,10 @@
 #ifndef __ASM_JZ4750D_IPU_H__
 #define __ASM_JZ4750D_IPU_H__
 
+#include <asm/mach-jz4750d/jz4750d_regs.h>
+
+#define IPU_BASE	0xB3080000
+
 /*************************************************************************
  * IPU (Image Processing Unit) - old style
  *************************************************************************/

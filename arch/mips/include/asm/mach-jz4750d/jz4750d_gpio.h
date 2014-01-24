@@ -15,6 +15,10 @@
 #ifndef __ASM_JZ4750D_GPIO_H__
 #define __ASM_JZ4750D_GPIO_H__
 
+#include <asm/mach-jz4750d/jz4750d_regs.h>
+
+#define GPIO_BASE	0xB0010000
+
 //------------------------------------------------------
 // GPIO Pins Description
 //

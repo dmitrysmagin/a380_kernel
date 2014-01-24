@@ -15,6 +15,11 @@
 #ifndef __ASM_JZ4750D_AIC_H__
 #define __ASM_JZ4750D_AIC_H__
 
+#include <asm/mach-jz4750d/jz4750d_regs.h>
+
+#define	AIC_BASE	0xb0020000
+#define ICDC_BASE	0xb0020000
+
 /*************************************************************************
  * AIC (AC97/I2S Controller)
  *************************************************************************/

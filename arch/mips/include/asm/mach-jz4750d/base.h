@@ -21,10 +21,12 @@
 #define JZ4750D_UART1_BASE_ADDR	0x10031000
 #define JZ4750D_UART2_BASE_ADDR	0x10032000
 
-/*
- * Define the module base addresses
- */
 
+#if 0
+
+/* Summary of JZ4750D base addresses  */
+
+// APB bus devices
 #define CPM_BASE	0xB0000000
 #define INTC_BASE	0xB0001000
 #define TCU_BASE	0xB0002000
@@ -37,27 +39,31 @@
 #define UART0_BASE	0xB0030000
 #define UART1_BASE	0xB0031000
 #define UART2_BASE	0xB0032000
-#define UART3_BASE	0xB0033000
 #define I2C_BASE	0xB0042000
 #define SSI_BASE	0xB0043000
 #define SADC_BASE	0xB0070000
 #define PCM_BASE	0xB0071000
 #define OWI_BASE	0XB0072000
 #define TSSI_BASE	0xB0073000
+
+// AHB0 bus devices
 #define EMC_BASE	0xB3010000
 #define OTP_BASE	0xB3012000
 #define DMAC_BASE	0xB3020000
-#define UHC_BASE	0xB3030000
 #define UDC_BASE	0xB3040000
 #define LCD_BASE	0xB3050000
 #define SLCD_BASE	0xB3050000
 #define TVE_BASE	0xB3050100
 #define CIM_BASE	0xB3060000
 #define IPU_BASE	0xB3080000
-#define ME_BASE		0xB3090000
-#define MC_BASE		0xB30A0000
+
+// AHB1 bus devices
+#define ME_BASE		0xB3090000 // or MC ?
+#define MC_BASE		0xB30A0000 // or ME ?
+#define DEBLK_BASE	0xB30B0000
+#define IDCT_BASE	0xB30C0000
 #define BCH_BASE	0xB30D0000
-#define ETH_BASE	0xB3100000
-#define TCSM_BASE	0xF4000000
+
+#endif
 
 #endif /* __ASM_JZ4750D_BASE_H__ */

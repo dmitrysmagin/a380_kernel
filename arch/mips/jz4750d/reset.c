@@ -13,12 +13,16 @@
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <linux/platform_device.h>
+
 #include <asm/io.h>
 #include <asm/pgtable.h>
 #include <asm/processor.h>
 #include <asm/reboot.h>
 #include <asm/system.h>
-#include <asm/jzsoc.h>
+
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_wdt.h>
+#include <asm/mach-jz4750d/jz4750d_tcu.h>
 
 void jz_restart(char *command)
 {

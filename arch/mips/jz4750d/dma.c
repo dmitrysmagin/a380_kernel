@@ -28,7 +28,16 @@
 
 #include <asm/system.h>
 #include <asm/addrspace.h>
-#include <asm/jzsoc.h>
+
+#include <asm/mach-jz4750d/jz4750d_dmac.h>
+#include <asm/mach-jz4750d/jz4750d_bch.h>
+#include <asm/mach-jz4750d/jz4750d_uart.h>
+#include <asm/mach-jz4750d/jz4750d_ssi.h>
+#include <asm/mach-jz4750d/jz4750d_msc.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/jz4750d_aic.h>
+#include <asm/mach-jz4750d/jz4750d_pcm.h>
+#include <asm/mach-jz4750d/dma.h>
 
 /*
  * A note on resource allocation:
