@@ -28,10 +28,11 @@
 
 #include <asm/irq.h>
 #include <asm/io.h>
-#include <linux/module.h>
 #include <asm/addrspace.h>
 
-#include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/jz4750d_i2c.h>
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+
 #include "i2c-jz47xx.h"
 
 /* I2C protocol */
