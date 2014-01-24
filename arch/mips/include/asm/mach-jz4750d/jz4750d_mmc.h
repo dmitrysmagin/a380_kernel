@@ -23,7 +23,6 @@ struct jz_mmc_platform_data {
 	void (*init) (struct device *);
 	void (*power_on) (struct device *);
 	void (*power_off) (struct device *);
-	void (*cpm_start) (struct device *);
 	unsigned int (*status) (struct device *);
 	unsigned int (*write_protect) (struct device *);
 	void (*plug_change) (int);

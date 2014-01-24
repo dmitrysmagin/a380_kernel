@@ -51,11 +51,6 @@ static void cetus_sd_power_off(struct device *dev)
 {
 }
 
-static void cetus_sd_cpm_start(struct device *dev)
-{
-	__cpm_start_msc(0);
-}
-
 static unsigned int cetus_sd_status(struct device *dev)
 {
 	return 1;
@@ -79,7 +74,6 @@ struct jz_mmc_platform_data cetus_sd_data = {
 	.init           = cetus_sd_gpio_init,
 	.power_on       = cetus_sd_power_on,
 	.power_off      = cetus_sd_power_off,
-	.cpm_start      = cetus_sd_cpm_start,
 	.status         = cetus_sd_status,
 	.plug_change    = cetus_sd_plug_change,
 	.write_protect  = cetus_sd_get_wp,
@@ -102,11 +96,6 @@ static void cetus_tf_power_on(struct device *dev)
 static void cetus_tf_power_off(struct device *dev)
 {
 	__msc1_disable_power();
-}
-
-static void cetus_tf_cpm_start(struct device *dev)
-{
-	__cpm_start_msc(1);
 }
 
 static unsigned int cetus_tf_status(struct device *dev)
@@ -133,7 +122,6 @@ struct jz_mmc_platform_data cetus_tf_data = {
 	.init           = cetus_tf_gpio_init,
 	.power_on       = cetus_tf_power_on,
 	.power_off      = cetus_tf_power_off,
-	.cpm_start	= cetus_tf_cpm_start,
 	.status		= cetus_tf_status,
 	.plug_change	= cetus_tf_plug_change,
 	.max_bus_width  = MMC_CAP_SD_HIGHSPEED | MMC_CAP_4_BIT_DATA,
