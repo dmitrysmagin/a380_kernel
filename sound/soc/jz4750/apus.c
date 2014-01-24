@@ -18,8 +18,6 @@
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 
-#include <asm/jzsoc.h>
-
 #include "../codecs/jzdlv.h"
 #include "jz4750-pcm.h"
 #include "jz4750-i2s.h"
