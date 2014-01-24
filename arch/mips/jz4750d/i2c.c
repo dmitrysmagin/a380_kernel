@@ -27,6 +27,7 @@
 #include <asm/addrspace.h>
 
 #include <asm/jzsoc.h>
+#include <asm/mach-jz4750d/i2c.h>
 
 /* I2C protocol */
 #define I2C_READ	1

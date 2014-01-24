@@ -47,7 +47,6 @@
 #include <asm/mach-jz4750d/jz4750d_ipu.h>
 
 #include <asm/mach-jz4750d/dma.h>
-#include <asm/mach-jz4750d/misc.h>
  
 /*------------------------------------------------------------------
  * Platform definitions
