@@ -48,7 +48,6 @@
 
 #include <asm/mach-jz4750d/dma.h>
 #include <asm/mach-jz4750d/misc.h>
-#include <asm/mach-jz4750d/platform.h>
  
 /*------------------------------------------------------------------
  * Platform definitions
@@ -61,12 +60,5 @@
 #ifdef CONFIG_JZ4750D_RZX50
 #include <asm/mach-jz4750d/board-rzx50.h>
 #endif
-
-/*------------------------------------------------------------------
- * Follows are related to platform definitions
- */
-
-#include <asm/mach-jz4750d/serial.h>
-#include <asm/mach-jz4750d/spi.h>
 
 #endif /* __ASM_JZ4750_H__ */

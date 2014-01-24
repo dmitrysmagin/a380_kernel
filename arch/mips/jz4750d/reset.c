@@ -12,6 +12,7 @@
  */
 #include <linux/sched.h>
 #include <linux/mm.h>
+#include <linux/platform_device.h>
 #include <asm/io.h>
 #include <asm/pgtable.h>
 #include <asm/processor.h>
