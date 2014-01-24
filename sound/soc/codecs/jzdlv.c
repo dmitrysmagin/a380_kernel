@@ -19,6 +19,9 @@
 #include <sound/soc-dai.h>
 #include <sound/initval.h>
 
+#include <asm/mach-jz4750d/jz4750d_aic.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
+
 #include "../jz4750/jz4750-pcm.h"
 #include "jzdlv.h"
 

@@ -16,6 +16,10 @@
 #include <sound/initval.h>
 #include <sound/soc.h>
 
+#include <asm/mach-jz4750d/jz4750d_aic.h>
+#include <asm/mach-jz4750d/jz4750d_dmac.h>
+#include <asm/mach-jz4750d/dma.h>
+
 #include "jz4750-pcm.h"
 #include "jz4750-i2s.h"
 #include "../codecs/jzdlv.h"

@@ -8,8 +8,6 @@
 #ifndef _JZ4750_PCM_H
 #define _JZ4750_PCM_H
 
-#include <asm/jzsoc.h>
-
 #define ST_RUNNING		(1<<0)
 #define ST_OPENED		(1<<1)
 
