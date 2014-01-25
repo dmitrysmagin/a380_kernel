@@ -24,7 +24,7 @@
 #include <asm/mach-jz4750d/platform.h>
 #include <asm/mach-jz4750d/base.h>
 #include <asm/mach-jz4750d/dma.h>
-//#include <asm/mach-jz4750d/irq.h>
+#include <asm/mach-jz4750d/irq.h>
 
 #include "serial.h"
 #include "clock.h"
@@ -180,9 +180,9 @@ struct platform_device jz_i2c_device = {
 #endif
 
 /* Serial */
-#define JZ4750D_IRQ_UART0 IRQ_UART0
-#define JZ4750D_IRQ_UART1 IRQ_UART1
-#define JZ4750D_IRQ_UART2 IRQ_UART2
+//#define JZ4750D_IRQ_UART0 IRQ_UART0
+//#define JZ4750D_IRQ_UART1 IRQ_UART1
+//#define JZ4750D_IRQ_UART2 IRQ_UART2
 
 #define JZ4750D_UART_DATA(_id) \
 	{ \
