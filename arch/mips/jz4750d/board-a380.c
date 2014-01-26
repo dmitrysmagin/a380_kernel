@@ -12,27 +12,26 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/kernel.h>
 #include <linux/init.h>
-#include <linux/sched.h>
-#include <linux/ioport.h>
-#include <linux/mm.h>
-#include <linux/console.h>
-#include <linux/delay.h>
 #include <linux/mmc/host.h>
-
-#include <asm/cpu.h>
-#include <asm/bootinfo.h>
-#include <asm/mipsregs.h>
-#include <asm/reboot.h>
+#include <linux/input.h>
+#include <linux/gpio_keys.h>
+#include <linux/input/matrix_keypad.h>
 
 #include <asm/mach-jz4750d/board-a380.h>
 #include <asm/mach-jz4750d/jz4750d_gpio.h>
 #include <asm/mach-jz4750d/jz4750d_intc.h>
 
 #include <asm/mach-jz4750d/jz4750d_mmc.h>
+#include <asm/mach-jz4750d/gpio.h>
 #include <asm/mach-jz4750d/platform.h>
-#include <../sound/oss/jz_audio.h>
 
+#ifdef CONFIG_SOUND_JZ_I2S
+#include <../sound/oss/jz_audio.h>
+#endif
+
+#include "serial.h"
 #include "clock.h"
 
 struct jz4750d_clock_board_data jz4750d_clock_bdata = {
@@ -132,7 +131,7 @@ struct jz_mmc_platform_data cetus_tf_data = {
 	.bus_width      = 1,
 };
 
-//////////////////////////////////////////////////////////
+#ifdef CONFIG_SOUND_JZ_I2S
 static struct snd_endpoint snd_endpoints_list[] = {
 	{
 		.name	= "HANDSET",
@@ -160,13 +159,16 @@ struct platform_device vogue_snd_device = {
 		.platform_data = &vogue_snd_endpoints,
 	},
 };
+#endif
 
 /* All */
 static struct platform_device *jz_platform_devices[] __initdata = {
 	&jz_lcd_device,
 	&jz_usb_gdt_device,
 	//&jz_i2c_device,
+#ifdef CONFIG_SOUND_JZ_I2S
 	&vogue_snd_device,
+#endif
 	&jz_msc0_device,
 	&jz_msc1_device,
 };

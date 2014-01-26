@@ -237,22 +237,19 @@ void __init arch_init_irq(void)
 	clear_c0_status(0xff04); /* clear ERL */
 	set_c0_status(0x0400);   /* set IP2 */
 
-	/* Set up INTC irq
-	 */
+	/* Set up INTC irq */
 	for (i = 0; i < NUM_INTC; i++) {
 		disable_intc_irq(i);
 		set_irq_chip_and_handler(i, &intc_irq_type, handle_level_irq);
 	}
 	
-	/* Set up DMAC irq
-	 */
+	/* Set up DMAC irq */
 	for (i = 0; i < NUM_DMA; i++) {
 		disable_dma_irq(IRQ_DMA_0 + i);
 		set_irq_chip_and_handler(IRQ_DMA_0 + i, &dma_irq_type, handle_level_irq);
 	}
 
-	/* Set up GPIO irq
-	 */
+	/* Set up GPIO irq */
 	for (i = 0; i < NUM_GPIO; i++) {
 		disable_gpio_irq(IRQ_GPIO_0 + i);
 		set_irq_chip_and_handler(IRQ_GPIO_0 + i, &gpio_irq_type, handle_level_irq);
@@ -288,16 +285,17 @@ static int plat_real_irq(int irq)
 
 asmlinkage void plat_irq_dispatch(void)
 {
-	int irq = 0;
-	static unsigned long intc_ipr = 0;
+	int irq;
+	unsigned long intc_ipr = REG_INTC_IPR;
 
-	intc_ipr |= REG_INTC_IPR;
-
-	if (!intc_ipr)	return;
-
-	irq = ffs(intc_ipr) - 1;
-	intc_ipr &= ~(1<<irq);
+	if (intc_ipr) { 
+		irq = ffs(intc_ipr) - 1;
+	} else {
+		spurious_interrupt();
+		return;
+	}
 
 	irq = plat_real_irq(irq);
 	do_IRQ(irq);
 }
+
