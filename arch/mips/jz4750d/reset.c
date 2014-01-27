@@ -24,6 +24,8 @@
 #include <asm/mach-jz4750d/jz4750d_wdt.h>
 #include <asm/mach-jz4750d/jz4750d_tcu.h>
 
+extern int jz_pm_hibernate(void);
+
 void jz_restart(char *command)
 {
 	printk("Restarting after 4 ms\n");
@@ -47,7 +49,7 @@ void jz_halt(void)
 
 void jz_power_off(void)
 {
-	jz_halt();
+	jz_pm_hibernate();
 }
 
 void jz4750d_reset_init(void)
