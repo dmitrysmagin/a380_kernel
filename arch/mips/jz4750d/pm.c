@@ -83,11 +83,6 @@ do {	                                      \
 	REG_GPIO_PXPES(5)  =  0xffffffff;     \
 } while (0)
 
-static void led_flush_test(int level)
-{
-	return;
-}
-
 static int jz_pm_do_hibernate(void)
 {
 	static unsigned int call_times = 0;
@@ -99,6 +94,10 @@ static int jz_pm_do_hibernate(void)
 	/* Mask all interrupts */
 	REG_INTC_IMSR = 0xffffffff;
 
+/* 
+   Later move disabling gpio to drivers
+ */
+#if 1
 #define PIN_POWER_ELAN (32*3 + 13)
 	__gpio_as_func0(PIN_POWER_ELAN);
 	__gpio_enable_pull(PIN_POWER_ELAN);
@@ -112,6 +111,7 @@ static int jz_pm_do_hibernate(void)
 	__gpio_clear_pin(LCD_BACKLIGHT_PIN);
 	mdelay(30);
 
+// These defines are different in board-***.h
 //#define GPIO_AMPEN          (32 * 4 + 5)  /* GPE5 */
 //#define GPIO_HP_OFF         (32 * 4 + 9)  /* GPE9 */
 	__gpio_as_output(GPIO_AMPEN);
@@ -123,99 +123,35 @@ static int jz_pm_do_hibernate(void)
 	__gpio_clear_pin(GPIO_HP_OFF);
 	//REG_CPM_CLKGR |= 0x1ffffffb;
 	mdelay(100);
+#endif
 
 	/*
 	 * RTC Wakeup or 1Hz interrupt can be enabled or disabled
 	 * through  RTC driver's ioctl (linux/driver/char/rtc_jz.c).
 	 */
-	while(!(REG_RTC_RCR & RTC_RCR_WRDY));
-	while((REG_RTC_RCR & RTC_RCR_SELEXC) != 0) {
-		while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-		REG_RTC_RCR &= ~RTC_RCR_SELEXC;
-		while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-		led_flush_test(1);
-		mdelay(6000);
-		led_flush_test(0);
-		mdelay(6000);
-	}
 
-#define WAKEUP_PIN_PLUSE 100
 	/* Set minimum wakeup_n pin low-level assertion time for wakeup: 100ms */
 	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_HWFCR = (WAKEUP_PIN_PLUSE << RTC_HWFCR_BIT);
-
-	//check the date
-	while(!(REG_RTC_RCR & RTC_RCR_WRDY));
-	while(((REG_RTC_HWFCR & RTC_HWFCR_MASK) >> RTC_HWFCR_BIT) != WAKEUP_PIN_PLUSE) {
-		while(!(REG_RTC_RCR & RTC_RCR_WRDY));
-		REG_RTC_HWFCR = (WAKEUP_PIN_PLUSE << RTC_HWFCR_BIT);
-		while(!(REG_RTC_RCR & RTC_RCR_WRDY));
-		led_flush_test(1);
-		mdelay(1000);
-		led_flush_test(0);
-		mdelay(1000);
-	}
-
-#define RESET_PIN_ASSERTION_TIME 127
+	REG_RTC_HWFCR = (100 << RTC_HWFCR_BIT);
 
 	/* Set reset pin low-level assertion time after wakeup: must  > 60ms */
 	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_HRCR = (RESET_PIN_ASSERTION_TIME << RTC_HRCR_BIT); /* 60 ms */
-
-	//check the date
-	while(!(REG_RTC_RCR & RTC_RCR_WRDY));
-	while(((REG_RTC_HRCR & RTC_HRCR_MASK) >> RTC_HRCR_BIT) != RESET_PIN_ASSERTION_TIME) {
-		while(!(REG_RTC_RCR & RTC_RCR_WRDY));
-		REG_RTC_HRCR = (RESET_PIN_ASSERTION_TIME << RTC_HRCR_BIT); /* 60 ms */
-		while(!(REG_RTC_RCR & RTC_RCR_WRDY));
-		led_flush_test(1);
-		mdelay(2000);
-		led_flush_test(0);
-		mdelay(2000);
-	}
+	REG_RTC_HRCR = (60 << RTC_HRCR_BIT); /* 60 ms */
 
 	/* Scratch pad register to be reserved */
 	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
 	REG_RTC_HSPR = 0x12345678;
 
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_HWCR = 0x00;
-
-	//check the date
-	while(!(REG_RTC_RCR & RTC_RCR_WRDY));
-	while(REG_RTC_HWCR != 0) {
-		while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-		REG_RTC_HWCR = 0x00;
-		while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-		led_flush_test(1);
-		mdelay(3000);
-		led_flush_test(0);
-		mdelay(3000);
-	}
-
         /* clear wakeup status register */
 	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
 	REG_RTC_HWRSR = 0x0;
-
-	//check the date
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	while(REG_RTC_HWRSR != 0) {
-		while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-		REG_RTC_HWRSR = 0x00;
-		while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-		led_flush_test(1);
-		mdelay(4000);
-		led_flush_test(0);
-		mdelay(4000);
-	}
 
 	/* Put CPU to power down mode */
 	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
 	REG_RTC_HCR = RTC_HCR_PD;
 
-
-	while(!(REG_RTC_RCR & RTC_RCR_WRDY));
-	while(1) printk("We should not be here!\n");
+	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
+	while(1);
 
 	/* We can't get here */
 	return 0;
@@ -256,20 +192,6 @@ static void jz_board_do_sleep(unsigned long *ptr)
 	 */
         __gpio_as_sleep();
 
-#ifdef DEBUG
-        /* Keep uart function for printing debug message */
-	__gpio_as_uart0();
-	__gpio_as_uart1();
-	__gpio_as_uart2();
-	__gpio_as_uart3();
-
-	/* Print messages of GPIO registers for debug */
-	for(i=0;i<GPIO_PORT_NUM;i++) {
-		dprintk("sleep dat:%x pin:%x fun:%x sel:%x dir:%x pull:%x msk:%x trg:%x\n",      \
-			REG_GPIO_PXDAT(i),REG_GPIO_PXPIN(i),REG_GPIO_PXFUN(i),REG_GPIO_PXSEL(i), \
-			REG_GPIO_PXDIR(i),REG_GPIO_PXPE(i),REG_GPIO_PXIM(i),REG_GPIO_PXTRG(i));
-	}
-#endif
 }
 
 static void jz_board_do_resume(unsigned long *ptr)
@@ -358,7 +280,7 @@ static int jz_pm_do_sleep(void)
 		"wait\n\t"
 		".set\tmips0");
 
-		/* Restore to IDLE mode */
+	/* Restore to IDLE mode */
 	REG_CPM_LCR &= ~CPM_LCR_LPM_MASK;
 	REG_CPM_LCR |= CPM_LCR_LPM_IDLE;
 
@@ -391,35 +313,12 @@ int jz_pm_hibernate(void)
 	return jz_pm_do_hibernate();
 }
 
-#ifndef CONFIG_JZ_POWEROFF
-static irqreturn_t pm_irq_handler (int irq, void *dev_id)
-{
-	return IRQ_HANDLED;
-}
-#endif
-
 /* Put CPU to SLEEP mode */
 int jz_pm_sleep(void)
 {
 	int retval;
 
-#ifndef CONFIG_JZ_POWEROFF
-	if ((retval = request_irq (IRQ_GPIO_0 + GPIO_WAKEUP, pm_irq_handler, IRQF_DISABLED,
-				   "PM", NULL))) {
-		printk ("PM could not get IRQ for GPIO_WAKEUP\n");
-		return retval;
-	}
-#endif
-
 	retval = jz_pm_do_sleep();
-
-	dprintk("%s %d after sleep\n",__FILE__,__LINE__);
-
-#ifndef CONFIG_JZ_POWEROFF
-	free_irq (IRQ_GPIO_0 + GPIO_WAKEUP, NULL);
-#endif
-
-	dprintk("%s %d after sleep\n",__FILE__,__LINE__);
 
 	return retval;
 }
