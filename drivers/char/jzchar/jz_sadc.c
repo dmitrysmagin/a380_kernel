@@ -49,7 +49,6 @@
 #endif
 
 #include "jzchars.h"
-#include "jz_ts.h"
 
 MODULE_AUTHOR("Jianli Wei<jlwei@ingenic.cn>");
 MODULE_DESCRIPTION("JZ4740 SADC driver");
@@ -67,24 +66,6 @@ struct sadc_device {
 static struct sadc_device *sadc_dev;
 
 extern unsigned int (*codec_read_battery)(void);
-
-#ifdef CONFIG_JZ_TPANEL_SADC
-static DECLARE_WAIT_QUEUE_HEAD (sadc_wait_queue);
-
-static int samples = 3; /* we sample 3 every time */
-static int first_time = 0;
-static unsigned long last_x, last_y, last_p;
-
-typedef struct datasource {
-        u16 xbuf;
-        u16 ybuf;
-	u16 zbuf;
-}datasource_t;
-
-static datasource_t data_s;
-static unsigned int p;
-static unsigned int old_x, old_y;
-#endif
 
 unsigned int jz4740_read_battery(void);
 
@@ -120,42 +101,6 @@ void start_pbat_adc(void)
   	REG_SADC_ENA |= SADC_ENA_PBATEN;      /* Enable pbat adc */
 }
 
-#ifdef CONFIG_JZ_TPANEL_SADC
-void start_ts_adc(void)
-{
-	REG_SADC_SAMETIME = 10;  /* about 0.1 ms,you can change it */
-	REG_SADC_WAITTIME = 2;  /* about 0.02 ms,you can change it */
-
-	REG_SADC_CFG &= ~(SADC_CFG_TS_DMA | SADC_CFG_XYZ_MASK | SADC_CFG_SNUM_MASK);
-	REG_SADC_CFG |= (SADC_CFG_EXIN | SADC_CFG_XYZ | SADC_CFG_SNUM_3);
-	REG_SADC_CTRL |= (SADC_CTRL_TSRDYM|SADC_CTRL_PBATRDYM|SADC_CTRL_PENUM |SADC_CTRL_SRDYM);
-	REG_SADC_CTRL &= ~SADC_CTRL_PENDM;
-	REG_SADC_ENA |= SADC_ENA_TSEN;
-}
-
-static int  jz4740_adc_read(struct jz_ts_t *ts)
-{
-	struct datasource *ds = &data_s;
-	u32 xybuf,z;
-
-	if (!(REG_SADC_STATE & SADC_STATE_TSRDY)) {
-		/* sleep */
-		REG_SADC_CTRL &= ~SADC_CTRL_TSRDYM;
-		ts->sleeping = 1;
-		sleep_on(&sadc_wait_queue);
-	}
-	ts->sleeping = 0;
-
-	xybuf = REG_SADC_TSDAT;
-	ds->xbuf = (xybuf>>16) & 0x0fff;
-	ds->ybuf = (xybuf)& 0x0fff;
-	z = REG_SADC_TSDAT;
-	ds->zbuf = z& 0x0fff;
-  	REG_SADC_STATE &= ~SADC_STATE_TSRDY;
-	return 0;
-}
-#endif
-
 /*------------------------------------------------------------
  * Read the battery voltage
  */
@@ -177,173 +122,6 @@ unsigned int jz4740_read_battery(void)
 	REG_SADC_STATE = SADC_STATE_PBATRDY;
 	return v;
 }
-
-/*------------------ Calibrate samples -------------------*/
-
-#ifdef CONFIG_JZ_TPANEL_SADC
-#define DIFF(a,b) (((a)>(b))?((a)-(b)):((b)-(a)))
-#define MIN(a,b) (((a)<(b))?(a):(b))
-
-#if  0
-#define XM 36 /* XM and YM may be changed for your screen */
-#define YM 20
-static int calibrate_samples(void *xbuf, void *ybuf, void *pbuf, int count)
-{
-	unsigned long usd0,usd1,usd2;
-	int xMaxError = XM,yMaxError = YM;
-	int x_valid = 0,y_valid = 0,valid = 0;
-	unsigned long x_cal = 0, y_cal = 0, p_cal = 0;
-	unsigned long *xp = (unsigned long *)xbuf;
-	unsigned long *yp = (unsigned long *)ybuf;
-	unsigned long *pp = (unsigned long *)pbuf;
-
-	usd0 = (xp[0] > xp[1]) ? (xp[0] - xp[1]) : (xp[1] - xp[0]);
-	usd1 = (xp[1] > xp[2]) ? (xp[1] - xp[2]) : (xp[2] - xp[1]);
-	usd2 = (xp[2] > xp[0]) ? (xp[2] - xp[0]) : (xp[0] - xp[2]);
-
-	if ( usd0 < usd1)
-		x_cal = xp[0] + ((usd2 < usd0) ? xp[2] : xp[1]);
-	else
-		x_cal= xp[2] + ((usd2 < usd1) ? xp[0] : xp[1]);
-	x_cal >>= 1;
-
-	if ( (usd0 < xMaxError) && (usd1 < xMaxError) && (usd2 < xMaxError) )
-		x_valid = 1;
-
-	usd0 = (yp[0] > yp[1]) ? (yp[0] - yp[1]) : (yp[1] - yp[0]);
-	usd1 = (yp[1] > yp[2]) ? (yp[1] - yp[2]) : (yp[2] - yp[1]);
-	usd2 = (yp[2] > yp[0]) ? (yp[2] - yp[0]) : (yp[0] - yp[2]);
-
-	if ( usd0 < usd1)
-		y_cal = yp[0] + ((usd2 < usd0) ? yp[2] : yp[1]);
-	else
-		y_cal = yp[2] + ((usd2 < usd1) ? yp[0] : yp[1]);
-
-	y_cal >>= 1;
-
-	if ( (usd0 < yMaxError) && (usd1 < yMaxError) && (usd2 < yMaxError) )
-		y_valid = 1;
-
-	if( x_valid && y_valid)
-		valid = 1;
-
-	usd0 = (pp[0] > pp[1]) ? (pp[0] - pp[1]) : (pp[1] - pp[0]);
-	usd1 = (pp[1] > pp[2]) ? (pp[1] - pp[2]) : (pp[2] - pp[1]);
-	usd2 = (pp[2] > pp[0]) ? (pp[2] - pp[0]) : (pp[0] - pp[2]);
-
-	if ( usd0 < usd1)
-		p_cal = pp[0] + ((usd2 < usd0) ? pp[2] : pp[1]);
-	else
-		p_cal= pp[2] + ((usd2 < usd1) ? pp[0] : pp[1]);
-
-	p_cal >>= 1;
-
-	if (first_time) {
-		first_time = 0;
-		last_x = x_cal;
-		last_y = y_cal;
-		last_p = p_cal;
-	}
-	else{
-		if ((DIFF(x_cal, last_x) > 50) ||
-		    (DIFF(y_cal, last_y) > 50))
-			valid = 0;
-		else
-			valid = 1;
-	}
-	*xp = last_x = x_cal;
-	*yp = last_y = y_cal;
-	*pp = last_p = p_cal;
-
-	return valid;
-}
-#endif
-
-static int calibrate_samples(void *xbuf, void *ybuf, void *pbuf, int count)
-{
-	unsigned long *xp = (unsigned long *)xbuf;
-	unsigned long *yp = (unsigned long *)ybuf;
-	unsigned long *pp = (unsigned long *)pbuf;
-	unsigned long x_cal = 0, y_cal = 0, p_cal = 0;
-	int i;
-	int valid = 1;
-
-	/* calculate the average of the rest */
-	for (i = 0; i < count; i++) {
-		x_cal += xp[i];
-		y_cal += yp[i];
-		p_cal += pp[i];
-	}
-	x_cal /= count;
-	y_cal /= count;
-	p_cal /= count;
-
-	if (first_time) {
-		first_time = 0;
-		last_x = x_cal;
-		last_y = y_cal;
-		last_p = p_cal;
-	}
-	else {
-		if ((DIFF(x_cal, last_x) > 50) ||
-		    (DIFF(y_cal, last_y) > 50))
-			valid = 0;
-		else
-			valid = 1;
-	}
-
-	*xp = last_x = x_cal;
-	*yp = last_y = y_cal;
-	*pp = last_p = p_cal;
-
-	return valid;
-}
-
-#define TSMAXX 945
-#define TSMAXY 830
-#define TSMINX 90
-#define TSMINY 105
-
-#define SCREEN_X 480
-#define SCREEN_Y 272
-
-static unsigned long transform_to_screen_x(struct jz_ts_t *ts, unsigned long x )
-{
-
-        if (ts->minx)
-	{
-		if (x < ts->minx) x = ts->minx;
-             	if (x > ts->maxx) x = ts->maxx;
-
-		return (x - ts->minx) * SCREEN_X / (ts->maxx - ts->minx);
-	}
-	else
-	{
-		if (x < TSMINX) x = TSMINX;
-		if (x > TSMAXX) x = TSMAXX;
-
-		return (x - TSMINX) * SCREEN_X / (TSMAXX - TSMINX);
-	}
-}
-
-static unsigned long transform_to_screen_y(struct jz_ts_t *ts, unsigned long y)
-{
-       if (ts->minx)
-	{
-		if (y < ts->minx) y = ts->miny;
-		if (y > ts->maxx) y = ts->maxy;
-
-		return (y - ts->miny) * SCREEN_Y / (ts->maxy - ts->miny);
-	}
-	else
-	{
-		if (y < TSMINX) y = TSMINY;
-		if (y > TSMAXX) y = TSMAXY;
-
-		return (y - TSMINY) * SCREEN_Y / (TSMAXY - TSMINY);
-	}
-}
-#endif
 
 /*
  * Device file operations
@@ -394,11 +172,14 @@ static const struct file_operations proc_sadc_battery_fops = {
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
-static unsigned int battery_mv = (41500-250)/4;//default full power
+
+static unsigned int battery_mv = (41500 - 250) / 4; // default full power
 extern void udc_pnp_set_gpio(void);
+
 static int proc_sadc_battery_show(struct seq_file *m, void *v)
 {
-	unsigned int mv = (battery_mv-180)/4;// = (jz4740_read_battery() * 7500 + 2048) / 4096;
+	unsigned int mv = (battery_mv - 180) / 4;// = (jz4740_read_battery() * 7500 + 2048) / 4096;
+
 	//maddrone add charge status
 	__gpio_as_input(GPIO_USB_DETE);
 	__gpio_disable_pull(GPIO_USB_DETE);
@@ -423,216 +204,50 @@ static int proc_sadc_battery_open(struct inode *inode, struct file *file)
 
 /*------------------ Common routines -------------------*/
 
-#ifdef CONFIG_JZ_TPANEL_SADC
-void ts_enable_irq(void)
-{
-	REG_SADC_CTRL &= ~SADC_CTRL_PENDM;
-}
-
-void ts_disable_irq(void)
-{
-	REG_SADC_CTRL |=  (SADC_CTRL_PENDM | SADC_CTRL_PENUM);
-}
-
-void ts_free_irq(struct jz_ts_t *ts)
-{
-	free_irq(ts->pendown_irq, ts);
-}
-
-void ts_data_ready(void)
-{
-	REG_SADC_CTRL |= SADC_CTRL_TSRDYM;
-	wake_up(&sadc_wait_queue);
-}
-
-/*
- * Interrupt handler
- */
-void ts_irq_callback(void)
-{
-	u32 state;
-
-	state = REG_SADC_STATE;
-	if (!(REG_SADC_CTRL&SADC_CTRL_PENDM)&&(REG_SADC_STATE & SADC_STATE_PEND)) {
-		REG_SADC_STATE = SADC_STATE_PEND;
-		REG_SADC_STATE = SADC_STATE_PENU;
-		REG_SADC_CTRL |= SADC_CTRL_PENDM;
-		REG_SADC_CTRL &= ~SADC_CTRL_PENUM;
-		p = 1;
-	}
-
-	if (!(REG_SADC_CTRL&SADC_CTRL_PENUM)&&(REG_SADC_STATE & SADC_STATE_PENU)) {
-		REG_SADC_STATE = SADC_STATE_PENU;
-		REG_SADC_CTRL |= SADC_CTRL_PENUM;
-		REG_SADC_CTRL &= ~SADC_CTRL_PENDM;
-		p = 0;
-	}
-
-	first_time = 1; // first time to acquire sample
-}
-
-int PenIsDown(void)
-{
-	return p;
-}
-
-int ts_request_irq(u32 *irq,
-		   irqreturn_t (*handler)(int, void *),
-		   const char *devname,
-		   void *dev_id)
-{
-	int ret;
-
-	/* return the irq number */
-	*irq = IRQ_SADC;
-	ts_disable_irq();
-	/* interrupt mode */
-	ret = request_irq(IRQ_SADC, handler, IRQF_DISABLED,
-			  devname, dev_id);
-	if(ret)
-		printk("failed irq \n");
-
-	start_ts_adc();
-	return ret;
-}
-
-/*
- * Acquire Raw pen coodinate data and compute touch screen
- * pressure resistance. Hold spinlock when calling.
- */
-int AcquireEvent(struct jz_ts_t *ts, struct ts_event *event)
-{
-	unsigned int x_raw[8], y_raw[8], p_raw[8];
-	int valid, i;
-	unsigned int avl_x, avl_y, diff_x, diff_y;
-	struct datasource *ds = &data_s;
-	avl_x = avl_y = 0;
-
-	for (i = 0; i < samples; i++) {
-		if (jz4740_adc_read(ts)) {
-			return 0;
-		}
-
-		x_raw[i] = ds->ybuf;
-		y_raw[i] = ds->xbuf;
-		p_raw[i] = ds->zbuf;
-		avl_x += x_raw[i];
-		avl_y += y_raw[i];
-#if 0
-		printk("x_raw=%x y_raw=%x z_raw=%x\n",x_raw[i],y_raw[i],p_raw[i]);
-#endif
-	}
-
-	avl_x /= samples;
-	avl_y /= samples;
-#define MAX_DELTA 20
-	valid = 1;
-
-	for (i = 1; i < samples; i++)
-	{
-		if ((100 * DIFF(x_raw[i],x_raw[i-1])/MIN(x_raw[i],x_raw[i-1])) > MAX_DELTA) {
-			valid = 0;
-			break;
-		}
-
-		if ((100 * DIFF(y_raw[i],y_raw[i-1])/MIN(y_raw[i],y_raw[i-1])) > MAX_DELTA) {
-			valid = 0;
-			break;
-		}
-
-		if ((100 * DIFF(p_raw[i],p_raw[i-1])/MIN(p_raw[i],p_raw[i-1])) > MAX_DELTA) {
-			valid = 0;
-			break;
-		}
-	}
-
-	if (valid) {
-		if (ts->first_read) {
-			ts->first_read = 0;
-			old_x = avl_x;
-			old_y = avl_y;
-		}
-		diff_x = DIFF(old_x, avl_x);
-		diff_y = DIFF(old_y, avl_y);
-		if (diff_x < 100 && diff_y < 100) {
-			old_x = avl_x;
-			old_y = avl_y;
-		} else
-			valid = 0;
-	}
-	if (valid) {
-		valid = calibrate_samples(x_raw, y_raw, p_raw, samples);
-	}
-
-	if (valid) {
-		unsigned int x_scr, y_scr;
-
-		if(ts->filter) {
-			x_scr = transform_to_screen_x(ts, x_raw[0]);
-			y_scr = transform_to_screen_y(ts, y_raw[0]);
-
-			if (ts->prints)
-				printk("x_raw=%d y_raw=%d x_transform=%d y_transform=%d\n", x_raw[0], y_raw[0], x_scr, y_scr);
-		}
-		else {
-			x_scr = x_raw[0];
-			y_scr = y_raw[0];
-
-			if (ts->prints)
-				printk("x_raw=%d y_raw=%d \n", x_raw[0], y_raw[0]);
-		}
-
-		event->x = x_scr;
-		event->y = y_scr;
-		event->pressure = (u16)p_raw[0];
-		event->status = PENDOWN;
-		return 1;
-	}
-	return 0;
-}
-#endif
 static struct task_struct * battery_monitor;
 
-
 #define POWEROFF_VOL 3450
+
 extern int jz_pm_hibernate(void);
 
-static void
-battery_track_timer(unsigned long data)
+static int battery_track_timer(void *data)
 {
-  //printk("%s %d \n",__FILE__,__LINE__);
-  //printk("kernel battery_track_time thread start!\n");
-  int over_time = 0;
-  while(1)
-  {
-    battery_mv = jz4740_read_battery();
-    unsigned int mv = (battery_mv*10000/4096)+80;//battery_mv*4+250;
-    battery_mv = mv;
-    //printk("%s %d mv is %d\n",__FILE__,__LINE__,mv);
-    if(mv < POWEROFF_VOL)
-    {
-      over_time++;
-      if(over_time > 5)
-      {
-        //printk("low power !\n");
+	int over_time = 0;
 
-        if(__gpio_get_pin(GPIO_CHARG_STAT_N))
-        {
-          printk("the power is too low do hibernate!!!!!\n");
-          extern void run_sbin_poweroff();
-          run_sbin_poweroff();
-          jz_pm_hibernate();
-        }
-      }
-    }
-    else
-    {
-      over_time = 0;
-    }
-    set_current_state(TASK_INTERRUPTIBLE);
-    schedule_timeout(HZ*10);
-  }
+	//printk("kernel battery_track_time thread start!\n");
+
+	while (1) {
+		unsigned int mv;
+
+		battery_mv = jz4740_read_battery();
+		mv = (battery_mv * 10000 / 4096) + 80; //battery_mv * 4 + 250;
+		battery_mv = mv;
+
+		if (mv < POWEROFF_VOL) {
+			over_time++;
+			if (over_time > 5) {
+				//printk("low power !\n");
+
+				if (__gpio_get_pin(GPIO_CHARG_STAT_N)) {
+					printk("the power is too low do hibernate!!!!!\n");
+#ifdef CONFIG_JZ_POWEROFF
+					extern void run_sbin_poweroff();
+					run_sbin_poweroff();
+#endif
+					jz_pm_hibernate();
+				}
+			}
+		} else {
+			over_time = 0;
+		}
+
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule_timeout(HZ*10);
+	}
+
+	return 0;
 }
+
 /*
  * Module init and exit
  */
@@ -648,33 +263,26 @@ static int __init sadc_init(void)
 
 	sadc_dev = dev;
 	ret = jz_register_chrdev(SADC_MINOR, SADC_NAME, &sadc_fops, dev);
-	if (ret < 0) goto free_dev;
+	if (ret < 0) {
+		kfree(dev);
+		return ret;
+	}
 
 	res = create_proc_entry("jz/battery", 0, NULL);
 	if (res) {
-		//res->owner = THIS_MODULE;
 		res->proc_fops = &proc_sadc_battery_fops;
 	}
 
-#ifdef CONFIG_JZ_TPANEL_SADC
-	codec_read_battery = jz4740_read_battery;
-#endif
-
 	sadc_init_clock(3);
 
-    battery_monitor = kthread_run(battery_track_timer, NULL, "battery _monitor");
-    if(IS_ERR(battery_monitor))
-    {
-      printk("Kernel battery _monitor thread start error!\n");
-      return;
-    }
+	battery_monitor = kthread_run(&battery_track_timer, NULL, "battery _monitor");
+	if (IS_ERR(battery_monitor)) {
+		printk("Kernel battery _monitor thread start error!\n");
+		return -1;
+	}
 
 	printk("JZ4740 SAR-ADC driver registered\n");
 	return 0;
-
-free_dev:
-	kfree(dev);
-	return ret;
 }
 
 static void __exit sadc_exit(void)
@@ -686,8 +294,6 @@ static void __exit sadc_exit(void)
 	free_irq(IRQ_SADC, dev);
 	jz_unregister_chrdev(SADC_MINOR, SADC_NAME);
 	kfree(dev);
-    //del_timer(&battery_monitor);
-
 }
 
 module_init(sadc_init);
