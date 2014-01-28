@@ -161,6 +161,103 @@ struct platform_device vogue_snd_device = {
 };
 #endif
 
+#ifndef CONFIG_KEYBOARD_A380_GPIO_KEYS
+/* Keys mapped to gpio */
+static struct gpio_keys_button a380_buttons[] = {
+	/* D-pad up */ {
+		.gpio			= JZ_GPIO_PORTE(0),
+		.active_low		= 1,
+		.code			= KEY_UP,
+	},
+	/* D-pad down */ {
+		.gpio			= JZ_GPIO_PORTE(1),
+		.active_low		= 1,
+		.code			= KEY_DOWN,
+	},
+	/* D-pad left */ {
+		.gpio			= JZ_GPIO_PORTE(2),
+		.active_low		= 1,
+		.code			= KEY_LEFT,
+	},
+	/* D-pad right */ {
+		.gpio			= JZ_GPIO_PORTE(3),
+		.active_low		= 1,
+		.code			= KEY_RIGHT,
+	},
+	/* A button */ {
+		.gpio			= JZ_GPIO_PORTC(31),
+		.active_low		= 1,
+		.code			= KEY_LEFTCTRL,
+	},
+	/* B button */ {
+		.gpio			= JZ_GPIO_PORTD(16),
+		.active_low		= 1,
+		.code			= KEY_LEFTALT,
+	},
+	/* X button */ {
+		.gpio			= JZ_GPIO_PORTD(17),
+		.active_low		= 1,
+		.code			= KEY_SPACE,
+	},
+	/* Y button */ {
+		.gpio			= JZ_GPIO_PORTE(11),
+		.active_low		= 1,
+		.code			= KEY_LEFTSHIFT,
+	},
+	/* Left shoulder button */ {
+		.gpio			= JZ_GPIO_PORTE(10),
+		.active_low		= 1,
+		.code			= KEY_TAB,
+		.debounce_interval	= 5,
+	},
+	/* Right shoulder button */ {
+		.gpio			= JZ_GPIO_PORTE(7),
+		.active_low		= 1,
+		.code			= KEY_BACKSPACE,
+		.debounce_interval	= 5,
+	},
+	/* START button */ {
+		.gpio			= JZ_GPIO_PORTD(21),
+		.active_low		= 1,
+		.code			= KEY_ENTER,
+		.debounce_interval	= 5,
+	},
+	/* SELECT button */ {
+		.gpio			= JZ_GPIO_PORTE(8),
+		.active_low		= 1,
+		.code			= KEY_ESC,
+		.debounce_interval	= 5,
+	},
+#ifndef CONFIG_JZ_POWEROFF
+	/* POWER slider */ {
+		.gpio			= JZ_GPIO_PORTE(30),
+		.active_low		= 1,
+		.code			= KEY_POWER,
+		.wakeup			= 1,
+	},
+#endif
+	/* POWER hold */ {
+		.gpio			= JZ_GPIO_PORTD(18),
+		.active_low		= 1,
+		.code			= KEY_PAUSE,
+	},
+};
+
+static struct gpio_keys_platform_data a380_gpio_keys_pdata = {
+	.buttons = a380_buttons,
+	.nbuttons = ARRAY_SIZE(a380_buttons),
+	.rep = 1,
+};
+
+static struct platform_device a380_gpio_keys_device = {
+	.name = "gpio-keys",
+	.id = -1,
+	.dev = {
+		.platform_data = &a380_gpio_keys_pdata,
+	},
+};
+#endif
+
 /* All */
 static struct platform_device *jz_platform_devices[] __initdata = {
 	&jz_lcd_device,
@@ -171,6 +268,9 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 #endif
 	&jz_msc0_device,
 	&jz_msc1_device,
+#ifndef CONFIG_KEYBOARD_A380_GPIO_KEYS
+	&a380_gpio_keys_device,
+#endif
 };
 
 static int __init a380_init_platform_devices(void)
