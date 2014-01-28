@@ -85,76 +85,6 @@ static struct irq_chip intc_irq_type = {
 };
 
 /*
- * GPIO irq type
- */
-
-static void enable_gpio_irq(unsigned int irq)
-{
-	unsigned int intc_irq;
-
-	if (irq < (IRQ_GPIO_0 + 32)) {
-		intc_irq = IRQ_GPIO0;
-	}
-	else if (irq < (IRQ_GPIO_0 + 64)) {
-		intc_irq = IRQ_GPIO1;
-	}
-	else if (irq < (IRQ_GPIO_0 + 96)) {
-		intc_irq = IRQ_GPIO2;
-	}
-	else if (irq < (IRQ_GPIO_0 + 128)) {
-		intc_irq = IRQ_GPIO3;
-	}
-	else if (irq < (IRQ_GPIO_0 + 160)) {
-		intc_irq = IRQ_GPIO4;
-	}
-	else {
-		intc_irq = IRQ_GPIO5;
-	}
-
-	enable_intc_irq(intc_irq);
-	__gpio_unmask_irq(irq - IRQ_GPIO_0);
-}
-
-static void disable_gpio_irq(unsigned int irq)
-{
-	__gpio_mask_irq(irq - IRQ_GPIO_0);
-}
-
-static void mask_and_ack_gpio_irq(unsigned int irq)
-{
-	__gpio_mask_irq(irq - IRQ_GPIO_0);
-	__gpio_ack_irq(irq - IRQ_GPIO_0);
-}
-
-static void end_gpio_irq(unsigned int irq)
-{
-	if (!(irq_desc[irq].status & (IRQ_DISABLED|IRQ_INPROGRESS))) {
-		enable_gpio_irq(irq);
-	}
-}
-
-static unsigned int startup_gpio_irq(unsigned int irq)
-{
-	enable_gpio_irq(irq);
-	return 0;
-}
-
-static void shutdown_gpio_irq(unsigned int irq)
-{
-	disable_gpio_irq(irq);
-}
-
-static struct irq_chip gpio_irq_type = {
-	.typename = "GPIO",
-	.startup = startup_gpio_irq,
-	.shutdown = shutdown_gpio_irq,
-	.unmask = enable_gpio_irq,
-	.mask = disable_gpio_irq,
-	.ack = mask_and_ack_gpio_irq,
-	.end = end_gpio_irq,
-};
-
-/*
  * DMA irq type
  */
 
@@ -247,12 +177,6 @@ void __init arch_init_irq(void)
 	for (i = 0; i < NUM_DMA; i++) {
 		disable_dma_irq(IRQ_DMA_0 + i);
 		set_irq_chip_and_handler(IRQ_DMA_0 + i, &dma_irq_type, handle_level_irq);
-	}
-
-	/* Set up GPIO irq */
-	for (i = 0; i < NUM_GPIO; i++) {
-		disable_gpio_irq(IRQ_GPIO_0 + i);
-		set_irq_chip_and_handler(IRQ_GPIO_0 + i, &gpio_irq_type, handle_level_irq);
 	}
 }
 
