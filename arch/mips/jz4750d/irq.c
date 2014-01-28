@@ -178,6 +178,14 @@ void __init arch_init_irq(void)
 		disable_dma_irq(IRQ_DMA_0 + i);
 		set_irq_chip_and_handler(IRQ_DMA_0 + i, &dma_irq_type, handle_level_irq);
 	}
+
+	/*
+	 * Disable GPIO irqs here to be sure
+	 * Useful when running kernel with kexec
+	 */
+	for (i = 0; i < NUM_GPIO; i++) {
+		__gpio_mask_irq(i);
+	}
 }
 
 static int plat_real_irq(int irq)
