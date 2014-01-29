@@ -959,12 +959,12 @@ static struct fb_videomode video_modes[] = {
 static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	struct fb_videomode *mode = &video_modes[0];
-
+#if 0
 	printk("Requesting mode %i x %i x %i\n",
 		var->xres,
 		var->yres,
 		var->bits_per_pixel);
-
+#endif
 	if (var->bits_per_pixel != 16)
 		return -EINVAL;
 
@@ -974,7 +974,7 @@ static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *inf
 	if (var->yres != mode->yres)
 		return -EINVAL;
 
-	printk("Found working mode: %s\n", mode->name);
+	printk("Found working mode: %dx%d\n", mode->xres, mode->yres);
 
 	fb_videomode_to_var(var, mode);
 

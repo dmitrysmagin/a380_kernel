@@ -49,6 +49,13 @@
 #include <asm/mach-jz4750d/jz4750d_tcu.h>
 #include <asm/mach-jz4750d/jz4750d_intc.h>
 
+// Remove later
+#if defined CONFIG_JZ4750D_A380
+  #include <asm/mach-jz4750d/board-a380.h>
+#elif defined CONFIG_JZ4750D_RZX50
+  #include <asm/mach-jz4750d/board-rzx50.h>
+#endif
+
 #include "jz4750_lcd.h"
 #include "jz4750_tve.h"
 
@@ -833,9 +840,9 @@ static struct fb_ops jz4750fb_ops = {
 	.fb_set_par 		= jz4750fb_set_par,
 	.fb_blank		= jz4750fb_blank,
 	.fb_pan_display		= jz4750fb_pan_display,
-	.fb_fillrect		= cfb_fillrect,
-	.fb_copyarea		= cfb_copyarea,
-	.fb_imageblit		= cfb_imageblit,
+	.fb_fillrect		= sys_fillrect,
+	.fb_copyarea		= sys_copyarea,
+	.fb_imageblit		= sys_imageblit,
 	.fb_mmap		= jz4750fb_mmap,
 	.fb_ioctl		= jz4750fb_ioctl,
 };
