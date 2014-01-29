@@ -1,5 +1,5 @@
 /*
- * Platform device support for Jz4740 SoC.
+ * Platform device support for Jz4750D SoC.
  *
  * Copyright 2007, <yliu@ingenic.cn>
  *
@@ -13,6 +13,9 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/resource.h>
+
+#include <linux/dma-mapping.h>
+
 #include <linux/serial_core.h>
 #include <linux/serial_8250.h>
 
@@ -29,70 +32,66 @@
 #include "serial.h"
 #include "clock.h"
 
-/*** LCD controller ***/
+/* LCD controller */
 static struct resource jz_lcd_resources[] = {
-	[0] = {
-		.start          = CPHYSADDR(LCD_BASE),
-		.end            = CPHYSADDR(LCD_BASE) + 0x10000 - 1,
+	{
+		.start          = JZ4750D_LCD_BASE_ADDR,
+		.end            = JZ4750D_LCD_BASE_ADDR + 0x10000 - 1,
 		.flags          = IORESOURCE_MEM,
 	},
-	[1] = {
-		.start          = IRQ_LCD,
-		.end            = IRQ_LCD,
+	{
+		.start          = JZ4750D_IRQ_LCD,
+		.end            = JZ4750D_IRQ_LCD,
 		.flags          = IORESOURCE_IRQ,
 	}
 };
-
-static u64 jz_lcd_dmamask = ~(u32)0;
 
 struct platform_device jz_lcd_device = {
 	.name           = "jz-lcd",
 	.id             = 0,
 	.dev = {
-		.dma_mask               = &jz_lcd_dmamask,
-		.coherent_dma_mask      = 0xffffffff,
+		.dma_mask = &jz_lcd_device.dev.coherent_dma_mask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
 	},
 	.num_resources  = ARRAY_SIZE(jz_lcd_resources),
 	.resource       = jz_lcd_resources,
 };
 
-/*** UDC (USB gadget controller) ***/
+/* UDC (USB gadget controller) */
 static struct resource jz_usb_gdt_resources[] = {
-	[0] = {
-		.start		= CPHYSADDR(UDC_BASE),
-		.end		= CPHYSADDR(UDC_BASE) + 0x10000 - 1,
+	{
+		.start		= JZ4750D_UDC_BASE_ADDR,
+		.end		= JZ4750D_UDC_BASE_ADDR + 0x10000 - 1,
 		.flags		= IORESOURCE_MEM,
 	},
-	[1] = {
-		.start		= IRQ_UDC,
-		.end		= IRQ_UDC,
+	{
+		.start		= JZ4750D_IRQ_UDC,
+		.end		= JZ4750D_IRQ_UDC,
 		.flags		= IORESOURCE_IRQ,
 	},
 };
-
-static u64 udc_dmamask = ~(u32)0;
 
 struct platform_device jz_usb_gdt_device = {
 	.name		= "jz-udc",
 	.id		= 0,
 	.dev = {
-		.dma_mask		= &udc_dmamask,
-		.coherent_dma_mask	= 0xffffffff,
+		.dma_mask = &jz_usb_gdt_device.dev.coherent_dma_mask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
 	},
 	.num_resources	= ARRAY_SIZE(jz_usb_gdt_resources),
 	.resource	= jz_usb_gdt_resources,
 };
 
-/*** MMC/SD controller MSC0 ***/
+/* MMC/SD controller MSC0 */
 static struct resource jz_msc0_resources[] = {
 	{
-		.start          = CPHYSADDR(MSC_BASE),
-		.end            = CPHYSADDR(MSC_BASE) + 0x1000 - 1,
+		.start          = JZ4750D_MSC0_BASE_ADDR,
+		.end            = JZ4750D_MSC0_BASE_ADDR + 0x1000 - 1,
 		.flags          = IORESOURCE_MEM,
 	},
 	{
-		.start          = IRQ_MSC0,
-		.end            = IRQ_MSC0,
+		.start          = JZ4750D_IRQ_MSC0,
+		.end            = JZ4750D_IRQ_MSC0,
 		.flags          = IORESOURCE_IRQ,
 	},
 	{
@@ -102,29 +101,27 @@ static struct resource jz_msc0_resources[] = {
 	},
 };
 
-static u64 jz_msc0_dmamask =  ~(u32)0;
-
 struct platform_device jz_msc0_device = {
 	.name = "jz-msc",
 	.id = 0,
 	.dev = {
-		.dma_mask               = &jz_msc0_dmamask,
-		.coherent_dma_mask      = 0xffffffff,
+		.dma_mask  = &jz_msc0_device.dev.coherent_dma_mask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
 	},
 	.num_resources  = ARRAY_SIZE(jz_msc0_resources),
 	.resource       = jz_msc0_resources,
 };
 
-/*** MMC/SD controller MSC1 ***/
+/* MMC/SD controller MSC1 */
 static struct resource jz_msc1_resources[] = {
 	{
-		.start          = CPHYSADDR(MSC_BASE) + 0x1000,
-		.end            = CPHYSADDR(MSC_BASE) + 0x10000 - 1,
+		.start          = JZ4750D_MSC1_BASE_ADDR,
+		.end            = JZ4750D_MSC1_BASE_ADDR + 0x1000 - 1,
 		.flags          = IORESOURCE_MEM,
 	},
 	{
-		.start          = IRQ_MSC1,
-		.end            = IRQ_MSC1,
+		.start          = JZ4750D_IRQ_MSC1,
+		.end            = JZ4750D_IRQ_MSC1,
 		.flags          = IORESOURCE_IRQ,
 	},
 	{
@@ -135,55 +132,43 @@ static struct resource jz_msc1_resources[] = {
 
 };
 
-static u64 jz_msc1_dmamask =  ~(u32)0;
-
 struct platform_device jz_msc1_device = {
 	.name = "jz-msc",
 	.id = 1,
 	.dev = {
-		.dma_mask               = &jz_msc1_dmamask,
-		.coherent_dma_mask      = 0xffffffff,
+		.dma_mask = &jz_msc1_device.dev.coherent_dma_mask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
 	},
 	.num_resources  = ARRAY_SIZE(jz_msc1_resources),
 	.resource       = jz_msc1_resources,
 };
 
-/*** I2C controller ***/
-#if 0
+/* I2C controller */
 static struct resource jz_i2c_resources[] = {
-	[0] = {
-		.start          = CPHYSADDR(I2C_BASE),
-		.end            = CPHYSADDR(I2C_BASE) + 0x10000 - 1,
+	{
+		.start          = JZ4750D_I2C_BASE_ADDR,
+		.end            = JZ4750D_I2C_BASE_ADDR + 0x10000 - 1,
 		.flags          = IORESOURCE_MEM,
 	},
-#if 0
-	[1] = {
-		.start          = IRQ_I2C,
-		.end            = IRQ_I2C,
+	{
+		.start          = JZ4750D_IRQ_I2C,
+		.end            = JZ4750D_IRQ_I2C,
 		.flags          = IORESOURCE_IRQ,
 	}
-#endif
 };
 
-static u64 jz_i2c_dmamask =  ~(u32)0;
-
 struct platform_device jz_i2c_device = {
-	.name = "jz_i2c",
+	.name = "jz47xx-i2c",
 	.id = 0,
 	.dev = {
-		.dma_mask               = &jz_i2c_dmamask,
-		.coherent_dma_mask      = 0xffffffff,
+		.dma_mask = &jz_i2c_device.dev.coherent_dma_mask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
 	},
 	.num_resources  = ARRAY_SIZE(jz_i2c_resources),
 	.resource       = jz_i2c_resources,
 };
-#endif
 
 /* Serial */
-//#define JZ4750D_IRQ_UART0 IRQ_UART0
-//#define JZ4750D_IRQ_UART1 IRQ_UART1
-//#define JZ4750D_IRQ_UART2 IRQ_UART2
-
 #define JZ4750D_UART_DATA(_id) \
 	{ \
 		.flags = UPF_SKIP_TEST | UPF_IOREMAP | UPF_FIXED_TYPE, \
@@ -223,7 +208,8 @@ void jz4750d_serial_device_register(void)
 
 	/*
 	 * ECS bit selects the clock source between EXCLK and EXCLK/2 output
-	 * This bit is only used to APB device such as UART I2S I2C SSI SADC UDC_PHY etc.
+	 * This bit is only used to APB device such as UART I2S I2C SSI SADC
+	 * UDC_PHY etc.
 	 */
 
 	if (readl(cpm_base + JZ_REG_CLOCK_CTRL) & JZ_CLOCK_CTRL_ECS) {
