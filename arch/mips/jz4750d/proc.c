@@ -44,60 +44,6 @@
 struct proc_dir_entry *proc_jz_root;
 
 /*
- * Generic register read/write
- */
-
-static int reg_read_proc (char *page, char **start, off_t off,
-			  int count, int *eof, void *data)
-{
-	return sprintf(page, "0x%08x\n", *((volatile u32 *)data));
-}
-
-static int reg_write_proc (struct file *file, const char *buffer, 
-			   unsigned long count, void *data)
-{
-	*((volatile u32 *)data) = simple_strtoul(buffer, 0, 16);
-	return count;
-}
-
-/*
- * GPIO status summary
- */
-
-static int gpio_print (char *page, const char *name, u32 value)
-{
-	int i, j, len = 0; u32 m = 0x80000000;
-	len += sprintf(page+len, "  %s 0x%08x ", name, value);
-	for (i = 0; i < 8; i++) {
-		page[len++] = ' ';
-		for (j = 0; j < 6; j++, m >>= 1) page[len++] = (value & m) ? '1' : '0';
-	}
-	page[len++] = '\n';
-	page[len] = 0;
-	return len;
-}
-
-static int gpio_read_proc (char *page, char **start, off_t off,
-			   int count, int *eof, void *data)
-{
-	int i, len = 0;
-	for (i = 0; i < 6; i++) {
-		len += sprintf(page+len, "GPIO%d:\n", i);
-		len += gpio_print(page+len, "PXPIN", REG_GPIO_PXPIN(i));
-		len += gpio_print(page+len, "PXDAT", REG_GPIO_PXDAT(i));
-		len += gpio_print(page+len, "PXIM ", REG_GPIO_PXIM(i));
-		len += gpio_print(page+len, "PXPE ", REG_GPIO_PXPE(i));
-		len += gpio_print(page+len, "PXFUN", REG_GPIO_PXFUN(i));
-		len += gpio_print(page+len, "PXSEL", REG_GPIO_PXSEL(i));
-		len += gpio_print(page+len, "PXDIR", REG_GPIO_PXDIR(i));
-		len += gpio_print(page+len, "PXTRG", REG_GPIO_PXTRG(i));
-	}
-	return len;
-}
-
-
-
-/*
  * EMC Modules
  */
 static int emc_read_proc (char *page, char **start, off_t off,
@@ -1084,36 +1030,6 @@ static int __init jz_proc_init(void)
 	unsigned int virt_addr, i;
 
 	proc_jz_root = proc_mkdir("jz", 0);
-
-	/* GPIO read only summary */
-	jz_proc_create("gpio", gpio_read_proc, NULL, NULL);
-
-	/* GPIO single register read/write access */
-	for (i = 0; i < 6; i++) {
-		jz_proc_create_n("gpio%u_pxpin",  i, reg_read_proc, NULL, (void *)GPIO_PXPIN(i));
-		jz_proc_create_n("gpio%u_pxdat",  i, reg_read_proc, reg_write_proc, (void *)GPIO_PXDAT(i));
-		jz_proc_create_n("gpio%u_pxdats", i, reg_read_proc, reg_write_proc, (void *)GPIO_PXDATS(i));
-		jz_proc_create_n("gpio%u_pxdatc", i, reg_read_proc, reg_write_proc, (void *)GPIO_PXDATC(i));
-		jz_proc_create_n("gpio%u_pxim",   i, reg_read_proc, reg_write_proc, (void *)GPIO_PXIM(i));
-		jz_proc_create_n("gpio%u_pxims",  i, reg_read_proc, reg_write_proc, (void *)GPIO_PXIMS(i));
-		jz_proc_create_n("gpio%u_pximc",  i, reg_read_proc, reg_write_proc, (void *)GPIO_PXIMC(i));
-		jz_proc_create_n("gpio%u_pxpe",   i, reg_read_proc, reg_write_proc, (void *)GPIO_PXPE(i));
-		jz_proc_create_n("gpio%u_pxpes",  i, reg_read_proc, reg_write_proc, (void *)GPIO_PXPES(i));
-		jz_proc_create_n("gpio%u_pxpec",  i, reg_read_proc, reg_write_proc, (void *)GPIO_PXPEC(i));
-		jz_proc_create_n("gpio%u_pxfun",  i, reg_read_proc, reg_write_proc, (void *)GPIO_PXFUN(i));
-		jz_proc_create_n("gpio%u_pxfuns", i, reg_read_proc, reg_write_proc, (void *)GPIO_PXFUNS(i));
-		jz_proc_create_n("gpio%u_pxfunc", i, reg_read_proc, reg_write_proc, (void *)GPIO_PXFUNC(i));
-		jz_proc_create_n("gpio%u_pxsel",  i, reg_read_proc, reg_write_proc, (void *)GPIO_PXSEL(i));
-		jz_proc_create_n("gpio%u_pxsels", i, reg_read_proc, reg_write_proc, (void *)GPIO_PXSELS(i));
-		jz_proc_create_n("gpio%u_pxselc", i, reg_read_proc, reg_write_proc, (void *)GPIO_PXSELC(i));
-		jz_proc_create_n("gpio%u_pxdir",  i, reg_read_proc, reg_write_proc, (void *)GPIO_PXDIR(i));
-		jz_proc_create_n("gpio%u_pxdirs", i, reg_read_proc, reg_write_proc, (void *)GPIO_PXDIRS(i));
-		jz_proc_create_n("gpio%u_pxdirc", i, reg_read_proc, reg_write_proc, (void *)GPIO_PXDIRC(i));
-		jz_proc_create_n("gpio%u_pxtrg",  i, reg_read_proc, reg_write_proc, (void *)GPIO_PXTRG(i));
-		jz_proc_create_n("gpio%u_pxtrgs", i, reg_read_proc, reg_write_proc, (void *)GPIO_PXTRGS(i));
-		jz_proc_create_n("gpio%u_pxtrgc", i, reg_read_proc, reg_write_proc, (void *)GPIO_PXTRGC(i));
-	}
-
 
 	/* External Memory Controller */
 	res = create_proc_entry("emc", 0644, proc_jz_root);
