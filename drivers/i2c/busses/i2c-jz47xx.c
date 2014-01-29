@@ -25,11 +25,13 @@
 #include <linux/errno.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
+#include <linux/slab.h>
 
 #include <asm/irq.h>
 #include <asm/io.h>
 #include <asm/addrspace.h>
 
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
 #include <asm/mach-jz4750d/jz4750d_i2c.h>
 #include <asm/mach-jz4750d/jz4750d_gpio.h>
 
