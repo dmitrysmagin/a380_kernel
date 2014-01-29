@@ -259,7 +259,7 @@ static struct platform_device board_keyboard = {
 /* All */
 static struct platform_device *jz_platform_devices[] __initdata = {
 	&jz_lcd_device,
-	&jz_usb_gdt_device,
+	&jz_udc_device,
 	//&jz_i2c_device,
 #ifdef CONFIG_SOUND_JZ_I2S
 	&vogue_snd_device,

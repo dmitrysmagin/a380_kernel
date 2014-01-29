@@ -67,6 +67,9 @@
 #define JZ4750D_IRQ_INTC_GPIO(x) (JZ4750D_IRQ_GPIO0 - (x))
 #define JZ4750D_IRQ_GPIO(x)	(JZ4750D_IRQ(48) + (x))
 
+/* 241 to 246 */
+#define JZ4750D_IRQ_ADC_BASE	JZ4750D_IRQ(241)
+
 #define NR_IRQS (256)
 
 #endif
