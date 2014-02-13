@@ -74,8 +74,6 @@
 #include "a380_slcd_ili9331.h"
 #endif
 
-#include "lockpic.h"
-
 #define TVOUT_2x
 #define TV_OUT_WIDTH 640
 #define TV_OUT_HEIGHT 480
@@ -426,12 +424,12 @@ static void print_lcdc_registers(void)	/* debug */
 	if ( 1 ) {
 		unsigned int * pii = (unsigned int *)dma_desc_base;
 		int i, j;
-		for (j=0;j< DMA_DESC_NUM ; j++) {
+		/*for (j=0;j< DMA_DESC_NUM ; j++) {
 			printk("dma_desc%d(0x%08x):\n", j, (unsigned int)pii);
 			for (i =0; i<8; i++ ) {
 				printk("\t\t0x%08x\n", *pii++);
 			}
-		}
+		}*/
 	}
 }
 #else
@@ -2389,36 +2387,6 @@ static int jz4750fb_device_attr_unregister(struct fb_info *fb_info)
 
 void draw_lock_picture(void)
 {
-#define PIC_HEIGHT 70
-	int i,j;
-	unsigned short *p;
-	unsigned short *q;
-
-	p = (unsigned short *)lcd_frame0;
-	q = (unsigned short *)lockpic;
-	if(l009_backlight == 0)
-		__lcd_set_backlight_level(50);
-
-	p += (SCREEN_HEIGHT - PIC_HEIGHT)/2*SCREEN_WIDTH + (SCREEN_WIDTH - PIC_HEIGHT)/2;
-	for(i = 0; i < PIC_HEIGHT-3; i++) {
-		for(j = 0; j < PIC_HEIGHT; j++) {
-			if((*q & 0xf000) == 0xf000 ||
-			   (*q & 0xe000) == 0xe000 ||
-			   (*q & 0xd000) == 0xd000 ||
-			   (*q & 0xc000) == 0xc000) {
-				p++;
-				q++;
-			} else {
-				*p++ = *q++;
-			}
-		}
-		p = p + SCREEN_WIDTH - PIC_HEIGHT;
-	}
-
-	dma_cache_wback((unsigned int)(lcd_frame0), SCREEN_WIDTH * SCREEN_HEIGHT);
-	if(l009_backlight == 0) __lcd_set_backlight_level(50);
-	mdelay(500);
-	if(l009_backlight == 0) __lcd_set_backlight_level(0);
 }
 EXPORT_SYMBOL(draw_lock_picture);
 
