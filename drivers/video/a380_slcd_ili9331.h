@@ -11,33 +11,6 @@
 #error "Define special lcd pins for your platform."
 #endif
 
-#if 0
-static void Mcupanel_Data(unsigned int data)
-{
-	while ((REG_SLCD_STATE)&(1 << 0));
-	REG_SLCD_DATA = (0 << 31) | (data&0xffff);
-}
-
-/* Sent a command with data (18-bit bus, 16-bit index, 16-bit register value) */
-static void Mcupanel_RegSet(unsigned int cmd, unsigned int data)
-{
-	/*printk("CMD = 0x%x, data=x%x\n",cmd,data);*/
-
-	while ((REG_SLCD_STATE)&(1 << 0));
-	REG_SLCD_DATA = (1 << 31) | ((cmd&0xff) >> 0);
-	while ((REG_SLCD_STATE)&(1 << 0));
-	REG_SLCD_DATA=(0 << 31) | (data&0x00ff);
-}
-
-/* Sent a command without data  (18-bit bus, 16-bit index) */
-static void Mcupanel_Command(unsigned int cmd) {
-	while ((REG_SLCD_STATE)&(1 << 0));
-	REG_SLCD_DATA =  (1 << 31) | ((cmd&0xff00) >> 8);
-	while ((REG_SLCD_STATE)&(1 << 0));
-	REG_SLCD_DATA =(1 << 31) | ((cmd&0xff) >> 0);
-}
-#endif
-
 static void LCD_Config_Data(unsigned int data_h,unsigned int data_l)
 {
 	while((REG_SLCD_STATE) & (1 << 0));
@@ -74,7 +47,6 @@ void Mcupanel_SetAddr(u32 x, u32 y) //u32
 	LCD_Config_Command(0x00,0x2c);
 }
 
-#undef __lcd_special_pin_init
 #define __lcd_special_pin_init()			\
 do {							\
 	__gpio_as_output(PIN_CS_N);			\
@@ -89,7 +61,6 @@ do {							\
 	mdelay(100);					\
 } while(0)
 
-#undef SlcdInit
 #define SlcdInit()                     \
 do {                                   \
 	mdelay(50);                    \
@@ -162,7 +133,6 @@ do {                                   \
 } while(0);
 
 /*---- LCD Initial ----*/
-#undef __lcd_slcd_pin_init
 #define __lcd_slcd_pin_init()					\
 do {								\
 	__gpio_as_slcd_8bit();					\
@@ -170,7 +140,6 @@ do {								\
 	__lcd_special_pin_init();				\
 }while (0)
 
-#undef __init_slcd_bus
 #define __init_slcd_bus()\
 do{\
 	__slcd_set_data_8bit_x2();\
@@ -181,7 +150,6 @@ do{\
 	__slcd_set_parallel_type();\
 } while(0)
 
-#undef __lcd_slcd_special_on
 #define __lcd_slcd_special_on()						\
 do {									\
 	__lcd_slcd_pin_init();						\

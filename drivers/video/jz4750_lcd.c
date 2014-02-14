@@ -22,6 +22,10 @@
  *	<Wolfgang Wang, Jun 10 2008>
  */
 
+/*
+ * Mod: <maddrone@gmail.com>
+ * */
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
@@ -35,6 +39,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
+#include <linux/proc_fs.h>
+#include <linux/kthread.h>
 
 #include <asm/irq.h>
 #include <asm/pgtable.h>
@@ -60,6 +66,21 @@
 #include "jz4750_lcd.h"
 #include "jz4750_tve.h"
 
+#ifdef CONFIG_JZ4750_SLCD_A380_ILI9331
+#include "a380_slcd_ili9331.h"
+#endif
+
+#define TV_OUT_WIDTH 640
+#define TV_OUT_HEIGHT 480
+
+#if defined(CONFIG_JZ4750D_A380)
+ #define SCREEN_WIDTH 400
+ #define SCREEN_HEIGHT 240
+#elif defined(CONFIG_JZ4750D_RZX50)
+ #define SCREEN_WIDTH 480
+ #define SCREEN_HEIGHT 272
+#endif
+
 //#define JZ_FB_DEBUG
 
 #ifdef JZ_FB_DEBUG
@@ -68,6 +89,10 @@
 #else
   #define D(fmt, args ...)
 #endif
+
+/*
+ * TODO: take information on w, h and bpp from panel part, not osd.
+ */
 
 struct jz4750lcd_info jz4750_lcd_panel = {
 #if defined(CONFIG_JZ4750_LCD_INNOLUX_PT035TN01_SERIAL)
@@ -265,6 +290,18 @@ static void print_lcdc_registers(void)	/* debug */
 #define print_lcdc_registers()
 #endif
 
+//maddrone add
+extern unsigned char *vmfbmem_addr;
+extern u32 phy_vmfbmem_addr;
+
+static unsigned int l009_backlight = 100;
+
+// 0 - lcd, 1 - tvout
+static unsigned long tvout_flag  = 0;
+
+static int tvout_display_w = SCREEN_WIDTH;
+static int tvout_display_h = SCREEN_HEIGHT;
+
 struct lcd_cfb_info {
 	struct fb_info	fb;
 	struct {
@@ -283,7 +320,10 @@ static unsigned char *lcd_frame0;
 static unsigned char *lcd_frame1;
 
 static struct jz4750_lcd_dma_desc *dma0_desc_cmd0, *dma0_desc_cmd;
+
+#ifdef CONFIG_FB_JZ4750_SLCD
 static unsigned char *lcd_cmdbuf;
+#endif
 
 static void jz4750fb_set_mode( struct jz4750lcd_info * lcd_info );
 static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info );
@@ -296,11 +336,13 @@ static int screen_off(void);
 static void ctrl_enable(void)
 {
 	REG_LCD_STATE = 0; /* clear lcdc status */
+#ifdef CONFIG_FB_JZ4750_SLCD
 	__lcd_slcd_special_on();
+#else
+	__lcd_special_on();
+#endif
 	__lcd_clr_dis();
 	__lcd_set_ena(); /* enable lcdc */
-
-	return;
 }
 
 static void ctrl_disable(void)
@@ -320,8 +362,6 @@ static void ctrl_disable(void)
 			printk("LCD disable timeout! REG_LCD_STATE=0x%08xx\n",REG_LCD_STATE);
 		REG_LCD_STATE &= ~LCD_STATE_LDD;
 	}
-
-	return;
 }
 
 static inline u_int chan_to_field(u_int chan, struct fb_bitfield *bf)
@@ -415,7 +455,6 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 	return 0;
 }
 
-
 /*
  * switch to tve mode from lcd mode
  * mode:
@@ -450,7 +489,7 @@ static void jz4750lcd_info_switch_to_TVE(int mode)
 		h = ( osd_lcd->fg1.h < TVE_HEIGHT_PAL )?osd_lcd->fg1.h:TVE_HEIGHT_PAL;
 		x = ((TVE_WIDTH_PAL - w) >> 2) << 1;
 		y = ((TVE_HEIGHT_PAL - h) >> 2) << 1;
-		info->osd.fg1.bpp = 32;	/* use RGB888 in TVE mode*/
+		info->osd.fg1.bpp = 16;	/* use RGB565 in TVE mode*/
 		info->osd.fg1.x = x;
 		info->osd.fg1.y = y;
 		info->osd.fg1.w = w;
@@ -474,7 +513,7 @@ static void jz4750lcd_info_switch_to_TVE(int mode)
 		h = ( osd_lcd->fg1.h < TVE_HEIGHT_NTSC)?osd_lcd->fg1.h:TVE_HEIGHT_NTSC;
 		x = ((TVE_WIDTH_NTSC - w) >> 2) << 1;
 		y = ((TVE_HEIGHT_NTSC - h) >> 2) << 1;
-		info->osd.fg1.bpp = 32;	/* use RGB888 int TVE mode */
+		info->osd.fg1.bpp = 16;	/* use RGB565 in TVE mode*/
 		info->osd.fg1.x = x;
 		info->osd.fg1.y = y;
 		info->osd.fg1.w = w;
@@ -549,6 +588,14 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 		switch (arg) {
 		case PANEL_MODE_TVE_PAL:	/* switch to TVE_PAL mode */
 		case PANEL_MODE_TVE_NTSC:	/* switch to TVE_NTSC mode */
+			printk("IOCTL: arg=PANEL_MODE_TVE_PAL\n");
+			if(arg == PANEL_MODE_TVE_PAL) {
+				tvout_display_w = 720;
+				tvout_display_h = 540;
+			} else {
+				tvout_display_w = 720;
+				tvout_display_h = 482;
+			}
 			jz4750lcd_info_switch_to_TVE(arg);
 			jz4750tve_init(arg); /* tve controller init */
 			udelay(100);
@@ -558,6 +605,8 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 			break;
 		case PANEL_MODE_LCD_PANEL:	/* switch to LCD mode */
 		default :
+			tvout_display_w = SCREEN_WIDTH;
+			tvout_display_h = SCREEN_HEIGHT;
 			/* turn off TVE, turn off DACn... */
 			jz4750tve_disable_tve();
 			jz4750_lcd_info = &jz4750_lcd_panel;
@@ -603,7 +652,7 @@ static int jz4750fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	unsigned long start;
 	unsigned long off;
 	u32 len;
-	D("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__);
+
 	off = vma->vm_pgoff << PAGE_SHIFT;
 	//fb->fb_get_fix(&fix, PROC_CONSOLE(info), info);
 
@@ -618,12 +667,12 @@ static int jz4750fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 
 	vma->vm_pgoff = off >> PAGE_SHIFT;
 	vma->vm_flags |= VM_IO;
-	//vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);	/* Uncacheable */
+	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);	/* Uncacheable */
 
 #if 1
 	pgprot_val(vma->vm_page_prot) &= ~_CACHE_MASK;
-	//pgprot_val(vma->vm_page_prot) |= _CACHE_UNCACHED;		/* Uncacheable */
-	pgprot_val(vma->vm_page_prot) |= _CACHE_CACHABLE_NONCOHERENT;	/* Write-Back */
+	pgprot_val(vma->vm_page_prot) |= _CACHE_UNCACHED;		/* Uncacheable */
+//	pgprot_val(vma->vm_page_prot) |= _CACHE_CACHABLE_NONCOHERENT;	/* Write-Back */
 #endif
 
 	if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
@@ -634,11 +683,61 @@ static int jz4750fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	return 0;
 }
 
+#define MAKENAME(X,Y) #X "x" #Y
+
+static struct fb_videomode video_modes[] = {
+	{
+		.name = MAKENAME(SCREEN_WIDTH, SCREEN_HEIGHT),
+		.xres = SCREEN_WIDTH,
+		.yres = SCREEN_HEIGHT,
+		.vmode = FB_VMODE_NONINTERLACED,
+	},
+};
+
 /* checks var and eventually tweaks it to something supported,
  * DO NOT MODIFY PAR */
 static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
-	printk("jz4750fb_check_var, not implement\n");
+	struct fb_videomode *mode = &video_modes[0];
+#if 0
+	printk("Requesting mode %i x %i x %i\n",
+		var->xres,
+		var->yres,
+		var->bits_per_pixel);
+#endif
+	if (var->bits_per_pixel != 16)
+		return -EINVAL;
+
+	if (var->xres != mode->xres)
+		return -EINVAL;
+
+	if (var->yres != mode->yres)
+		return -EINVAL;
+
+	printk("Found working mode: %dx%d\n", mode->xres, mode->yres);
+
+	fb_videomode_to_var(var, mode);
+
+	/* Reserve space for double buffering. */
+	var->yres_virtual = var->yres * 2;
+
+	if (var->bits_per_pixel == 16) {
+		var->transp.length = 0;
+		var->blue.length = var->red.length = 5;
+		var->green.length = 6;
+		var->transp.offset = 0;
+		var->red.offset = 11;
+		var->green.offset = 5;
+		var->blue.offset = 0;
+	} else {
+		var->transp.offset = 24;
+		var->red.offset = 16;
+		var->green.offset = 8;
+		var->blue.offset = 0;
+		var->transp.length = var->red.length =
+		var->green.length = var->blue.length = 8;
+	}
+
 	return 0;
 }
 
@@ -980,6 +1079,10 @@ static int jz4750fb_map_smem(struct lcd_cfb_info *cfb)
 
 	bpp = bpp_to_data_bpp(jz4750_lcd_info->osd.fg0.bpp);
 
+	/*
+	 * Problem: there could be two panels (lcd/tv) with different sizes.
+	 * This code allocates maximum memory, fix it later.
+	 */
 #ifndef CONFIG_FB_JZ4750_TVE
 	w = jz4750_lcd_info->osd.fg0.w;
 	h = jz4750_lcd_info->osd.fg0.h;
@@ -1002,11 +1105,19 @@ static int jz4750fb_map_smem(struct lcd_cfb_info *cfb)
 	needroom += ((w * bpp + 7) >> 3) * h;
 #endif // two layer
 
+	printk("FrameBuffer bpp = %d\n", bpp);
+
 	for (page_shift = 0; page_shift < 12; page_shift++)
 		if ((PAGE_SIZE << page_shift) >= needroom)
 			break;
 	lcd_palette = (unsigned char *)__get_free_pages(GFP_KERNEL, 0);
 	lcd_frame0 = (unsigned char *)__get_free_pages(GFP_KERNEL, page_shift);
+
+	//maddrone add for mplayer trans fb
+	vmfbmem_addr = lcd_frame0;
+
+	memset(vmfbmem_addr,0xff,SCREEN_WIDTH*SCREEN_HEIGHT*2);
+	phy_vmfbmem_addr = virt_to_phys((void *)vmfbmem_addr);
 
 	if ((!lcd_palette) || (!lcd_frame0))
 		return -ENOMEM;
@@ -1221,10 +1332,33 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 	dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
 	dma0_desc0->frame_id = (unsigned int)0x0000da00; /* DMA0'0 */
 
+	//maddrone change here
+	if(lcd_info->panel.cfg & LCD_CFG_TVEN) {
+		unsigned int frame_size0;
+
+		//maddrone
+		frame_size0 = (tvout_display_w * tvout_display_h * 16) >> 3;
+		frame_size0 /= 4;
+		dma0_desc0->cmd = frame_size0;
+		dma0_desc0->desc_size = (tvout_display_h << 16) | tvout_display_w;
+		dma0_desc0->offsize = 0;
+		dma0_desc0->cmd_num = 0;
+	} else {
+		unsigned int frame_size0;
+
+		//maddrone
+		frame_size0 = (SCREEN_WIDTH * SCREEN_HEIGHT * 16) >> 3;
+		frame_size0 /= 4;
+		dma0_desc0->cmd = frame_size0;
+		dma0_desc0->desc_size = (SCREEN_HEIGHT << 16) | SCREEN_WIDTH;
+		dma0_desc0->offsize = 0;
+		dma0_desc0->cmd_num = 0;
+	}
+
 	/* DMA0 Descriptor1 */
 	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) { /* TVE mode */
 
-
+		printk("TV Enable Mode...\n");
 		if (lcd_info->osd.fg0.bpp <= 8) /* load palette only once at setup */
 			dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc_palette);
 		else
@@ -1386,21 +1520,25 @@ static void jz4750fb_set_panel_mode( struct jz4750lcd_info * lcd_info )
 	if ( lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD ) /* enable Smart LCD DMA */
 		REG_SLCD_CTRL = SLCD_CTRL_DMA_EN;
 
-	switch ( lcd_info->panel.cfg & LCD_CFG_MODE_MASK ) {
-	case LCD_CFG_MODE_GENERIC_TFT:
-	case LCD_CFG_MODE_INTER_CCIR656:
-	case LCD_CFG_MODE_NONINTER_CCIR656:
-	case LCD_CFG_MODE_SLCD:
-	default:		/* only support TFT16 TFT32, not support STN and Special TFT by now(10-06-2008)*/
-		REG_LCD_VAT = (((panel->blw + panel->w + panel->elw + panel->hsw)) << 16) | (panel->vsw + panel->bfw + panel->h + panel->efw);
-		REG_LCD_DAH = ((panel->hsw + panel->blw) << 16) | (panel->hsw + panel->blw + panel->w);
-		REG_LCD_DAV = ((panel->vsw + panel->bfw) << 16) | (panel->vsw + panel->bfw + panel->h);
-		REG_LCD_HSYNC = (0 << 16) | panel->hsw;
-		REG_LCD_VSYNC = (0 << 16) | panel->vsw;
-		break;
-	}
+	/* only support TFT16 TFT32, not support STN and Special TFT by now(10-06-2008)*/
+	REG_LCD_VAT = (((panel->blw + panel->w + panel->elw + panel->hsw)) << 16) |
+			(panel->vsw + panel->bfw + panel->h + panel->efw);
+	REG_LCD_DAH = ((panel->hsw + panel->blw) << 16) | (panel->hsw + panel->blw + panel->w);
+	REG_LCD_DAV = ((panel->vsw + panel->bfw) << 16) | (panel->vsw + panel->bfw + panel->h);
+	REG_LCD_HSYNC = (0 << 16) | panel->hsw;
+	REG_LCD_VSYNC = (0 << 16) | panel->vsw;
+/*	// replace with this:
+	__lcd_vat_set_ht(panel->blw + panel->w + panel->elw);
+	__lcd_vat_set_vt(panel->bfw + panel->h + panel->efw);
+	__lcd_dah_set_hds(panel->blw);
+	__lcd_dah_set_hde(panel->blw + panel->w);
+	__lcd_dav_set_vds(panel->bfw);
+	__lcd_dav_set_vde(panel->bfw + panel->h);
+	__lcd_hsync_set_hps(0);
+	__lcd_hsync_set_hpe(panel->hsw);
+	__lcd_vsync_set_vpe(panel->vsw);
+*/
 }
-
 
 static void jz4750fb_set_osd_mode( struct jz4750lcd_info * lcd_info )
 {
@@ -1478,6 +1616,8 @@ static void jz4750fb_foreground_resize( struct jz4750lcd_info * lcd_info )
 	fg0_line_size = ((fg0_line_size+3)>>2)<<2; /* word aligned */
 	fg0_frm_size = fg0_line_size * lcd_info->osd.fg0.h;
 
+	printk("fg0_frm_size = 0x%x\n",fg0_frm_size);
+
 	fg1_line_size = lcd_info->osd.fg1.w*((lcd_info->osd.fg1.bpp+7)/8);
 	fg1_line_size = ((fg1_line_size+3)>>2)<<2; /* word aligned */
 	fg1_frm_size = fg1_line_size * lcd_info->osd.fg1.h;
@@ -1495,8 +1635,8 @@ static void jz4750fb_foreground_resize( struct jz4750lcd_info * lcd_info )
 		     (lcd_info->osd.fg_change != FG_CHANGE_ALL) )
 			REG_LCD_OSDCTRL |= LCD_OSDCTRL_CHANGES;
 
-		/* wait change ready??? */
-//		while ( REG_LCD_OSDS & LCD_OSDS_READY )	/* fix in the future, Wolfgang, 06-20-2008 */
+		/* wait change ready???  maddrone open*/
+		while ( REG_LCD_OSDS & LCD_OSDS_READY )	/* fix in the future, Wolfgang, 06-20-2008 */
 		D("wait LCD_OSDS_READY\n");
 
 		if ( lcd_info->osd.fg_change & FG0_CHANGE_SIZE ) { /* change FG0 size */
@@ -1552,18 +1692,26 @@ static void jz4750fb_change_clock( struct jz4750lcd_info * lcd_info )
 
 	val = lcd_info->panel.fclk; /* frame clk */
 
+	/* Pixclk */
 	if ( (lcd_info->panel.cfg & LCD_CFG_MODE_MASK) != LCD_CFG_MODE_SERIAL_TFT) {
-		pclk = val * (lcd_info->panel.w + lcd_info->panel.hsw + lcd_info->panel.elw + lcd_info->panel.blw) * (lcd_info->panel.h + lcd_info->panel.vsw + lcd_info->panel.efw + lcd_info->panel.bfw); /* Pixclk */
+		pclk = val *
+		      (lcd_info->panel.w + /*lcd_info->panel.hsw + */ lcd_info->panel.elw + lcd_info->panel.blw) *
+		      (lcd_info->panel.h + /*lcd_info->panel.vsw + */ lcd_info->panel.efw + lcd_info->panel.bfw);
 	} else {
 		/* serial mode: Hsync period = 3*Width_Pixel */
-		pclk = val * (lcd_info->panel.w*3 + lcd_info->panel.hsw + lcd_info->panel.elw + lcd_info->panel.blw) * (lcd_info->panel.h + lcd_info->panel.vsw + lcd_info->panel.efw + lcd_info->panel.bfw); /* Pixclk */
+		pclk = val *
+		      (lcd_info->panel.w * 3 + /*lcd_info->panel.hsw + */ lcd_info->panel.elw + lcd_info->panel.blw) *
+		      (lcd_info->panel.h + /*lcd_info->panel.vsw + */ lcd_info->panel.efw + lcd_info->panel.bfw);
 	}
 
 	/********* In TVE mode PCLK = 27MHz ***********/
 	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) {		/* LCDC output to TVE */
+		REG_CPM_LPCDR  &= (~CPM_LPCDR_LSCS);   //maddrone add
 		REG_CPM_LPCDR  |= CPM_LPCDR_LTCS;
 		pclk = 27000000;
-		val = __cpm_get_pllout2() / pclk; /* pclk */
+		//val = __cpm_get_pllout2() / pclk; /* pclk */
+		val = 432000000 / pclk; /* pclk */
+		printk("maddrone tve: pllout2 = 0x%x\n", __cpm_get_pllout2());
 		val--;
 		__cpm_set_pixdiv(val);
 
@@ -1580,6 +1728,7 @@ static void jz4750fb_change_clock( struct jz4750lcd_info * lcd_info )
 #endif
 		__cpm_select_pixclk_tve();
 
+		REG_CPM_LPCDR |= CPM_LPCDR_LTCS;  //maddrone add
 		REG_CPM_CPCCR |= CPM_CPCCR_CE ; /* update divide */
 	} else {		/* LCDC output to  LCD panel */
 		val = __cpm_get_pllout2() / pclk; /* pclk */
@@ -1653,13 +1802,28 @@ static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info )
 	 * 6. enable lcdc.
 	 */
 
-	__lcd_clr_ena();	/* Quick Disable */
+	printk("In jz4750fb_deep_set_mode  \n");
+
+#ifdef CONFIG_FB_JZ4750_SLCD
+	__lcd_clr_ena();	/* quick disable */
+	__slcd_disable_dma();
+#else
+	__lcd_set_dis();	/* regular disable */
+	mdelay(50);
+#endif
 	lcd_info->osd.fg_change = FG_CHANGE_ALL; /* change FG0, FG1 size, postion??? */
 	jz4750fb_descriptor_init(lcd_info);
 	jz4750fb_set_panel_mode(lcd_info);
 	jz4750fb_set_mode(lcd_info);
 	jz4750fb_change_clock(lcd_info);
+#ifdef CONFIG_FB_JZ4750_SLCD
+	__slcd_enable_dma();
+	REG_SLCD_CTRL |= SLCD_CTRL_DMA_EN;
+#else
+	__lcd_clr_dis();
+#endif
 	__lcd_set_ena();	/* enable lcdc */
+	printk("Out jz4750fb_deep_set_mode  \n");
 }
 
 static irqreturn_t jz4750fb_interrupt_handler(int irq, void *dev_id)
@@ -1696,7 +1860,6 @@ static irqreturn_t jz4750fb_interrupt_handler(int irq, void *dev_id)
 }
 
 #ifdef CONFIG_PM
-
 /*
  * Suspend the LCDC.
  */
@@ -1918,10 +2081,66 @@ void draw_lock_picture(void)
 }
 EXPORT_SYMBOL(draw_lock_picture);
 
+static int proc_lcd_backlight_read_proc(
+			char *page, char **start, off_t off,
+			int count, int *eof, void *data)
+{
+	return sprintf(page, "%ui\n", l009_backlight);
+}
+
+static int proc_lcd_backlight_write_proc(
+			struct file *file, const char *buffer,
+			unsigned long count, void *data)
+{
+	l009_backlight =  simple_strtoul(buffer, 0, 10);
+	__lcd_set_backlight_level(l009_backlight);	/* We support 8 levels here. */
+	if(l009_backlight == 0)
+		__gpio_clear_pin(GPIO_LCD_VCC_EN_N);
+	else
+		__gpio_set_pin(GPIO_LCD_VCC_EN_N);
+	return count;
+}
+
+
+static int proc_tvout_read_proc(
+			char *page, char **start, off_t off,
+			int count, int *eof, void *data)
+{
+	return sprintf(page, "%lu\n", tvout_flag);
+}
+
+static int proc_tvout_write_proc(
+			struct file *file, const char *buffer,
+			unsigned long count, void *data)
+{
+	tvout_flag = simple_strtoul(buffer, 0, 10);
+
+	if(tvout_flag == 1) { // lcd to tvout
+		jz4750lcd_info_switch_to_TVE(PANEL_MODE_TVE_NTSC);
+		jz4750tve_init(PANEL_MODE_TVE_NTSC); /* tve controller init */
+		udelay(100);
+		jz4750tve_enable_tve();
+		jz4750fb_deep_set_mode(jz4750_lcd_info);
+		screen_off();
+		
+	} else if(tvout_flag == 0) { // tvout to lcd
+		jz4750tve_disable_tve();
+		udelay(100);
+		jz4750_lcd_info = &jz4750_lcd_panel;
+		jz4750fb_deep_set_mode(jz4750_lcd_info);
+		screen_on();
+	}
+
+	return count;
+}
+
 static void gpio_init(void)
 {
 	__lcd_display_pin_init();
 
+#ifdef CONFIG_FB_JZ4750_SLCD
+	__gpio_as_slcd_8bit();
+#else
 	/* gpio init __gpio_as_lcd */
 	if (jz4750_lcd_info->panel.cfg & LCD_CFG_MODE_TFT_16BIT)
 		__gpio_as_lcd_16bit();
@@ -1929,6 +2148,7 @@ static void gpio_init(void)
 		__gpio_as_lcd_24bit();
 	else
 		__gpio_as_lcd_18bit();
+#endif
 
 	/* In special mode, we only need init special pin,
 	 * as general lcd pin has init in uboot */
@@ -1943,8 +2163,6 @@ static void gpio_init(void)
 		;
 	}
 #endif
-
-	return;
 }
 
 static void set_bpp_to_ctrl_bpp(void)
@@ -1982,8 +2200,6 @@ static void set_bpp_to_ctrl_bpp(void)
 			jz4750_lcd_info->osd.fg1.bpp = 32;
 			break;
 	}
-
-	return;
 }
 
 static void slcd_init(void)
@@ -1992,17 +2208,16 @@ static void slcd_init(void)
 #if defined(CONFIG_FB_JZ4750_SLCD)
 	__lcd_as_smart_lcd();
 	__slcd_disable_dma();
-	__init_slcd_bus();	/* Note: modify this depend on you lcd */
+	//__init_slcd_bus();	/* Note: modify this depend on you lcd */
 
 #endif
-	return;
 }
 
 static int __devinit jz4750_fb_probe(struct platform_device *dev)
 {
 	struct lcd_cfb_info *cfb;
-
 	int err = 0;
+	struct proc_dir_entry *res, *res1;
 
 	cfb = jz4750fb_alloc_fb_info();
 	if (!cfb)
@@ -2038,7 +2253,7 @@ static int __devinit jz4750_fb_probe(struct platform_device *dev)
 
 	if (request_irq(IRQ_LCD, jz4750fb_interrupt_handler, IRQF_DISABLED,
 			"lcd", 0)) {
-		D("Faield to request LCD IRQ.\n");
+		D("Failed to request LCD IRQ.\n");
 		err = -EBUSY;
 		goto failed;
 	}
@@ -2049,6 +2264,21 @@ static int __devinit jz4750_fb_probe(struct platform_device *dev)
 #ifdef JZ_FB_DEBUG
 	display_h_color_bar(jz4750_lcd_info->osd.fg0.w, jz4750_lcd_info->osd.fg0.h, jz4750_lcd_info->osd.fg0.bpp);
 #endif
+
+	//maddrone add
+	res = create_proc_entry("jz/lcd_backlight", 0, NULL);
+	if(res) {
+		//res->owner = THIS_MODULE;
+		res->read_proc = proc_lcd_backlight_read_proc;
+		res->write_proc = proc_lcd_backlight_write_proc;
+	}
+
+	res1 = create_proc_entry("jz/tvout", 0, NULL);
+	if(res1) {
+		//res1->owner = THIS_MODULE;
+		res1->read_proc = proc_tvout_read_proc;
+		res1->write_proc = proc_tvout_write_proc;
+	}
 
 	return 0;
 
@@ -2061,6 +2291,12 @@ failed:
 
 static int __devexit jz4750_fb_remove(struct platform_device *pdev)
 {
+	struct lcd_cfb_info *cfb = jz4750fb_info;
+
+	jz4750fb_device_attr_unregister(&cfb->fb);
+	jz4750fb_unmap_smem(cfb);
+	jz4750fb_free_fb_info(cfb);
+
 	return 0;
 }
 

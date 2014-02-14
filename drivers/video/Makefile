@@ -30,8 +30,6 @@ obj-$(CONFIG_FB_DEFERRED_IO)   += fb_defio.o
 # Hardware specific drivers go first
 
 obj-$(CONFIG_FB_JZ4750_LCD)       += jz4750_lcd.o jz4750_android_ipu.o
-obj-$(CONFIG_FB_JZ4750_LCD_A380)  += jz4750_lcd_a380.o jz4750_android_ipu.o
-obj-$(CONFIG_FB_JZ4750_LCD_RZX50) += jz4750_lcd_a380.o jz4750_android_ipu.o
 obj-$(CONFIG_FB_JZ4750_TVE)       += jz4750_tve.o
 
 obj-$(CONFIG_FB_AMIGA)            += amifb.o c2p_planar.o

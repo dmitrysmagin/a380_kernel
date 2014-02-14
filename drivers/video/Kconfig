@@ -264,43 +264,17 @@ config FB_JZ4750_LCD
 	   foreground0 and foreground1.
 	   JZ4750 LCD driver support only foreground0 by default.
 
-config FB_JZ4750_LCD_A380
-	tristate "JZ4750 LCD Controller support for Dingoo A380"
-	depends on FB_JZSOC && (SOC_JZ4750 || SOC_JZ4750D || SOC_JZ4750L)
-	---help---
-	   JZ4750 LCD Controller driver for Dingoo A380.
-
-config FB_JZ4750_LCD_RZX50
-	tristate "JZ4750 LCD Controller support for Ritmix RZX50"
-	depends on FB_JZSOC && (SOC_JZ4750 || SOC_JZ4750D || SOC_JZ4750L)
-	---help---
-	   JZ4750 LCD Controller driver for Dingoo A380.
-
-config FB_JZ4750_LCD_USE_2LAYER_FRAMEBUFFER
-	bool "JZ4750 LCD driver 2 layers framebuffer support."
-	depends on FB_JZ4750_LCD || FB_JZ4750_LCD_A380 || FB_JZ4750_LCD_RZX50
-	---help---
-	   JZ4750 LCD driver support only foreground0 by default.
-	   If you need both foreground0 and foreground1, please select this.
-
 config FB_JZ4750_TVE
 	tristate "Jz4750 TV Encode support"
-	depends on FB_JZSOC && (FB_JZ4750_LCD || FB_JZ4750_LCD_A380 || FB_JZ4750_LCD_RZX50)
+	depends on FB_JZSOC && FB_JZ4750_LCD
 	default n
-
-config IPU_JZ4750
-	tristate "Jz4750 ipu support (Only for debug)"
-	depends on FB_JZSOC && (FB_JZ4750_LCD || FB_JZ4750_LCD_A380 || FB_JZ4750_LCD_RZX50)
-	default n
-	---help---
-	   Test JZ4750 IPU, if not sure, please set it to n.
 
 config FB_JZ4750_SLCD
 	bool
-	depends on FB_JZ4750_LCD || FB_JZ4750_LCD_A380 || FB_JZ4750_LCD_RZX50
+	depends on FB_JZ4750_LCD
 	default n
 choice
-	depends on FB_JZ4750_LCD || FB_JZ4750_LCD_A380 || FB_JZ4750_LCD_RZX50
+	depends on FB_JZ4750_LCD
 	prompt "JZ4750 LCD Panels Support"
 	---help---
 	   Please select the lcd panel in you board
