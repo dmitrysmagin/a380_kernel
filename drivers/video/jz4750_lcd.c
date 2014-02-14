@@ -1521,13 +1521,6 @@ static void jz4750fb_set_panel_mode( struct jz4750lcd_info * lcd_info )
 		REG_SLCD_CTRL = SLCD_CTRL_DMA_EN;
 
 	/* only support TFT16 TFT32, not support STN and Special TFT by now(10-06-2008)*/
-	REG_LCD_VAT = (((panel->blw + panel->w + panel->elw + panel->hsw)) << 16) |
-			(panel->vsw + panel->bfw + panel->h + panel->efw);
-	REG_LCD_DAH = ((panel->hsw + panel->blw) << 16) | (panel->hsw + panel->blw + panel->w);
-	REG_LCD_DAV = ((panel->vsw + panel->bfw) << 16) | (panel->vsw + panel->bfw + panel->h);
-	REG_LCD_HSYNC = (0 << 16) | panel->hsw;
-	REG_LCD_VSYNC = (0 << 16) | panel->vsw;
-/*	// replace with this:
 	__lcd_vat_set_ht(panel->blw + panel->w + panel->elw);
 	__lcd_vat_set_vt(panel->bfw + panel->h + panel->efw);
 	__lcd_dah_set_hds(panel->blw);
@@ -1537,7 +1530,6 @@ static void jz4750fb_set_panel_mode( struct jz4750lcd_info * lcd_info )
 	__lcd_hsync_set_hps(0);
 	__lcd_hsync_set_hpe(panel->hsw);
 	__lcd_vsync_set_vpe(panel->vsw);
-*/
 }
 
 static void jz4750fb_set_osd_mode( struct jz4750lcd_info * lcd_info )
@@ -1695,13 +1687,13 @@ static void jz4750fb_change_clock( struct jz4750lcd_info * lcd_info )
 	/* Pixclk */
 	if ( (lcd_info->panel.cfg & LCD_CFG_MODE_MASK) != LCD_CFG_MODE_SERIAL_TFT) {
 		pclk = val *
-		      (lcd_info->panel.w + /*lcd_info->panel.hsw + */ lcd_info->panel.elw + lcd_info->panel.blw) *
-		      (lcd_info->panel.h + /*lcd_info->panel.vsw + */ lcd_info->panel.efw + lcd_info->panel.bfw);
+		      (lcd_info->panel.w + lcd_info->panel.elw + lcd_info->panel.blw) *
+		      (lcd_info->panel.h + lcd_info->panel.efw + lcd_info->panel.bfw);
 	} else {
 		/* serial mode: Hsync period = 3*Width_Pixel */
 		pclk = val *
-		      (lcd_info->panel.w * 3 + /*lcd_info->panel.hsw + */ lcd_info->panel.elw + lcd_info->panel.blw) *
-		      (lcd_info->panel.h + /*lcd_info->panel.vsw + */ lcd_info->panel.efw + lcd_info->panel.bfw);
+		      (lcd_info->panel.w * 3 + lcd_info->panel.elw + lcd_info->panel.blw) *
+		      (lcd_info->panel.h + lcd_info->panel.efw + lcd_info->panel.bfw);
 	}
 
 	/********* In TVE mode PCLK = 27MHz ***********/
