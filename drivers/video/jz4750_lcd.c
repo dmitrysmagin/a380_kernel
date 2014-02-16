@@ -699,14 +699,6 @@ static struct fb_videomode video_modes[] = {
 static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	struct fb_videomode *mode = &video_modes[0];
-#if 0
-	printk("Requesting mode %i x %i x %i\n",
-		var->xres,
-		var->yres,
-		var->bits_per_pixel);
-#endif
-	if (var->bits_per_pixel != 16)
-		return -EINVAL;
 
 	if (var->xres != mode->xres)
 		return -EINVAL;
@@ -719,7 +711,11 @@ static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *inf
 	fb_videomode_to_var(var, mode);
 
 	/* Reserve space for double buffering. */
+	/* FIXME: strange behavior when yres_virtual == yres */
 	var->yres_virtual = var->yres * 2;
+
+	if (var->bits_per_pixel != 32 && var->bits_per_pixel != 16)
+		var->bits_per_pixel = 32;
 
 	if (var->bits_per_pixel == 16) {
 		var->transp.length = 0;
@@ -791,26 +787,27 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *info)
 static int jz4750fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	struct lcd_cfb_info *cfb = (struct lcd_cfb_info *)info;
-	int dy;
 
 	if (!var || !cfb) {
 		return -EINVAL;
 	}
 
-	if (var->xoffset - cfb->fb.var.xoffset) {
+	if (var->xoffset != cfb->fb.var.xoffset) {
 		/* No support for X panning for now! */
 		return -EINVAL;
 	}
 
-	dy = var->yoffset;
-	D("var.yoffset: %d", dy);
-	if (dy) {
-		dma0_desc0->databuf = (unsigned int)virt_to_phys((void *)lcd_frame0 + (cfb->fb.fix.line_length * dy));
-		dma_cache_wback((unsigned int)(dma0_desc0), sizeof(struct jz4750_lcd_dma_desc));
-	} else {
-		dma0_desc0->databuf = (unsigned int)virt_to_phys((void *)lcd_frame0);
-		dma_cache_wback((unsigned int)(dma0_desc0), sizeof(struct jz4750_lcd_dma_desc));
-	}
+	/*
+	 * TODO: yoffset is the height of requested mode which could be
+	 * smaller than panel height. Example: on 480x272 panel if a smaller
+	 * res is used (400x240), yoffset is either 0 or 240 (should be 272)
+	 * Possible fix: use osd.fg0.h instead ??
+	 */
+	printk("var.yoffset: %d\n", var->yoffset);
+	dma0_desc0->databuf = (unsigned int)virt_to_phys((void *)lcd_frame0
+			+ (cfb->fb.fix.line_length * var->yoffset));
+	dma_cache_wback((unsigned int)(dma0_desc0),
+			sizeof(struct jz4750_lcd_dma_desc));
 
 	return 0;
 }
