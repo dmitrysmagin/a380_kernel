@@ -299,9 +299,6 @@ static unsigned int l009_backlight = 100;
 // 0 - lcd, 1 - tvout
 static unsigned long tvout_flag  = 0;
 
-static int tvout_display_w = SCREEN_WIDTH;
-static int tvout_display_h = SCREEN_HEIGHT;
-
 struct lcd_cfb_info {
 	struct fb_info	fb;
 	struct {
@@ -588,14 +585,6 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 		switch (arg) {
 		case PANEL_MODE_TVE_PAL:	/* switch to TVE_PAL mode */
 		case PANEL_MODE_TVE_NTSC:	/* switch to TVE_NTSC mode */
-			printk("IOCTL: arg=PANEL_MODE_TVE_PAL\n");
-			if(arg == PANEL_MODE_TVE_PAL) {
-				tvout_display_w = 720;
-				tvout_display_h = 540;
-			} else {
-				tvout_display_w = 720;
-				tvout_display_h = 482;
-			}
 			jz4750lcd_info_switch_to_TVE(arg);
 			jz4750tve_init(arg); /* tve controller init */
 			udelay(100);
@@ -605,8 +594,6 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 			break;
 		case PANEL_MODE_LCD_PANEL:	/* switch to LCD mode */
 		default :
-			tvout_display_w = SCREEN_WIDTH;
-			tvout_display_h = SCREEN_HEIGHT;
 			/* turn off TVE, turn off DACn... */
 			jz4750tve_disable_tve();
 			jz4750_lcd_info = &jz4750_lcd_panel;
@@ -1330,29 +1317,6 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 
 	dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
 	dma0_desc0->frame_id = (unsigned int)0x0000da00; /* DMA0'0 */
-
-	//maddrone change here
-	if(lcd_info->panel.cfg & LCD_CFG_TVEN) {
-		unsigned int frame_size0;
-
-		//maddrone
-		frame_size0 = (tvout_display_w * tvout_display_h * 16) >> 3;
-		frame_size0 /= 4;
-		dma0_desc0->cmd = frame_size0;
-		dma0_desc0->desc_size = (tvout_display_h << 16) | tvout_display_w;
-		dma0_desc0->offsize = 0;
-		dma0_desc0->cmd_num = 0;
-	} else {
-		unsigned int frame_size0;
-
-		//maddrone
-		frame_size0 = (SCREEN_WIDTH * SCREEN_HEIGHT * 16) >> 3;
-		frame_size0 /= 4;
-		dma0_desc0->cmd = frame_size0;
-		dma0_desc0->desc_size = (SCREEN_HEIGHT << 16) | SCREEN_WIDTH;
-		dma0_desc0->offsize = 0;
-		dma0_desc0->cmd_num = 0;
-	}
 
 	/* DMA0 Descriptor1 */
 	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) { /* TVE mode */
