@@ -787,6 +787,8 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *info)
 static int jz4750fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	struct lcd_cfb_info *cfb = (struct lcd_cfb_info *)info;
+	/* HACK: var->yoffset should contain correct osd.fg0.h */
+	unsigned int dy = var->yoffset ? var->height : 0;
 
 	if (!var || !cfb) {
 		return -EINVAL;
@@ -805,7 +807,7 @@ static int jz4750fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *i
 	 */
 	printk("var.yoffset: %d\n", var->yoffset);
 	dma0_desc0->databuf = (unsigned int)virt_to_phys((void *)lcd_frame0
-			+ (cfb->fb.fix.line_length * var->yoffset));
+			+ (cfb->fb.fix.line_length * dy));
 	dma_cache_wback((unsigned int)(dma0_desc0),
 			sizeof(struct jz4750_lcd_dma_desc));
 
