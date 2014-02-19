@@ -293,12 +293,20 @@ static int __init a380_init_platform_devices(void)
 
 static void __init board_gpio_setup(void)
 {
+	int i;
+
 	__gpio_as_output(GPIO_AMPEN);
 	__gpio_clear_pin(GPIO_AMPEN);
 #ifdef GPIO_CHARGE
 	__gpio_as_output(GPIO_CHARGE);
 	__gpio_set_pin(GPIO_CHARGE);
 #endif
+
+	/* Set up gpios for keys */
+	for(i = 0; i < ARRAY_SIZE(a380_buttons); i++) {
+		__gpio_as_input(a380_buttons[i].gpio);
+		__gpio_enable_pull(a380_buttons[i].gpio);
+	}
 }
 
 static int __init jz_board_setup(void)

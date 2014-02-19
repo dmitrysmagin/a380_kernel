@@ -284,12 +284,29 @@ static int __init rzx50_init_platform_devices(void)
 
 static void __init board_gpio_setup(void)
 {
+	int i;
+
 	__gpio_as_output(GPIO_AMPEN);
 	__gpio_clear_pin(GPIO_AMPEN);
 #ifdef GPIO_CHARGE
 	__gpio_as_output(GPIO_CHARGE);
 	__gpio_set_pin(GPIO_CHARGE);
 #endif
+
+	/* Set up gpios for keys */
+	for(i = 0; i < ARRAY_SIZE(board_keypad_row_gpios); i++) {
+		__gpio_as_func0(board_keypad_row_gpios[i]);
+		__gpio_as_input(board_keypad_row_gpios[i]);
+		__gpio_enable_pull(board_keypad_row_gpios[i]);
+	  
+	}
+
+	for(i = 0; i < ARRAY_SIZE(board_keypad_col_gpios); i++) {
+		__gpio_as_func0(board_keypad_col_gpios[i]);
+		__gpio_as_input(board_keypad_col_gpios[i]);
+		__gpio_enable_pull(board_keypad_col_gpios[i]);
+	  
+	}
 }
 
 static int __init jz_board_setup(void)
