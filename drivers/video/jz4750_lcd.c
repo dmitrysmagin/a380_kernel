@@ -2103,6 +2103,17 @@ static void gpio_init(void)
 		__gpio_as_lcd_24bit();
 	else
 		__gpio_as_lcd_18bit();
+#ifdef CONFIG_JZ4750D_RZX50
+	/* HACK:
+	 * Set D19 (LCD_HSYNC) to proper values
+	 * because it's used for d-pad on RZX50.
+	 * __gpio_as_lcd_24bit() macro spoils it.
+	 */
+
+        __gpio_as_func0(32*3+19);
+        __gpio_as_input(32*3+19);
+        __gpio_enable_pull(32*3+19);
+#endif
 #endif
 
 	/* In special mode, we only need init special pin,
