@@ -17,6 +17,7 @@
 #include <linux/mmc/host.h>
 #include <linux/input.h>
 #include <linux/gpio_keys.h>
+#include <linux/pwm_backlight.h>
 #include <linux/input/matrix_keypad.h>
 
 #include <asm/mach-jz4750d/board-a380.h>
@@ -266,6 +267,22 @@ static struct platform_device a380_gpio_keys_device = {
 };
 #endif
 
+/* LCD backlight */
+static struct platform_pwm_backlight_data a380_backlight_pdata = {
+	.pwm_id = 1,
+	.max_brightness = 255,
+	.dft_brightness = 145,
+	.pwm_period_ns = 40000, /* 25 kHz: outside human hearing range */
+};
+
+static struct platform_device a380_backlight_device = {
+	.name = "pwm-backlight",
+	.id = -1,
+	.dev = {
+		.platform_data = &a380_backlight_pdata,
+	},
+};
+
 /* All */
 static struct platform_device *jz_platform_devices[] __initdata = {
 	&jz_lcd_device,
@@ -279,6 +296,7 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 #ifndef CONFIG_KEYBOARD_A380_GPIO_KEYS
 	&a380_gpio_keys_device,
 #endif
+	&a380_backlight_device,
 };
 
 static int __init a380_init_platform_devices(void)
