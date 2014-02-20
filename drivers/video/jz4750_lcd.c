@@ -290,10 +290,6 @@ static void print_lcdc_registers(void)	/* debug */
 #define print_lcdc_registers()
 #endif
 
-//maddrone add
-extern unsigned char *vmfbmem_addr;
-extern u32 phy_vmfbmem_addr;
-
 static unsigned int l009_backlight = 100;
 
 // 0 - lcd, 1 - tvout
@@ -1098,12 +1094,6 @@ static int jz4750fb_map_smem(struct lcd_cfb_info *cfb)
 			break;
 	lcd_palette = (unsigned char *)__get_free_pages(GFP_KERNEL, 0);
 	lcd_frame0 = (unsigned char *)__get_free_pages(GFP_KERNEL, page_shift);
-
-	//maddrone add for mplayer trans fb
-	vmfbmem_addr = lcd_frame0;
-
-	memset(vmfbmem_addr,0xff,SCREEN_WIDTH*SCREEN_HEIGHT*2);
-	phy_vmfbmem_addr = virt_to_phys((void *)vmfbmem_addr);
 
 	if ((!lcd_palette) || (!lcd_frame0))
 		return -ENOMEM;
