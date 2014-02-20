@@ -324,6 +324,8 @@
 	(REG_TCU_TCSR((n)) = (REG_TCU_TCSR((n)) & ~(TCU_TCSR_EXT_EN | TCU_TCSR_RTC_EN | TCU_TCSR_PCK_EN)) | TCU_TCSR_PCK_EN)
 #define __tcu_disable_pclk(n) \
 	REG_TCU_TCSR(n) = (REG_TCU_TCSR((n)) & ~TCU_TCSR_PCK_EN);
+#define __tcu_select_clk_div(n, c) \
+	(REG_TCU_TCSR((n)) = (REG_TCU_TCSR((n)) & ~TCU_TCSR_PRESCALE_MASK) | ((c) << TCU_TCSR_PRESCALE_BIT))
 #define __tcu_select_clk_div1(n) \
 	(REG_TCU_TCSR((n)) = (REG_TCU_TCSR((n)) & ~TCU_TCSR_PRESCALE_MASK) | TCU_TCSR_PRESCALE1)
 #define __tcu_select_clk_div4(n) \
