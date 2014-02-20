@@ -290,8 +290,6 @@ static void print_lcdc_registers(void)	/* debug */
 #define print_lcdc_registers()
 #endif
 
-static unsigned int l009_backlight = 100;
-
 // 0 - lcd, 1 - tvout
 static unsigned long tvout_flag  = 0;
 
@@ -300,10 +298,6 @@ struct lcd_cfb_info {
 	struct {
 		u16 red, green, blue;
 	}		palette[NR_PALETTE];
-
-	int		b_lcd_display;
-	int		b_lcd_pwm;
-	int		backlight_level;
 };
 
 #define DMA_DESC_NUM		6
@@ -321,10 +315,17 @@ static unsigned char *lcd_cmdbuf;
 static void jz4750fb_set_mode( struct jz4750lcd_info * lcd_info );
 static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info );
 
-static int jz4750fb_set_backlight_level(int n);
+static int screen_on(void)
+{
+	__gpio_set_pin(GPIO_LCD_VCC_EN_N);
+	return 0;
+}
 
-static int screen_on(void);
-static int screen_off(void);
+static int screen_off(void)
+{
+	__gpio_clear_pin(GPIO_LCD_VCC_EN_N);
+	return 0;
+}
 
 static void ctrl_enable(void)
 {
@@ -524,23 +525,6 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 	void __user *argp = (void __user *)arg;
 
 	switch (cmd) {
-	case FBIOSETBACKLIGHT:
-		jz4750fb_set_backlight_level(arg);
-
-		break;
-
-	case FBIODISPON:
-		ctrl_enable();
-		screen_on();
-
-		break;
-
-	case FBIODISPOFF:
-		screen_off();
-		ctrl_disable();
-
-		break;
-
 	case FBIOPRINT_REG:
 		print_lcdc_registers();
 
@@ -990,8 +974,6 @@ static struct lcd_cfb_info * jz4750fb_alloc_fb_info(void)
 	jz4750fb_info = cfb;
 
 	memset(cfb, 0, sizeof(struct lcd_cfb_info) );
-
-	cfb->backlight_level	= LCD_DEFAULT_BACKLIGHT;
 
 	strcpy(cfb->fb.fix.id, "jz-lcd");
 	cfb->fb.fix.type	= FB_TYPE_PACKED_PIXELS;
@@ -1872,180 +1854,10 @@ static void display_h_color_bar(int w, int h, int bpp)
 }
 #endif
 
-/* Backlight Control Interface via sysfs
- *
- * LCDC:
- * Enabling LCDC when LCD backlight is off will only affects cfb->display.
- *
- * Backlight:
- * Changing the value of LCD backlight when LCDC is off will only affect the cfb->backlight_level.
- *
- * - River.
- */
-static int screen_off(void)
-{
-	struct lcd_cfb_info *cfb = jz4750fb_info;
-
-	__lcd_close_backlight();
-	__lcd_display_off();
-
-#ifdef HAVE_LCD_PWM_CONTROL
-	if (cfb->b_lcd_pwm) {
-		__lcd_pwm_stop();
-		cfb->b_lcd_pwm = 0;
-	}
-#endif
-
-	cfb->b_lcd_display = 0;
-
-	return 0;
-}
-
-static int screen_on(void)
-{
-	struct lcd_cfb_info *cfb = jz4750fb_info;
-
-	__lcd_display_on();
-	mdelay(200);
-	/* Really restore LCD backlight when LCD backlight is turned on. */
-	if (cfb->backlight_level) {
-#ifdef HAVE_LCD_PWM_CONTROL
-		if (!cfb->b_lcd_pwm) {
-			__lcd_pwm_start();
-			cfb->b_lcd_pwm = 1;
-		}
-#endif
-		__lcd_set_backlight_level(cfb->backlight_level);
-
-	}
-
-	cfb->b_lcd_display = 1;
-
-	return 0;
-}
-
-static int jz4750fb_set_backlight_level(int n)
-{
-	struct lcd_cfb_info *cfb = jz4750fb_info;
-
-	if (n) {
-		if (n > LCD_MAX_BACKLIGHT)
-			n = LCD_MAX_BACKLIGHT;
-
-		if (n < LCD_MIN_BACKLIGHT)
-			n = LCD_MIN_BACKLIGHT;
-
-		/* Really change the value of backlight when LCDC is enabled. */
-		if (cfb->b_lcd_display) {
-#ifdef HAVE_LCD_PWM_CONTROL
-			if (!cfb->b_lcd_pwm) {
-				__lcd_pwm_start();
-				cfb->b_lcd_pwm = 1;
-			}
-#endif
-			__lcd_set_backlight_level(n);
-		}
-	}else{
-		/* Turn off LCD backlight. */
-		__lcd_close_backlight();
-
-#ifdef HAVE_LCD_PWM_CONTROL
-		if (cfb->b_lcd_pwm) {
-			__lcd_pwm_stop();
-			cfb->b_lcd_pwm = 0;
-		}
-#endif
-	}
-
-	cfb->backlight_level = n;
-
-	return 0;
-}
-
-static ssize_t show_bl_level(struct device *device,
-			     struct device_attribute *attr, char *buf)
-{
-	struct lcd_cfb_info *cfb = jz4750fb_info;
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", cfb->backlight_level);
-}
-
-static ssize_t store_bl_level(struct device *device,
-		struct device_attribute *attr,
-		const char *buf, size_t count)
-{
-	int n;
-	char *ep;
-
-	n = simple_strtoul(buf, &ep, 0);
-	if (*ep && *ep != '\n')
-		return -EINVAL;
-
-	jz4750fb_set_backlight_level(n);
-
-	return count;
-}
-
-static struct device_attribute device_attrs[] = {
-	__ATTR(backlight_level, S_IRUGO | S_IWUSR, show_bl_level, store_bl_level),
-};
-
-static int jz4750fb_device_attr_register(struct fb_info *fb_info)
-{
-	int error = 0;
-	unsigned int i;
-
-	for (i = 0; i < ARRAY_SIZE(device_attrs); i++) {
-		error = device_create_file(fb_info->dev, &device_attrs[i]);
-
-		if (error)
-			break;
-	}
-
-	if (error) {
-		while (--i >= 0)
-			device_remove_file(fb_info->dev, &device_attrs[i]);
-	}
-
-	return 0;
-}
-
-static int jz4750fb_device_attr_unregister(struct fb_info *fb_info)
-{
-	unsigned int i;
-
-	for (i = 0; i < ARRAY_SIZE(device_attrs); i++)
-		device_remove_file(fb_info->dev, &device_attrs[i]);
-
-	return 0;
-}
-/* End */
-
 void draw_lock_picture(void)
 {
 }
 EXPORT_SYMBOL(draw_lock_picture);
-
-static int proc_lcd_backlight_read_proc(
-			char *page, char **start, off_t off,
-			int count, int *eof, void *data)
-{
-	return sprintf(page, "%ui\n", l009_backlight);
-}
-
-static int proc_lcd_backlight_write_proc(
-			struct file *file, const char *buffer,
-			unsigned long count, void *data)
-{
-	l009_backlight =  simple_strtoul(buffer, 0, 10);
-	__lcd_set_backlight_level(l009_backlight);	/* We support 8 levels here. */
-	if(l009_backlight == 0)
-		__gpio_clear_pin(GPIO_LCD_VCC_EN_N);
-	else
-		__gpio_set_pin(GPIO_LCD_VCC_EN_N);
-	return count;
-}
-
 
 static int proc_tvout_read_proc(
 			char *page, char **start, off_t off,
@@ -2067,7 +1879,6 @@ static int proc_tvout_write_proc(
 		jz4750tve_enable_tve();
 		jz4750fb_deep_set_mode(jz4750_lcd_info);
 		screen_off();
-		
 	} else if(tvout_flag == 0) { // tvout to lcd
 		jz4750tve_disable_tve();
 		udelay(100);
@@ -2173,7 +1984,7 @@ static int __devinit jz4750_fb_probe(struct platform_device *dev)
 {
 	struct lcd_cfb_info *cfb;
 	int err = 0;
-	struct proc_dir_entry *res, *res1;
+	struct proc_dir_entry *res;
 
 	cfb = jz4750fb_alloc_fb_info();
 	if (!cfb)
@@ -2205,8 +2016,6 @@ static int __devinit jz4750_fb_probe(struct platform_device *dev)
 	printk("fb%d: %s frame buffer device, using %dK of video memory\n",
 		cfb->fb.node, cfb->fb.fix.id, cfb->fb.fix.smem_len>>10);
 
-	jz4750fb_device_attr_register(&cfb->fb);
-
 	if (request_irq(IRQ_LCD, jz4750fb_interrupt_handler, IRQF_DISABLED,
 			"lcd", 0)) {
 		D("Failed to request LCD IRQ.\n");
@@ -2222,18 +2031,10 @@ static int __devinit jz4750_fb_probe(struct platform_device *dev)
 #endif
 
 	//maddrone add
-	res = create_proc_entry("jz/lcd_backlight", 0, NULL);
+	res = create_proc_entry("jz/tvout", 0, NULL);
 	if(res) {
-		//res->owner = THIS_MODULE;
-		res->read_proc = proc_lcd_backlight_read_proc;
-		res->write_proc = proc_lcd_backlight_write_proc;
-	}
-
-	res1 = create_proc_entry("jz/tvout", 0, NULL);
-	if(res1) {
-		//res1->owner = THIS_MODULE;
-		res1->read_proc = proc_tvout_read_proc;
-		res1->write_proc = proc_tvout_write_proc;
+		res->read_proc = proc_tvout_read_proc;
+		res->write_proc = proc_tvout_write_proc;
 	}
 
 	return 0;
@@ -2249,7 +2050,6 @@ static int __devexit jz4750_fb_remove(struct platform_device *pdev)
 {
 	struct lcd_cfb_info *cfb = jz4750fb_info;
 
-	jz4750fb_device_attr_unregister(&cfb->fb);
 	jz4750fb_unmap_smem(cfb);
 	jz4750fb_free_fb_info(cfb);
 
