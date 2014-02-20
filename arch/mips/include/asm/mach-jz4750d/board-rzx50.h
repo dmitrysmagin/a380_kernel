@@ -43,7 +43,7 @@
 #define GPIO_CHARG_STAT_N	(32*4+10)	/* GPD15 */
 //#define GPIO_CHARGE		(32*3+19)	/* GPD14 */
 //#define GPIO_DISP_OFF_N	(32*4+18)	/* SDATO */
-#define GPIO_LCD_VCC_EN_N	(32*4+1)	/* SDATI */
+#define GPIO_LCD_VCC_EN_N	(32*4+22)	/* GPE22 PWM2 */ 
 //#define GPIO_LED_EN		124		/* GPD28 */
 #define GPIO_AMPEN		(32*4+5)	/* GPE5 */
 #define GPIO_HP_DETE		(32*4+9)	/* GPE9 */

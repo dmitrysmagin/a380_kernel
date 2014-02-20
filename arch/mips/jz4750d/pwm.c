@@ -40,7 +40,7 @@ struct pwm_device {
 static struct pwm_device jz4750d_pwm_list[] = {
 	{ 0, JZ_GPIO_PORTE(20),  false },
 	//{ 1, JZ_GPIO_PORTF(11),  false },
-	{ 2, JZ_GPIO_PORTE(22),  false },
+	{ 2, JZ_GPIO_PORTE(22),  false }, /* LCD power */
 	{ 3, JZ_GPIO_PORTE(23),  false },
 	{ 4, JZ_GPIO_PORTE(24),  false },
 	{ 5, JZ_GPIO_PORTE(25),  false },
