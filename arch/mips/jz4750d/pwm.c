@@ -39,7 +39,7 @@ struct pwm_device {
 
 static struct pwm_device jz4750d_pwm_list[] = {
 	{ 0, JZ_GPIO_PORTE(20),  false },
-	//{ 1, JZ_GPIO_PORTF(11),  false },
+	{ 1, JZ_GPIO_PORTF(11),  false },
 	{ 2, JZ_GPIO_PORTE(22),  false }, /* LCD power */
 	{ 3, JZ_GPIO_PORTE(23),  false },
 	{ 4, JZ_GPIO_PORTE(24),  false },
@@ -75,7 +75,16 @@ struct pwm_device *pwm_request(int id, const char *label)
 		return ERR_PTR(ret);
 	}
 
+#if 0
+	__gpio_as_pwm(id);
+#else
+	/*
+	 * CHECKIT: according to jz4750d_gpio.h PWM1 gpio has to be func1
+	 * but __gpio_as_pwm(1) sets it to func0 though
+	 */
 	__gpio_as_func0(pwm->gpio);
+	__gpio_disable_pull(pwm->gpio);
+#endif
 	__tcu_start_timer_clock(id);
 
 	return pwm;

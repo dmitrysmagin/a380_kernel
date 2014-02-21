@@ -269,7 +269,7 @@ static struct platform_device a380_gpio_keys_device = {
 
 /* LCD backlight */
 static struct platform_pwm_backlight_data a380_backlight_pdata = {
-	.pwm_id = 1,
+	.pwm_id = 2,
 	.max_brightness = 255,
 	.dft_brightness = 145,
 	.pwm_period_ns = 40000, /* 25 kHz: outside human hearing range */
