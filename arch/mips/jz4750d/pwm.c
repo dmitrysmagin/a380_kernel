@@ -75,16 +75,13 @@ struct pwm_device *pwm_request(int id, const char *label)
 		return ERR_PTR(ret);
 	}
 
-#if 0
-	__gpio_as_pwm(id);
-#else
 	/*
 	 * CHECKIT: according to jz4750d_gpio.h PWM1 gpio has to be func1
 	 * but __gpio_as_pwm(1) sets it to func0 though
 	 */
 	__gpio_as_func0(pwm->gpio);
 	__gpio_disable_pull(pwm->gpio);
-#endif
+
 	__tcu_start_timer_clock(id);
 
 	return pwm;
@@ -132,6 +129,10 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 
 	if (__tcu_counter_enabled(id))
 		pwm_disable(pwm);
+
+	/* FIXME: check why removing these two lines makes backlight non-working */
+	__gpio_as_func0(pwm->gpio);
+	__gpio_disable_pull(pwm->gpio);
 
 	__tcu_set_count(id, 0);
 	__tcu_set_half_data(id, duty);

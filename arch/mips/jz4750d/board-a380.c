@@ -279,9 +279,12 @@ static void __init board_gpio_setup(void)
 #endif
 
 	/* Set up gpios for keys */
-	for(i = 0; i < ARRAY_SIZE(a380_buttons); i++) {
+	for (i = 0; i < ARRAY_SIZE(a380_buttons); i++) {
 		__gpio_as_input(a380_buttons[i].gpio);
-		__gpio_enable_pull(a380_buttons[i].gpio);
+		if (a380_buttons[i].gpio == JZ_GPIO_PORTC(31))
+			__gpio_disable_pull(a380_buttons[i].gpio);
+		else
+			__gpio_enable_pull(a380_buttons[i].gpio);
 	}
 }
 
