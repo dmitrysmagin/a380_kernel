@@ -70,9 +70,6 @@
 #include "a380_slcd_ili9331.h"
 #endif
 
-#define TV_OUT_WIDTH 640
-#define TV_OUT_HEIGHT 480
-
 #if defined(CONFIG_JZ4750D_A380)
  #define SCREEN_WIDTH 400
  #define SCREEN_HEIGHT 240
@@ -149,9 +146,7 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 		 .alpha = 0x00,	/* alpha value */
 		 .ipu_restart = 0x80001000, /* ipu restart */
 		 .fg_change = FG_CHANGE_ALL, /* change all initially */
-		 //.fg0 = {16, 0, 0, 720, 540}, /* bpp, x, y, w, h */
 		 .fg1 = {32, 200, 120, 12, 12}, /* bpp, x, y, w, h */
-		 //.fg0 = {32, 0, 0, 320, 240}, /* bpp, x, y, w, h */
 		 .fg0 = {16, 0, 0, 400, 240}, /* bpp, x, y, w, h */
 	 },
 #else
@@ -164,30 +159,22 @@ struct jz4750lcd_info jz4750_info_tve = {
 		.cfg = LCD_CFG_TVEN | /* output to tve */
 		LCD_CFG_NEWDES | /* 8words descriptor */
 		LCD_CFG_TVEPEH |
-		//LCD_CFG_RECOVER | /* underrun protect */
 		LCD_CFG_MODE_INTER_CCIR656, /* Interlace CCIR656 mode */
-		//.ctrl = LCD_CTRL_OFUM | LCD_CTRL_BST_16,	/* 16words burst */
-		//.ctrl = LCD_CTRL_OFUM | LCD_CTRL_BST_16,	/* 16words burst */
 		.ctrl = LCD_CTRL_BST_16,	/* 16words burst */
-		//TVE_WIDTH_PAL, TVE_HEIGHT_PAL, TVE_FREQ_PAL, 0, 0, 0, 0, 0, 0,
 		TVE_WIDTH_NTSC , TVE_HEIGHT_NTSC, TVE_FREQ_NTSC, 0, 0, 0, 0, 0, 0,
 	},
 	.osd = {
 		 .osd_cfg = LCD_OSDC_OSDEN | /* Use OSD mode */
-//		 LCD_OSDC_ALPHAEN | /* enable alpha */
 		 LCD_OSDC_F0EN,	/* enable Foreground0 */
 		 .osd_ctrl = 0,		/* disable ipu,  */
 		 .rgb_ctrl = LCD_RGBC_YCC, /* enable RGB => YUV */
-		 //.rgb_ctrl = 0, /* enable RGB => YUV */
-		 //.bgcolor = 0x008080, /* set background color Black */
 		 .bgcolor = 0x0, /* set background color Black */
 		 .colorkey0 = 0, /* disable colorkey */
 		 .colorkey1 = 0, /* disable colorkey */
 		 .alpha = 0x30,	/* alpha value */
 		 .ipu_restart = 0x80000100, /* ipu restart */
 		 .fg_change = FG_CHANGE_ALL, /* change all initially */
-                 //.fg0 = {16,0,0,TVE_WIDTH_PAL,TVE_HEIGHT_PAL},	/*  */
-                 .fg0 = {16,0,0,TVE_WIDTH_NTSC,TVE_HEIGHT_NTSC},	/*  */
+		 .fg0 = {16,0,0,TVE_WIDTH_NTSC,TVE_HEIGHT_NTSC},
 		 .fg1 = {16,0,0,0,0},
 	},
 };
@@ -196,99 +183,6 @@ struct jz4750lcd_info *jz4750_lcd_info = &jz4750_lcd_panel; /* default output to
 static struct lcd_cfb_info *jz4750fb_info;
 static struct jz4750_lcd_dma_desc *dma_desc_base;
 static struct jz4750_lcd_dma_desc *dma0_desc_palette, *dma0_desc0, *dma0_desc1, *dma1_desc0, *dma1_desc1;
-
-#ifdef JZ_FB_DEBUG
-static void print_lcdc_registers(void)	/* debug */
-{
-	/* LCD Controller Resgisters */
-	printk("REG_LCD_CFG:\t0x%08x\n", REG_LCD_CFG);
-	printk("REG_LCD_CTRL:\t0x%08x\n", REG_LCD_CTRL);
-	printk("REG_LCD_STATE:\t0x%08x\n", REG_LCD_STATE);
-	printk("REG_LCD_OSDC:\t0x%08x\n", REG_LCD_OSDC);
-	printk("REG_LCD_OSDCTRL:\t0x%08x\n", REG_LCD_OSDCTRL);
-	printk("REG_LCD_OSDS:\t0x%08x\n", REG_LCD_OSDS);
-	printk("REG_LCD_BGC:\t0x%08x\n", REG_LCD_BGC);
-	printk("REG_LCD_KEK0:\t0x%08x\n", REG_LCD_KEY0);
-	printk("REG_LCD_KEY1:\t0x%08x\n", REG_LCD_KEY1);
-	printk("REG_LCD_ALPHA:\t0x%08x\n", REG_LCD_ALPHA);
-	printk("REG_LCD_IPUR:\t0x%08x\n", REG_LCD_IPUR);
-	printk("REG_LCD_VAT:\t0x%08x\n", REG_LCD_VAT);
-	printk("REG_LCD_DAH:\t0x%08x\n", REG_LCD_DAH);
-	printk("REG_LCD_DAV:\t0x%08x\n", REG_LCD_DAV);
-	printk("REG_LCD_XYP0:\t0x%08x\n", REG_LCD_XYP0);
-	printk("REG_LCD_XYP1:\t0x%08x\n", REG_LCD_XYP1);
-	printk("REG_LCD_SIZE0:\t0x%08x\n", REG_LCD_SIZE0);
-	printk("REG_LCD_SIZE1:\t0x%08x\n", REG_LCD_SIZE1);
-	printk("REG_LCD_RGBC\t0x%08x\n", REG_LCD_RGBC);
-	printk("REG_LCD_VSYNC:\t0x%08x\n", REG_LCD_VSYNC);
-	printk("REG_LCD_HSYNC:\t0x%08x\n", REG_LCD_HSYNC);
-	printk("REG_LCD_PS:\t0x%08x\n", REG_LCD_PS);
-	printk("REG_LCD_CLS:\t0x%08x\n", REG_LCD_CLS);
-	printk("REG_LCD_SPL:\t0x%08x\n", REG_LCD_SPL);
-	printk("REG_LCD_REV:\t0x%08x\n", REG_LCD_REV);
-	printk("REG_LCD_IID:\t0x%08x\n", REG_LCD_IID);
-	printk("REG_LCD_DA0:\t0x%08x\n", REG_LCD_DA0);
-	printk("REG_LCD_SA0:\t0x%08x\n", REG_LCD_SA0);
-	printk("REG_LCD_FID0:\t0x%08x\n", REG_LCD_FID0);
-	printk("REG_LCD_CMD0:\t0x%08x\n", REG_LCD_CMD0);
-	printk("REG_LCD_OFFS0:\t0x%08x\n", REG_LCD_OFFS0);
-	printk("REG_LCD_PW0:\t0x%08x\n", REG_LCD_PW0);
-	printk("REG_LCD_CNUM0:\t0x%08x\n", REG_LCD_CNUM0);
-	printk("REG_LCD_DESSIZE0:\t0x%08x\n", REG_LCD_DESSIZE0);
-	printk("REG_LCD_DA1:\t0x%08x\n", REG_LCD_DA1);
-	printk("REG_LCD_SA1:\t0x%08x\n", REG_LCD_SA1);
-	printk("REG_LCD_FID1:\t0x%08x\n", REG_LCD_FID1);
-	printk("REG_LCD_CMD1:\t0x%08x\n", REG_LCD_CMD1);
-	printk("REG_LCD_OFFS1:\t0x%08x\n", REG_LCD_OFFS1);
-	printk("REG_LCD_PW1:\t0x%08x\n", REG_LCD_PW1);
-	printk("REG_LCD_CNUM1:\t0x%08x\n", REG_LCD_CNUM1);
-	printk("REG_LCD_DESSIZE1:\t0x%08x\n", REG_LCD_DESSIZE1);
-	printk("==================================\n");
-	printk("REG_LCD_VSYNC:\t%d:%d\n", REG_LCD_VSYNC>>16, REG_LCD_VSYNC&0xfff);
-	printk("REG_LCD_HSYNC:\t%d:%d\n", REG_LCD_HSYNC>>16, REG_LCD_HSYNC&0xfff);
-	printk("REG_LCD_VAT:\t%d:%d\n", REG_LCD_VAT>>16, REG_LCD_VAT&0xfff);
-	printk("REG_LCD_DAH:\t%d:%d\n", REG_LCD_DAH>>16, REG_LCD_DAH&0xfff);
-	printk("REG_LCD_DAV:\t%d:%d\n", REG_LCD_DAV>>16, REG_LCD_DAV&0xfff);
-	printk("==================================\n");
-
-	/* Smart LCD Controller Resgisters */
-	printk("REG_SLCD_CFG:\t0x%08x\n", REG_SLCD_CFG);
-	printk("REG_SLCD_CTRL:\t0x%08x\n", REG_SLCD_CTRL);
-	printk("REG_SLCD_STATE:\t0x%08x\n", REG_SLCD_STATE);
-	printk("==================================\n");
-
-	/* TVE Controller Resgisters */
-	printk("REG_TVE_CTRL:\t0x%08x\n", REG_TVE_CTRL);
-	printk("REG_TVE_FRCFG:\t0x%08x\n", REG_TVE_FRCFG);
-	printk("REG_TVE_SLCFG1:\t0x%08x\n", REG_TVE_SLCFG1);
-	printk("REG_TVE_SLCFG2:\t0x%08x\n", REG_TVE_SLCFG2);
-	printk("REG_TVE_SLCFG3:\t0x%08x\n", REG_TVE_SLCFG3);
-	printk("REG_TVE_LTCFG1:\t0x%08x\n", REG_TVE_LTCFG1);
-	printk("REG_TVE_LTCFG2:\t0x%08x\n", REG_TVE_LTCFG2);
-	printk("REG_TVE_CFREQ:\t0x%08x\n", REG_TVE_CFREQ);
-	printk("REG_TVE_CPHASE:\t0x%08x\n", REG_TVE_CPHASE);
-	printk("REG_TVE_CBCRCFG:\t0x%08x\n", REG_TVE_CBCRCFG);
-	printk("REG_TVE_WSSCR:\t0x%08x\n", REG_TVE_WSSCR);
-	printk("REG_TVE_WSSCFG1:\t0x%08x\n", REG_TVE_WSSCFG1);
-	printk("REG_TVE_WSSCFG2:\t0x%08x\n", REG_TVE_WSSCFG2);
-	printk("REG_TVE_WSSCFG3:\t0x%08x\n", REG_TVE_WSSCFG3);
-
-	printk("==================================\n");
-
-	if ( 1 ) {
-		unsigned int * pii = (unsigned int *)dma_desc_base;
-		int i, j;
-		/*for (j=0;j< DMA_DESC_NUM ; j++) {
-			printk("dma_desc%d(0x%08x):\n", j, (unsigned int)pii);
-			for (i =0; i<8; i++ ) {
-				printk("\t\t0x%08x\n", *pii++);
-			}
-		}*/
-	}
-}
-#else
-#define print_lcdc_registers()
-#endif
 
 // 0 - lcd, 1 - tvout
 static unsigned long tvout_flag  = 0;
@@ -317,12 +211,14 @@ static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info );
 
 static int screen_on(void)
 {
+	__gpio_as_output(GPIO_LCD_VCC_EN_N);
 	__gpio_set_pin(GPIO_LCD_VCC_EN_N);
 	return 0;
 }
 
 static int screen_off(void)
 {
+	__gpio_as_output(GPIO_LCD_VCC_EN_N);
 	__gpio_clear_pin(GPIO_LCD_VCC_EN_N);
 	return 0;
 }
@@ -371,7 +267,6 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 	struct lcd_cfb_info *cfb = (struct lcd_cfb_info *)info;
 	unsigned short *ptr, ctmp;
 
-//	D("regno:%d,RGBt:(%d,%d,%d,%d)\t", regno, red, green, blue, transp);
 	if (regno >= NR_PALETTE)
 		return 1;
 
@@ -434,16 +329,6 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 				(red << 16) |
 				(green << 8) |
 				(blue << 0);
-
-/*		if (regno < 16) {
-			unsigned val;
-			val  = chan_to_field(red, &cfb->fb.var.red);
-			val |= chan_to_field(green, &cfb->fb.var.green);
-			val |= chan_to_field(blue, &cfb->fb.var.blue);
-			((u32 *)cfb->fb.pseudo_palette)[regno] = val;
-		}
-*/
-
 		break;
 	}
 	return 0;
@@ -525,11 +410,6 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 	void __user *argp = (void __user *)arg;
 
 	switch (cmd) {
-	case FBIOPRINT_REG:
-		print_lcdc_registers();
-
-		break;
-
 	case FBIO_GET_MODE:
 		D("fbio get mode\n");
 
@@ -1820,45 +1700,6 @@ static int jz4750_fb_resume(struct platform_device *pdev)
 
 #endif /* CONFIG_PM */
 
-/* The following routine is only for test */
-
-#ifdef JZ_FB_DEBUG
-static void display_h_color_bar(int w, int h, int bpp)
-{
-	int i, j;
-	unsigned short *p;
-	int k = 0;
-
-	p = (unsigned short *)lcd_frame0;
-
-	// red
-	for(i = 0; i < 80; i++)
-		for(j = 0; j < SCREEN_WIDTH; j++)
-			p[k++] = 0xF800;
-			//p[k++] = 0xFF00;    //green
-			//p[k++] = 0xFF;    //purple
-
-	// green
-	for(i = 0; i < 80; i++)
-		for(j = 0; j < SCREEN_WIDTH; j++)
-			p[k++] = 0x07E0;
-
-	// blue
-	for(i = 0; i < 80; i++)
-		for(j = 0; j < SCREEN_WIDTH; j++)
-			p[k++] = 0x001F;
-
-	dma_cache_wback((unsigned int)(lcd_frame0), SCREEN_WIDTH * SCREEN_HEIGHT);
-
-	mdelay(1000);
-}
-#endif
-
-void draw_lock_picture(void)
-{
-}
-EXPORT_SYMBOL(draw_lock_picture);
-
 static int proc_tvout_read_proc(
 			char *page, char **start, off_t off,
 			int count, int *eof, void *data)
@@ -2025,10 +1866,6 @@ static int __devinit jz4750_fb_probe(struct platform_device *dev)
 
 	ctrl_enable();
 	screen_on();
-
-#ifdef JZ_FB_DEBUG
-	display_h_color_bar(jz4750_lcd_info->osd.fg0.w, jz4750_lcd_info->osd.fg0.h, jz4750_lcd_info->osd.fg0.bpp);
-#endif
 
 	//maddrone add
 	res = create_proc_entry("jz/tvout", 0, NULL);
