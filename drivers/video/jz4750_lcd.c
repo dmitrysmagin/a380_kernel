@@ -209,20 +209,6 @@ static unsigned char *lcd_cmdbuf;
 static void jz4750fb_set_mode( struct jz4750lcd_info * lcd_info );
 static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info );
 
-static int screen_on(void)
-{
-	__gpio_as_output(GPIO_LCD_VCC_EN_N);
-	__gpio_set_pin(GPIO_LCD_VCC_EN_N);
-	return 0;
-}
-
-static int screen_off(void)
-{
-	__gpio_as_output(GPIO_LCD_VCC_EN_N);
-	__gpio_clear_pin(GPIO_LCD_VCC_EN_N);
-	return 0;
-}
-
 static void ctrl_enable(void)
 {
 	REG_LCD_STATE = 0; /* clear lcdc status */
@@ -449,16 +435,12 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 			jz4750tve_init(arg); /* tve controller init */
 			udelay(100);
 			jz4750tve_enable_tve();
-			/* turn off lcd backlight */
-			screen_off();
 			break;
 		case PANEL_MODE_LCD_PANEL:	/* switch to LCD mode */
 		default :
 			/* turn off TVE, turn off DACn... */
 			jz4750tve_disable_tve();
 			jz4750_lcd_info = &jz4750_lcd_panel;
-			/* turn on lcd backlight */
-			screen_on();
 			break;
 		}
 
@@ -553,7 +535,7 @@ static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *inf
 	if (var->yres != mode->yres)
 		return -EINVAL;
 
-	printk("Found working mode: %dx%d\n", mode->xres, mode->yres);
+	D("Found working mode: %dx%d\n", mode->xres, mode->yres);
 
 	fb_videomode_to_var(var, mode);
 
@@ -607,7 +589,6 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *info)
 	//case FB_BLANK_NORMAL:
 		/* Turn on panel */
 		__lcd_set_ena();
-		screen_on();
 
 		break;
 
@@ -652,7 +633,7 @@ static int jz4750fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *i
 	 * res is used (400x240), yoffset is either 0 or 240 (should be 272)
 	 * Possible fix: use osd.fg0.h instead ??
 	 */
-	printk("var.yoffset: %d\n", var->yoffset);
+	D("var.yoffset: %d\n", var->yoffset);
 	dma0_desc0->databuf = (unsigned int)virt_to_phys((void *)lcd_frame0
 			+ (cfb->fb.fix.line_length * dy));
 	dma_cache_wback((unsigned int)(dma0_desc0),
@@ -1672,7 +1653,6 @@ static irqreturn_t jz4750fb_interrupt_handler(int irq, void *dev_id)
  */
 static int jz4750_fb_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	screen_off();
 	ctrl_disable();
 
 	__cpm_stop_lcd();
@@ -1688,7 +1668,6 @@ static int jz4750_fb_resume(struct platform_device *pdev)
 	__cpm_start_lcd();
 
 	ctrl_enable();
-	screen_on();
 
 	return 0;
 }
@@ -1719,13 +1698,11 @@ static int proc_tvout_write_proc(
 		udelay(100);
 		jz4750tve_enable_tve();
 		jz4750fb_deep_set_mode(jz4750_lcd_info);
-		screen_off();
 	} else if(tvout_flag == 0) { // tvout to lcd
 		jz4750tve_disable_tve();
 		udelay(100);
 		jz4750_lcd_info = &jz4750_lcd_panel;
 		jz4750fb_deep_set_mode(jz4750_lcd_info);
-		screen_on();
 	}
 
 	return count;
@@ -1831,7 +1808,6 @@ static int __devinit jz4750_fb_probe(struct platform_device *dev)
 	if (!cfb)
 		goto failed;
 
-	screen_off();
 	ctrl_disable();
 
 	gpio_init();
@@ -1865,7 +1841,6 @@ static int __devinit jz4750_fb_probe(struct platform_device *dev)
 	}
 
 	ctrl_enable();
-	screen_on();
 
 	//maddrone add
 	res = create_proc_entry("jz/tvout", 0, NULL);
