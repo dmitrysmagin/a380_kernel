@@ -28,10 +28,6 @@
 #include <asm/mach-jz4750d/gpio.h>
 #include <asm/mach-jz4750d/platform.h>
 
-#ifdef CONFIG_SOUND_JZ_I2S
-#include <../sound/oss/jz_audio.h>
-#endif
-
 #include "serial.h"
 #include "clock.h"
 
@@ -81,7 +77,8 @@ struct jz_mmc_platform_data cetus_sd_data = {
 	.status         = cetus_sd_status,
 	.plug_change    = cetus_sd_plug_change,
 	.write_protect  = cetus_sd_get_wp,
-	.max_bus_width  = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED | MMC_CAP_4_BIT_DATA,
+	.max_bus_width  = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
+			  MMC_CAP_4_BIT_DATA,
 	.bus_width      = 4, /* 1, 4 or 8 */
 };
 
@@ -132,37 +129,6 @@ struct jz_mmc_platform_data cetus_tf_data = {
 	.bus_width      = 1,
 };
 
-#ifdef CONFIG_SOUND_JZ_I2S
-static struct snd_endpoint snd_endpoints_list[] = {
-	{
-		.name	= "HANDSET",
-		.id	= 0
-	},
-	{
-		.name	= "SPEAKER",
-		.id	= 1
-	},
-	{
-		.name	= "HEADSET",
-		.id	= 2
-	},
-};
-
-static struct jz_snd_endpoints vogue_snd_endpoints = {
-	.endpoints = snd_endpoints_list,
-	.num = ARRAY_SIZE(snd_endpoints_list),
-};
-
-struct platform_device vogue_snd_device = {
-	.name = "mixer",
-	.id = -1,
-	.dev = {
-		.platform_data = &vogue_snd_endpoints,
-	},
-};
-#endif
-
-#ifndef CONFIG_KEYBOARD_A380_GPIO_KEYS
 /* Keys mapped to gpio */
 static struct gpio_keys_button a380_buttons[] = {
 	/* D-pad up */ {
@@ -237,14 +203,12 @@ static struct gpio_keys_button a380_buttons[] = {
 		.code			= KEY_ESC,
 		.debounce_interval	= 5,
 	},
-#ifndef CONFIG_JZ_POWEROFF
 	/* POWER slider */ {
 		.gpio			= JZ_GPIO_PORTE(30),
 		.active_low		= 1,
 		.code			= KEY_POWER,
 		.wakeup			= 1,
 	},
-#endif
 	/* POWER hold */ {
 		.gpio			= JZ_GPIO_PORTD(18),
 		.active_low		= 1,
@@ -265,7 +229,6 @@ static struct platform_device a380_gpio_keys_device = {
 		.platform_data = &a380_gpio_keys_pdata,
 	},
 };
-#endif
 
 /* LCD backlight */
 static struct platform_pwm_backlight_data a380_backlight_pdata = {
@@ -288,14 +251,9 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 	&jz_lcd_device,
 	&jz_udc_device,
 	//&jz_i2c_device,
-#ifdef CONFIG_SOUND_JZ_I2S
-	&vogue_snd_device,
-#endif
 	&jz_msc0_device,
 	&jz_msc1_device,
-#ifndef CONFIG_KEYBOARD_A380_GPIO_KEYS
 	&a380_gpio_keys_device,
-#endif
 	&a380_backlight_device,
 };
 
