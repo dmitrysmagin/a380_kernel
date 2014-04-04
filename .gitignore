@@ -17,6 +17,8 @@
 *.i
 *.lst
 *.symtypes
+*.builtin
+*.order
 
 #
 # Top-level generic files
