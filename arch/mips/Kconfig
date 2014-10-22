@@ -202,8 +202,6 @@ config SOC_JZ4750D
 	select GENERIC_IRQ_CHIP
 	select CPU_SUPPORTS_CPUFREQ
 	select MIPS_CPUFREQ
-	select JZSOC
-	select JZRISC
 
 config LASAT
 	bool "LASAT Networks platforms"
@@ -742,12 +740,6 @@ source "arch/mips/cavium-octeon/Kconfig"
 source "arch/mips/loongson/Kconfig"
 
 endmenu
-
-config JZSOC
-	bool
-
-config JZRISC
-	bool
 
 config RWSEM_GENERIC_SPINLOCK
 	bool
