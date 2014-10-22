@@ -121,11 +121,25 @@ choice
 #
 # Integrated controllers
 #
+config USB_GADGET_JZ4740
+	boolean "JZ4740 UDC"
+	depends on MACH_JZ4740 || MACH_JZ4750D
+	select USB_GADGET_SELECTED
+	select USB_GADGET_DUALSPEED
+	help
+	   Select this to support the Ingenic JZ4740 processor
+           high speed USB device controller.
+
+config USB_JZ4740
+	tristate
+	depends on USB_GADGET_JZ4740
+	default USB_GADGET
 
 config USB_GADGET_AT91
 	boolean "Atmel AT91 USB Device Port"
 	depends on ARCH_AT91 && !ARCH_AT91SAM9RL && !ARCH_AT91CAP9 && !ARCH_AT91SAM9G45
 	select USB_GADGET_SELECTED
+
 	help
 	   Many Atmel AT91 processors (such as the AT91RM2000) have a
 	   full speed USB Device Port with support for five configurable
