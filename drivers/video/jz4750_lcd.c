@@ -1737,7 +1737,7 @@ static void gpio_init(void)
 
 	/* In special mode, we only need init special pin,
 	 * as general lcd pin has init in uboot */
-#if defined(CONFIG_SOC_JZ4750) || defined(CONFIG_SOC_JZ4750D)
+#if defined(CONFIG_MACH_JZ4750D)
 	switch (jz4750_lcd_info->panel.cfg & LCD_CFG_MODE_MASK) {
 	case LCD_CFG_MODE_SPECIAL_TFT_1:
 	case LCD_CFG_MODE_SPECIAL_TFT_2:
