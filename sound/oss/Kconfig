@@ -3,38 +3,6 @@
 #
 # Prompt user for primary drivers.
 
-config OSS_OBSOLETE
-	bool "Obsolete OSS drivers"
-	depends on SOUND_PRIME
-	help
-	  This option enables support for obsolete OSS drivers that
-	  are scheduled for removal in the near future.
-
-	  Please contact Adrian Bunk <bunk@stusta.de> if you had to
-	  say Y here because your hardware is not properly supported
-	  by ALSA.
-
-	  If unsure, say N.
-
-config SOUND_JZ_I2S
-	bool "Jz On-Chip I2S driver"
-	depends on OSS_OBSOLETE
-	help
-	  Say Y here if you have want to select the on-chip I2S driver
-	  on Jz4730/Jz4740/Jz4750.
-
-choice
-	prompt "I2S codec type"
-	depends on SOUND_JZ_I2S
-
-config I2S_DLV
-	bool "Internal On-Chip codec on Jz4750 or Jz4750d"
-	depends on SOC_JZ4750 || SOC_JZ4750D || SOC_JZ4750L
-	help
-	  Answer Y if you have an internal I2S codec on Jz4750 or Jz4750d, jz4750L.
-
-endchoice
-
 config SOUND_BCM_CS4297A
 	tristate "Crystal Sound CS4297a (for Swarm)"
 	depends on SIBYTE_SWARM

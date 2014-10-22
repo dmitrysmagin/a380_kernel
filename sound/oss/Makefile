@@ -9,8 +9,6 @@ obj-$(CONFIG_SOUND_OSS)		+= sound.o
 
 # Please leave it as is, cause the link order is significant !
 
-obj-$(CONFIG_I2S_DLV)	        += jzdlv.o jz_i2s.o
-
 obj-$(CONFIG_SOUND_SH_DAC_AUDIO)	+= sh_dac_audio.o
 obj-$(CONFIG_SOUND_AEDSP16)	+= aedsp16.o
 obj-$(CONFIG_SOUND_PSS)		+= pss.o ad1848.o mpu401.o
