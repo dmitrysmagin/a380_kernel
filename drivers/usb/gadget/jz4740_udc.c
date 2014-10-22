@@ -38,7 +38,16 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 #include <asm/system.h>
+
+#if defined(CONFIG_MACH_JZ4740)
 #include <asm/mach-jz4740/clock.h>
+#elif defined (CONFIG_MACH_JZ4750D)
+#include <asm/mach-jz4750d/clock.h>
+
+/* FIXME: hack for jz4740_udc.c */
+#define jz4740_clock_udc_enable_auto_suspend \
+	jz4750d_clock_udc_enable_auto_suspend
+#endif
 
 #include "jz4740_udc.h"
 
