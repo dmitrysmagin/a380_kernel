@@ -41,7 +41,7 @@
 
 #if defined(CONFIG_MACH_JZ4740)
 #include <asm/mach-jz4740/clock.h>
-#elif defined (CONFIG_SOC_JZ4750D)
+#elif defined (CONFIG_MACH_JZ4750D)
 #include <asm/mach-jz4750d/clock.h>
 
 /* FIXME: hack for jz4740_udc.c */
