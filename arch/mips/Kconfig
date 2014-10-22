@@ -187,7 +187,7 @@ config MACH_JZ4740
 	select SYS_HAS_EARLY_PRINTK
 	select HAVE_PWM
 
-config SOC_JZ4750D
+config MACH_JZ4750D
 	bool "Ingenic JZ4750D based machines"
 	select SYS_HAS_CPU_MIPS32_R1
 	select SYS_SUPPORTS_32BIT_KERNEL
