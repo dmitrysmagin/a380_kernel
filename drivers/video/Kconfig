@@ -247,6 +247,61 @@ config FB_TILEBLITTING
 comment "Frame buffer hardware drivers"
 	depends on FB
 
+config FB_JZSOC
+	tristate "JZSOC LCD controller support"
+	depends on FB && MACH_JZ4750D
+	select FB_SYS_FILLRECT
+	select FB_SYS_COPYAREA
+	select FB_SYS_IMAGEBLIT
+	---help---
+	   JZSOC LCD Controller and Smart LCD Controller driver support.
+
+config FB_JZ4750_LCD
+	tristate "JZ4750 LCD Controller support"
+	depends on FB_JZSOC && MACH_JZ4750D
+	---help---
+	   JZ4750 LCD Controller driver.
+	   JZ4750 LCD Controller support OSD function (refer to
+	   jz4750_lcdc_spec.pdf). JZ4750 LCD OSD implement 2 framebuffer layers:
+	   foreground0 and foreground1.
+	   JZ4750 LCD driver support only foreground0 by default.
+
+config FB_JZ4750_TVE
+	tristate "JZ4750 TV Encoder support"
+	depends on FB_JZ4750_LCD
+	default n
+
+config FB_JZ4750_SLCD
+	bool
+	depends on FB_JZ4750_LCD
+	default n
+choice
+	depends on FB_JZ4750_LCD
+	prompt "JZ4750 LCD Panels Support"
+	---help---
+	   Please select the lcd panel in you board
+
+config JZ4750_LCD_INNOLUX_PT035TN01_SERIAL
+	bool "Ritmix RZX-50 TFT panel (480x272)(8bit-serial mode)"
+	depends on FB_JZ4750_LCD
+	---help---
+	Driver for Innolux PT035TN01 TFT panel as connected in Ritmix RZX-50.
+
+config JZ4750_SLCD_A380_ILI9331
+	bool "Dingoo A380 ILI9331 smart LCD panel (400x240)"
+	depends on FB_JZ4750_LCD
+	select FB_JZ4750_SLCD
+	---help---
+	Driver for ILI9331 smart LCD panel as connected in Dingoo A380.
+
+config JZ4750_SLCD_400X240_8352B
+	bool "Dingoo A320E 8352B smart LCD panel (400x240)"
+	depends on FB_JZ4750_LCD
+	select FB_JZ4750_SLCD
+	---help---
+	Driver for HX 8352B Tianma (smart lcd 16-bit)
+endchoice
+
 config FB_CIRRUS
 	tristate "Cirrus Logic support"
 	depends on FB && (ZORRO || PCI)
