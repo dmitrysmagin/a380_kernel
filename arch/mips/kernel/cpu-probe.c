@@ -968,6 +968,8 @@ static inline void cpu_probe_ingenic(struct cpuinfo_mips *c, unsigned int cpu)
 	switch (c->processor_id & 0xff00) {
 	case PRID_IMP_JZRISC:
 		c->cputype = CPU_JZRISC;
+		c->isa_level = MIPS_CPU_ISA_M32R1;
+		c->tlbsize = 32;
 		__cpu_name[cpu] = "Ingenic JZRISC";
 		break;
 	default:
