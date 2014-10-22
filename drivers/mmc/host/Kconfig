@@ -6,14 +6,14 @@ comment "MMC/SD/SDIO Host Controller Drivers"
 
 config MMC_JZSOC
 	tristate "Ingenic MMC/SD/SDIO controller support"
-	depends on SOC_JZ4750 || SOC_JZ4750D || SOC_JZ4760 || SOC_JZ4760B
+	depends on MACH_JZ4750D
 	default y
 	help
 	  this selects Ingenic MMC/SD/SDIO controller support, it was automatically selected
 
 config JZ_SYSTEM_AT_CARD
 	tristate "System at MMC/SD  support"
-	depends on SOC_JZ4750 || SOC_JZ4750D || SOC_JZ4760 || SOC_JZ4760B
+	depends on MACH_JZ4750D
 	depends on MMC_JZSOC 
 	help
 	  This selects uboot kernel fs at the Multimedia/SD/SDIO Card.
