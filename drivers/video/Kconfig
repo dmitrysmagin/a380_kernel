@@ -247,7 +247,7 @@ comment "Frame buffer hardware drivers"
 
 config FB_JZSOC
 	tristate "JZSOC LCD controller support"
-	depends on FB && JZSOC
+	depends on FB && SOC_JZ4750D
 	select FB_SYS_FILLRECT
 	select FB_SYS_COPYAREA
 	select FB_SYS_IMAGEBLIT
