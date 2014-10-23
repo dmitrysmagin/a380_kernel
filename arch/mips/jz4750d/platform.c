@@ -50,7 +50,7 @@ static struct resource jz_usb_gdt_resources[] = {
 
 struct platform_device jz_udc_device = {
 	.name		= "jz-udc",
-	.id		= 0,
+	.id		= -1,
 	.dev = {
 		.dma_mask = &jz_udc_device.dev.coherent_dma_mask,
 		.coherent_dma_mask = DMA_BIT_MASK(32),
