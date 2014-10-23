@@ -53,14 +53,13 @@ struct jz4750_runtime_data {
 	dma_addr_t dma_end;
 	struct jz4750_pcm_dma_params *params;
 
-	dma_addr_t user_cur_addr;         /* user current write buffer start address */
-	unsigned int user_cur_len;        /* user current write buffer length */
+	dma_addr_t user_cur_addr;  /* user current write buffer start address */
+	unsigned int user_cur_len; /* user current write buffer length */
 
 	/* buffer list and information */
-	struct jz4750_dma_buf_aic	*curr;		/* current dma buffer */
-	struct jz4750_dma_buf_aic	*next;		/* next buffer to load */
-	struct jz4750_dma_buf_aic	*end;		/* end of queue */
-
+	struct jz4750_dma_buf_aic	*curr;	/* current dma buffer */
+	struct jz4750_dma_buf_aic	*next;	/* next buffer to load */
+	struct jz4750_dma_buf_aic	*end;	/* end of queue */
 };
 
 /* identify hardware playback capabilities */
@@ -96,7 +95,8 @@ static const struct snd_pcm_hardware jz4750_pcm_hardware = {
  * size       the size of the buffer in bytes
  *
 */
-static int jz4750_dma_buf_enqueue(struct jz4750_runtime_data *prtd, dma_addr_t data, int size)
+static int jz4750_dma_buf_enqueue(struct jz4750_runtime_data *prtd,
+		dma_addr_t data, int size)
 {   
 	struct jz4750_dma_buf_aic *aic_buf;
 
@@ -232,7 +232,8 @@ static void jz4750_pcm_enqueue(struct snd_pcm_substream *substream)
 }
 
 /* 
- * call the function:jz4750_pcm_dma_irq() after DMA has transfered the current buffer  
+ * call the function jz4750_pcm_dma_irq() after DMA has transfered
+ * the current buffer
  */
 static irqreturn_t jz4750_pcm_dma_irq(int dma_ch, void *dev_id)
 {
@@ -281,7 +282,7 @@ static irqreturn_t jz4750_pcm_dma_irq(int dma_ch, void *dev_id)
 
 /* some parameter about DMA operation */
 static int jz4750_pcm_hw_params(struct snd_pcm_substream *substream,
-	struct snd_pcm_hw_params *params)
+		struct snd_pcm_hw_params *params)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct jz4750_runtime_data *prtd = runtime->private_data;
@@ -313,13 +314,13 @@ static int jz4750_pcm_hw_params(struct snd_pcm_substream *substream,
 	prtd->params = dma;
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		ret = jz_request_dma(DMA_ID_AIC_TX, prtd->params->client->name, 
-				     jz4750_pcm_dma_irq, IRQF_DISABLED, substream);
+				  jz4750_pcm_dma_irq, IRQF_DISABLED, substream);
 		if (ret < 0)
 			return ret;
 		prtd->params->channel = ret;
 	} else {
 		ret = jz_request_dma(DMA_ID_AIC_RX, prtd->params->client->name, 
-				     jz4750_pcm_dma_irq, IRQF_DISABLED, substream);
+				  jz4750_pcm_dma_irq, IRQF_DISABLED, substream);
 		if (ret < 0)
 			return ret;
 		prtd->params->channel = ret;
@@ -381,14 +382,13 @@ static int jz4750_dma_ctrl(int channel)
 	}
 
 	return 0;
-	
 }
 
 static int jz4750_pcm_prepare(struct snd_pcm_substream *substream)
 {
 	struct jz4750_runtime_data *prtd = substream->runtime->private_data;
 	int ret = 0;
-       
+
 	/* return if this is a bufferless transfer e.g */
 	if (!prtd->params)
 	 	return 0;
@@ -397,12 +397,11 @@ static int jz4750_pcm_prepare(struct snd_pcm_substream *substream)
 	jz4750_dma_ctrl(prtd->params->channel);
 	prtd->dma_loaded = 0;
 	prtd->dma_pos = prtd->dma_start;
-       
+
 	/* enqueue dma buffers */
 	jz4750_pcm_enqueue(substream);
 
 	return ret;
-
 }
 
 static int jz4750_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
@@ -443,8 +442,7 @@ static int jz4750_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	return ret;
 }
 
-static snd_pcm_uframes_t
-jz4750_pcm_pointer(struct snd_pcm_substream *substream)
+static snd_pcm_uframes_t jz4750_pcm_pointer(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct jz4750_runtime_data *prtd = runtime->private_data;
@@ -512,7 +510,7 @@ static int jz4750_pcm_open(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct jz4750_runtime_data *prtd;
-     
+
 #ifdef CONFIG_SND_OSSEMUL
 	hw_params_cnt = 0;
 #endif
@@ -680,7 +678,7 @@ int jz4750_pcm_new(struct snd_card *card, struct snd_soc_dai *dai,
 }
 
 struct snd_soc_platform jz4750_soc_platform = {
-	.name		= "jz4750-audio",
+	.name		= "jz4750-pcm",
 	.pcm_ops 	= &jz4750_pcm_ops,
 	.pcm_new	= jz4750_pcm_new,
 	.pcm_free	= jz4750_pcm_free_dma_buffers,

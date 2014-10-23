@@ -46,7 +46,8 @@ static struct jz4750_pcm_dma_params jz4750_i2s_pcm_stereo_in = {
 	.dma_size	= 2,
 };
 
-static int jz4750_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
+static int jz4750_i2s_startup(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *dai)
 {
 	/*struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	  struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;*/
@@ -128,7 +129,7 @@ static void jz4750_snd_rx_ctrl(int on)
 }
 
 static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
-				struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
+		struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
@@ -179,7 +180,8 @@ static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int jz4750_i2s_trigger(struct snd_pcm_substream *substream, int cmd, struct snd_soc_dai *dai)
+static int jz4750_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
+		struct snd_soc_dai *dai)
 {
 	int ret = 0;
 	
@@ -207,7 +209,8 @@ static int jz4750_i2s_trigger(struct snd_pcm_substream *substream, int cmd, stru
 	return ret;
 }
 
-static void jz4750_i2s_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
+static void jz4750_i2s_shutdown(struct snd_pcm_substream *substream,
+	struct snd_soc_dai *dai)
 {
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 	} else {
@@ -216,7 +219,8 @@ static void jz4750_i2s_shutdown(struct snd_pcm_substream *substream, struct snd_
 	return;
 }
 
-static int jz4750_i2s_probe(struct platform_device *pdev, struct snd_soc_dai *dai)	
+static int jz4750_i2s_probe(struct platform_device *pdev,
+		struct snd_soc_dai *dai)
 {
 	__i2s_internal_codec();
 	__i2s_as_slave();
@@ -227,7 +231,7 @@ static int jz4750_i2s_probe(struct platform_device *pdev, struct snd_soc_dai *da
 	__i2s_disable();
 	mdelay(2);
 	REG_AIC_I2SCR = 0x10;
-   	__i2s_disable();
+	__i2s_disable();
 	__i2s_internal_codec();
 	__i2s_as_slave();
 	__i2s_select_i2s();
@@ -270,10 +274,10 @@ static int jz4750_i2s_resume(struct snd_soc_dai *dai)
 #define jz4750_i2s_resume	NULL
 #endif
 
-#define JZ4750_I2S_RATES (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_11025 |\
-		SNDRV_PCM_RATE_12000 | SNDRV_PCM_RATE_16000 |\
-		SNDRV_PCM_RATE_22050 | SNDRV_PCM_RATE_24000 |\
-		SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_44100 |\
+#define JZ4750_I2S_RATES \
+		(SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_11025 | \
+		SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_22050 | \
+		SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_44100 | \
 		SNDRV_PCM_RATE_48000)
 
 static struct snd_soc_dai_ops jz4750_i2s_dai_ops = {
