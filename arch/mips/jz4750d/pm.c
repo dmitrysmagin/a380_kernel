@@ -38,13 +38,6 @@
 #include <asm/mach-jz4750d/jz4750d_rtc.h>
 #include <asm/mach-jz4750d/jz4750d_emc.h>
 
-// Remove later
-#if defined CONFIG_JZ4750D_A380
-  #include <asm/mach-jz4750d/board-a380.h>
-#elif defined CONFIG_JZ4750D_RZX50
-  #include <asm/mach-jz4750d/board-rzx50.h>
-#endif
-
 #undef DEBUG
 //#define DEBUG
 #ifdef DEBUG
@@ -93,37 +86,6 @@ static int jz_pm_do_hibernate(void)
 
 	/* Mask all interrupts */
 	REG_INTC_IMSR = 0xffffffff;
-
-/* 
-   Later move disabling gpio to drivers
- */
-#if 1
-#define PIN_POWER_ELAN (32*3 + 13)
-	__gpio_as_func0(PIN_POWER_ELAN);
-	__gpio_enable_pull(PIN_POWER_ELAN);
-	__gpio_as_output(PIN_POWER_ELAN);
-	__gpio_set_pin(PIN_POWER_ELAN);//turn off wireless moudle
-	mdelay(30);
-
-#define LCD_BACKLIGHT_PIN 32*4+22
-	__gpio_as_output(LCD_BACKLIGHT_PIN);
-	__gpio_enable_pull(LCD_BACKLIGHT_PIN);
-	__gpio_clear_pin(LCD_BACKLIGHT_PIN);
-	mdelay(30);
-
-// These defines are different in board-***.h
-//#define GPIO_AMPEN          (32 * 4 + 5)  /* GPE5 */
-//#define GPIO_HP_OFF         (32 * 4 + 9)  /* GPE9 */
-	__gpio_as_output(GPIO_AMPEN);
-	__gpio_enable_pull(GPIO_AMPEN);
-	__gpio_as_output(GPIO_HP_OFF);
-	__gpio_enable_pull(GPIO_HP_OFF);
-	__gpio_clear_pin(GPIO_AMPEN);
-	mdelay(30);
-	__gpio_clear_pin(GPIO_HP_OFF);
-	//REG_CPM_CLKGR |= 0x1ffffffb;
-	mdelay(100);
-#endif
 
 	/*
 	 * RTC Wakeup or 1Hz interrupt can be enabled or disabled
