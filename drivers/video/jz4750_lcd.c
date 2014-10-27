@@ -596,11 +596,6 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *info)
 	case FB_BLANK_VSYNC_SUSPEND:
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_POWERDOWN:
-#if 0
-		/* Turn off panel */
-		__lcd_display_off();
-		__lcd_set_dis();
-#endif
 		break;
 	default:
 		break;
@@ -1710,7 +1705,7 @@ static int proc_tvout_write_proc(
 
 static void gpio_init(void)
 {
-	__lcd_display_pin_init();
+	__lcd_special_pin_init();
 
 #ifdef CONFIG_FB_JZ4750_SLCD
 	__gpio_as_slcd_8bit();

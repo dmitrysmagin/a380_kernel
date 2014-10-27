@@ -189,45 +189,5 @@ do { \
 
 #endif /* CONFIG_JZ4750_LCD_INNOLUX_PT035TN01_SERIAL */
 
-/*
- * Platform specific definition
- */
-
-/* board A380 or RZX50 */
-#if defined(CONFIG_JZ4750D_A380) || defined(CONFIG_JZ4750D_RZX50)
-
-/* stubs */
-#ifndef __lcd_special_on
-#define __lcd_special_on()
-#endif
-
-#ifndef __lcd_special_off
-#define __lcd_special_off()
-#endif
-
-#define __lcd_display_pin_init() \
-do { \
-	__gpio_as_output(GPIO_LCD_VCC_EN_N);	 \
-	__gpio_as_output(GPIO_LCD_PWM);	 \
-	__lcd_special_pin_init();	   \
-} while (0)
-
-#define __lcd_display_on() \
-do { \
-	__lcd_special_on();	\
-	__lcd_set_backlight_level(60);		\
-	mdelay(300); \
-	__gpio_set_pin(GPIO_LCD_VCC_EN_N);	\
-} while (0)
-
-#define __lcd_display_off() \
-do { \
-	__lcd_close_backlight();		\
-	__lcd_special_off();	 \
-} while (0)
-
-
-#endif
-
 
 #endif /* __JZ4750_LCD_H__ */
