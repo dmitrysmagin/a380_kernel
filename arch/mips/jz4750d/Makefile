@@ -12,6 +12,7 @@ obj-$(CONFIG_PROC_FS)		+= proc.o
 
 # board specific support
 
+obj-$(CONFIG_JZ4750D_A320E)	+= board-a320e.o
 obj-$(CONFIG_JZ4750D_A380)	+= board-a380.o
 obj-$(CONFIG_JZ4750D_RZX50)	+= board-rzx50.o
 
