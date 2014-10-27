@@ -56,13 +56,6 @@
 #include <asm/mach-jz4750d/jz4750d_tcu.h>
 #include <asm/mach-jz4750d/jz4750d_intc.h>
 
-// Remove later
-#if defined CONFIG_JZ4750D_A380
-  #include <asm/mach-jz4750d/board-a380.h>
-#elif defined CONFIG_JZ4750D_RZX50
-  #include <asm/mach-jz4750d/board-rzx50.h>
-#endif
-
 #include "jz4750_lcd.h"
 #include "jz4750_tve.h"
 
