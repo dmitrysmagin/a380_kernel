@@ -7,7 +7,6 @@
 
 #define PIN_CS_N 	(32*3+18)	// GPD18
 #define PIN_RESET_N 	(32*3+21)	// GPD21
-#endif
 
 /* Sent a command with data (18-bit bus, 16-bit index, 16-bit register value) */
 static void Mcupanel_RegSet(unsigned int cmd, unsigned int data)
@@ -187,4 +186,7 @@ void Mcupanel_SetAddr_Reset(u32 x, u32 y) //u32
 		__slcd_set_clk_falling();\
 		__slcd_set_parallel_type();\
 	}while(0)
+
+#endif  /* CONFIG_JZ4750_SLCD_400X240_8352B */
+
 #endif  /* __JZ_8352B_H__ */
