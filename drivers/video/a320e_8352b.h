@@ -1,8 +1,6 @@
 #ifndef __JZ_8352B_H__
 #define __JZ_8352B_H__
 
-#include <asm/jzsoc.h>
-
 #if defined(CONFIG_JZ4750_SLCD_400X240_8352B)
 #define WR_GRAM_CMD	0x22
 

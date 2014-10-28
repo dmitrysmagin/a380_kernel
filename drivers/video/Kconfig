@@ -265,8 +265,8 @@ config FB_JZ4750_LCD
 	   JZ4750 LCD driver support only foreground0 by default.
 
 config FB_JZ4750_TVE
-	tristate "Jz4750 TV Encode support"
-	depends on FB_JZSOC && FB_JZ4750_LCD
+	tristate "JZ4750 TV Encoder support"
+	depends on FB_JZ4750_LCD
 	default n
 
 config FB_JZ4750_SLCD
@@ -281,14 +281,23 @@ choice
 
 config JZ4750_LCD_INNOLUX_PT035TN01_SERIAL
 	bool "Ritmix RZX-50 TFT panel (480x272)(8bit-serial mode)"
+	depends on FB_JZ4750_LCD
 	---help---
 	Driver for Innolux PT035TN01 TFT panel as connected in Ritmix RZX-50.
 
 config JZ4750_SLCD_A380_ILI9331
 	bool "Dingoo A380 ILI9331 smart LCD panel (400x240)"
+	depends on FB_JZ4750_LCD
 	select FB_JZ4750_SLCD
 	---help---
 	Driver for ILI9331 smart LCD panel as connected in Dingoo A380.
+
+config JZ4750_SLCD_400X240_8352B
+	bool "Dingoo A320E 8352B smart LCD panel (400x240)"
+	depends on FB_JZ4750_LCD
+	select FB_JZ4750_SLCD
+	---help---
+	Driver for HX 8352B Tianma (smart lcd 16-bit)
 endchoice
 
 config FB_CIRRUS

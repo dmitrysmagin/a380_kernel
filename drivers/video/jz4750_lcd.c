@@ -59,11 +59,14 @@
 #include "jz4750_lcd.h"
 #include "jz4750_tve.h"
 
-#ifdef CONFIG_JZ4750_SLCD_A380_ILI9331
+/* choose LCD panel */
+#if defined(CONFIG_JZ4750_SLCD_A380_ILI9331)
 #include "a380_slcd_ili9331.h"
+#elif defined(CONFIG_JZ4750_SLCD_400X240_8352B)
+#include "a320e_8352b.h"
 #endif
 
-#if defined(CONFIG_JZ4750D_A380)
+#if defined(CONFIG_JZ4750D_A380) || defined(CONFIG_JZ4750D_A320E)
  #define SCREEN_WIDTH 400
  #define SCREEN_HEIGHT 240
 #elif defined(CONFIG_JZ4750D_RZX50)
@@ -87,19 +90,23 @@
 struct jz4750lcd_info jz4750_lcd_panel = {
 #if defined(CONFIG_JZ4750_LCD_INNOLUX_PT035TN01_SERIAL)
 	.panel = {
-		.cfg = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */
-		LCD_CFG_NEWDES | /* 8words descriptor */
-		LCD_CFG_MODE_GENERIC_TFT | /* Generic TFT panel */
-		LCD_CFG_MODE_TFT_24BIT | /* output 24bpp */
-		LCD_CFG_HSP | /* Hsync polarity: active low */
-		LCD_CFG_VSP, /* Vsync polarity: leading edge is falling edge */
+		.cfg =	LCD_CFG_LCDPIN_LCD |
+			LCD_CFG_RECOVER | /* Underrun recover */
+			LCD_CFG_NEWDES | /* 8words descriptor */
+			LCD_CFG_MODE_GENERIC_TFT | /* Generic TFT panel */
+			LCD_CFG_MODE_TFT_24BIT | /* output 24bpp */
+			LCD_CFG_HSP | /* Hsync polarity: active low */
+			LCD_CFG_VSP,
+			/* Vsync polarity: leading edge is falling edge */
 		.slcd_cfg = 0,
-		.ctrl = LCD_CTRL_OFUM | LCD_CTRL_BST_16, /* 16words burst, enable out FIFO underrun irq */
+		.ctrl =		LCD_CTRL_OFUM |
+				LCD_CTRL_BST_16,
+			/* 16words burst, enable out FIFO underrun irq */
 		480, 272, 40, 1, 1, 40, 215, 0, 45,
 	},
 	.osd = {
-		 .osd_cfg = LCD_OSDC_OSDEN | /* Use OSD mode */
-		 LCD_OSDC_F0EN,	/* enable Foreground0 */
+		 .osd_cfg =	LCD_OSDC_OSDEN | /* Use OSD mode */
+				LCD_OSDC_F0EN, /* enable Foreground0 */
 		 .osd_ctrl = 0,		/* disable ipu,  */
 		 .rgb_ctrl = 0,
 		 .bgcolor = 0x000000, /* set background color Black */
@@ -109,39 +116,71 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 		 .ipu_restart = 0x80001000, /* ipu restart */
 		 .fg_change = FG_CHANGE_ALL, /* change all initially */
 		 .fg0 = {16, 0, 0, 480, 272}, /* bpp, x, y, w, h */
-		 .fg1 = {32, 0, 0, 480, 272}, /* bpp, x, y, w, h */
+		 .fg1 = {16, 0, 0, 480, 272}, /* bpp, x, y, w, h */
 	 },
 #elif defined(CONFIG_JZ4750_SLCD_A380_ILI9331)
 	.panel = {
-		 .cfg      = LCD_CFG_LCDPIN_SLCD | /* Underrun recover*/
-		             LCD_CFG_NEWDES | /* 8words descriptor */
-		             LCD_CFG_MODE_SLCD, /* TFT Smart LCD panel */
-		 .slcd_cfg = SLCD_CFG_DWIDTH_8BIT_x2 |
-		             SLCD_CFG_CWIDTH_8BIT |
-		             SLCD_CFG_CS_ACTIVE_LOW |
-		             SLCD_CFG_RS_CMD_LOW |
-		             SLCD_CFG_CLK_ACTIVE_FALLING |
-		             SLCD_CFG_TYPE_PARALLEL,
-		 .ctrl     = LCD_CTRL_BST_16 |
-		             LCD_CTRL_BPP_16 |
-		             LCD_CTRL_OFUM,
-			     /* 16words burst, enable out FIFO underrun irq */
+		 .cfg =		LCD_CFG_LCDPIN_SLCD | /* Underrun recover*/
+				LCD_CFG_NEWDES | /* 8words descriptor */
+				LCD_CFG_MODE_SLCD, /* TFT Smart LCD panel */
+		 .slcd_cfg =	SLCD_CFG_DWIDTH_8BIT_x2 |
+				SLCD_CFG_CWIDTH_8BIT |
+				SLCD_CFG_CS_ACTIVE_LOW |
+				SLCD_CFG_RS_CMD_LOW |
+				SLCD_CFG_CLK_ACTIVE_FALLING |
+				SLCD_CFG_TYPE_PARALLEL,
+		 .ctrl =	LCD_CTRL_BST_16 |
+				LCD_CTRL_BPP_16 |
+				LCD_CTRL_OFUM,
+			/* 16words burst, enable out FIFO underrun irq */
 		 400, 240, 200, 0, 0, 0, 0, 0, 0,
 	 },
 	.osd = {
-		 .osd_cfg = LCD_OSDC_OSDEN | /* Use OSD mode */
-		 LCD_OSDC_F0EN,	/* enable Foreground0 */
+		 .osd_cfg =	LCD_OSDC_OSDEN | /* Use OSD mode */
+		 		LCD_OSDC_F0EN, /* enable Foreground0 */
 		 .osd_ctrl = 0,		/* disable ipu,  */
 		 .rgb_ctrl = 0,
 		 .bgcolor = 0x0000FF, /* set background color Black */
 		 .colorkey0 = 0, /* disable colorkey */
 		 .colorkey1 = 0, /* disable colorkey */
-		 .alpha = 0x00,	/* alpha value */
+		 .alpha = 0x00, /* alpha value */
 		 .ipu_restart = 0x80001000, /* ipu restart */
 		 .fg_change = FG_CHANGE_ALL, /* change all initially */
-		 .fg1 = {32, 200, 120, 12, 12}, /* bpp, x, y, w, h */
+		 .fg1 = {16, 0, 0, 400, 240}, /* bpp, x, y, w, h */
 		 .fg0 = {16, 0, 0, 400, 240}, /* bpp, x, y, w, h */
 	 },
+#elif defined(CONFIG_JZ4750_SLCD_400X240_8352B)
+	.panel = {
+		.cfg =		LCD_CFG_LCDPIN_SLCD |
+				LCD_CFG_NEWDES |
+				LCD_CFG_MODE_SLCD, /* TFT Smart LCD panel */
+		.slcd_cfg =	SLCD_CFG_DWIDTH_16BIT |
+				SLCD_CFG_CWIDTH_16BIT |
+				SLCD_CFG_CS_ACTIVE_LOW |
+				SLCD_CFG_RS_CMD_LOW |
+				SLCD_CFG_CLK_ACTIVE_FALLING |
+				SLCD_CFG_TYPE_PARALLEL,
+		.ctrl =		LCD_CTRL_BST_16 |
+				LCD_CTRL_BPP_18_24,
+			/* 16words burst, enable out FIFO underrun irq */
+		400, 240, 60, 0, 0, 0, 0, 0, 0,
+	},
+	.osd = {
+		.osd_cfg =	LCD_OSDC_OSDEN | /* Use OSD mode */
+				LCD_OSDC_F0EN | /* enable Foreground0 */
+				LCD_OSDC_F1EN | /* enable Foreground0 */
+				LCD_OSDC_ALPHAEN, /* enable Foreground0 */
+		.osd_ctrl = 0,		/* disable ipu,  */
+		.rgb_ctrl = 0,
+		.bgcolor = 0x000000, /* set background color Black */
+		.colorkey0 = 0, /* disable colorkey */
+		.colorkey1 = 0, /* disable colorkey */
+		.alpha = 0x88,	/* alpha value */
+		.ipu_restart = 0x80001000, /* ipu restart */
+		.fg_change = FG_CHANGE_ALL, /* change all initially */
+		.fg0 = {16, 0, 0, 400, 240}, /* bpp, x, y, w, h */
+		.fg1 = {16, 0, 0, 400, 240}, /* bpp, x, y, w, h */
+	},
 #else
 #error "Select LCD panel first!!!"
 #endif
@@ -149,16 +188,17 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 
 struct jz4750lcd_info jz4750_info_tve = {
 	.panel = {
-		.cfg = LCD_CFG_TVEN | /* output to tve */
-		LCD_CFG_NEWDES | /* 8words descriptor */
-		LCD_CFG_TVEPEH |
-		LCD_CFG_MODE_INTER_CCIR656, /* Interlace CCIR656 mode */
-		.ctrl = LCD_CTRL_BST_16,	/* 16words burst */
-		TVE_WIDTH_NTSC , TVE_HEIGHT_NTSC, TVE_FREQ_NTSC, 0, 0, 0, 0, 0, 0,
+		.cfg =		LCD_CFG_TVEN | /* output to tve */
+				LCD_CFG_NEWDES | /* 8words descriptor */
+				LCD_CFG_TVEPEH |
+				LCD_CFG_MODE_INTER_CCIR656,
+				/* Interlace CCIR656 mode */
+		.ctrl =		LCD_CTRL_BST_16, /* 16words burst */
+		TVE_WIDTH_NTSC, TVE_HEIGHT_NTSC, TVE_FREQ_NTSC, 0,0,0,0,0,0,
 	},
 	.osd = {
-		 .osd_cfg = LCD_OSDC_OSDEN | /* Use OSD mode */
-		 LCD_OSDC_F0EN,	/* enable Foreground0 */
+		 .osd_cfg =	LCD_OSDC_OSDEN | /* Use OSD mode */
+				 LCD_OSDC_F0EN, /* enable Foreground0 */
 		 .osd_ctrl = 0,		/* disable ipu,  */
 		 .rgb_ctrl = LCD_RGBC_YCC, /* enable RGB => YUV */
 		 .bgcolor = 0x0, /* set background color Black */
@@ -172,7 +212,8 @@ struct jz4750lcd_info jz4750_info_tve = {
 	},
 };
 
-struct jz4750lcd_info *jz4750_lcd_info = &jz4750_lcd_panel; /* default output to lcd panel */
+/* default output to lcd panel */
+struct jz4750lcd_info *jz4750_lcd_info = &jz4750_lcd_panel;
 static struct lcd_cfb_info *jz4750fb_info;
 static struct jz4750_lcd_dma_desc *dma_desc_base;
 static struct jz4750_lcd_dma_desc *dma0_desc_palette, *dma0_desc0, *dma0_desc1, *dma1_desc0, *dma1_desc1;
