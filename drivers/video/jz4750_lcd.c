@@ -22,10 +22,6 @@
  *	<Wolfgang Wang, Jun 10 2008>
  */
 
-/*
- * Mod: <maddrone@gmail.com>
- * */
-
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
@@ -60,11 +56,9 @@
 #include "jz4750_tve.h"
 
 /* choose LCD panel */
-#if defined(CONFIG_JZ4750_SLCD_A380_ILI9331)
-#include "a380_slcd_ili9331.h"
-#elif defined(CONFIG_JZ4750_SLCD_400X240_8352B)
-#include "a320e_8352b.h"
-#endif
+#include "jz_rzx50_panel.h"
+#include "jz_a380_panel.h"
+#include "jz_a320e_panel.h"
 
 #if defined(CONFIG_JZ4750D_A380) || defined(CONFIG_JZ4750D_A320E)
  #define SCREEN_WIDTH 400

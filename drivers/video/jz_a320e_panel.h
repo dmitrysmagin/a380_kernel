@@ -1,6 +1,7 @@
 #ifndef __JZ_8352B_H__
 #define __JZ_8352B_H__
 
+/* 400x240 board A320E */
 #if defined(CONFIG_JZ4750_SLCD_400X240_8352B)
 #define WR_GRAM_CMD	0x22
 
