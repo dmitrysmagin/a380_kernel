@@ -8,6 +8,8 @@
 
 #include <linux/init.h>
 #include <linux/module.h>
+#include <linux/platform_device.h>
+#include <linux/slab.h>
 #include <linux/device.h>
 #include <linux/delay.h>
 #include <sound/core.h>
@@ -24,73 +26,30 @@
 #include "jz4750-i2s.h"
 #include "../codecs/jzdlv.h"
 
-static struct jz4750_dma_client jz4750_dma_client_out = {
-	.name = "I2S PCM Stereo out"
-};
+struct jz4750_i2s {
+	struct resource *mem;
+	void __iomem *base;
+	dma_addr_t phys_base;
+#if 0
+	struct clk *clk_aic;
+	struct clk *clk_i2s;
 
-static struct jz4750_dma_client jz4750_dma_client_in = {
-	.name = "I2S PCM Stereo in"
+	struct jz4740_pcm_config pcm_config_playback;
+	struct jz4740_pcm_config pcm_config_capture;
+#endif
 };
 
 static struct jz4750_pcm_dma_params jz4750_i2s_pcm_stereo_out = {
-	.client		= &jz4750_dma_client_out,
 	.channel	= DMA_ID_AIC_TX,
 	.dma_addr	= AIC_DR,
 	.dma_size	= 2,
 };
 
 static struct jz4750_pcm_dma_params jz4750_i2s_pcm_stereo_in = {
-	.client		= &jz4750_dma_client_in,
 	.channel	= DMA_ID_AIC_RX,
 	.dma_addr	= AIC_DR,
 	.dma_size	= 2,
 };
-
-static int jz4750_i2s_startup(struct snd_pcm_substream *substream,
-		struct snd_soc_dai *dai)
-{
-	/*struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	  struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;*/
-
-	return 0;
-}
-
-static int jz4750_i2s_set_dai_fmt(struct snd_soc_dai *cpu_dai,
-		unsigned int fmt)
-{
-	/* interface format */
-	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
-	case SND_SOC_DAIFMT_I2S:
-		/* 1 : ac97 , 0 : i2s */
-		break;
-	case SND_SOC_DAIFMT_LEFT_J:
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
-	case SND_SOC_DAIFMT_CBS_CFS:
-	        /* 0 : slave */ 
-		break;
-	case SND_SOC_DAIFMT_CBM_CFS:
-		/* 1 : master */
-		break;
-	default:
-		break;
-	}
-	
-	return 0;
-}
-
-/* 
-* Set Jz4750 Clock source
-*/
-static int jz4750_i2s_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
-		int clk_id, unsigned int freq, int dir)
-{
-	return 0;
-}
 
 static void jz4750_snd_tx_ctrl(int on)
 {
@@ -128,25 +87,75 @@ static void jz4750_snd_rx_ctrl(int on)
 	}
 }
 
-static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
-		struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
+static int jz4750_i2s_startup(struct snd_pcm_substream *substream,
+	struct snd_soc_dai *dai)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
-	int channels = params_channels(params);
-	
-	jz4750_snd_rx_ctrl(0);
-	jz4750_snd_rx_ctrl(0);
-	write_codec_file_bit(5, 0, 7);//PMR1.SB_DAC->0
+	/*struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	  struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;*/
+
+	return 0;
+}
+
+static void jz4750_i2s_shutdown(struct snd_pcm_substream *substream,
+	struct snd_soc_dai *dai)
+{
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		cpu_dai->playback.dma_data = &jz4750_i2s_pcm_stereo_out;
+	} else {
+	}
+
+	return;
+}
+
+static int jz4750_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
+	struct snd_soc_dai *dai)
+{
+	int ret = 0;
+
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+			jz4750_snd_rx_ctrl(1);
+		else
+			jz4750_snd_tx_ctrl(1);
+		break;
+	case SNDRV_PCM_TRIGGER_STOP:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
+	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+			jz4750_snd_rx_ctrl(0);
+		else
+			jz4750_snd_tx_ctrl(0);
+		break;
+	default:
+		ret = -EINVAL;
+	}
+
+	return ret;
+}
+
+static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
+	struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
+{
+	int channels = params_channels(params);
+
+	jz4750_snd_rx_ctrl(0);
+	jz4750_snd_rx_ctrl(0);
+
+	write_codec_file_bit(5, 0, 7);//PMR1.SB_DAC->0
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		snd_soc_dai_set_dma_data(dai, substream,
+					&jz4750_i2s_pcm_stereo_out);
 		
 		if (channels == 1)
 			__aic_enable_mono2stereo();
 		else
 			__aic_disable_mono2stereo();
 	} else
-		rtd->dai->cpu_dai->capture.dma_data = &jz4750_i2s_pcm_stereo_in;
+		snd_soc_dai_set_dma_data(dai, substream,
+					&jz4750_i2s_pcm_stereo_in);
 
 #if 1
 	switch (channels) {
@@ -180,47 +189,42 @@ static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int jz4750_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
-		struct snd_soc_dai *dai)
+static int jz4750_i2s_set_dai_fmt(struct snd_soc_dai *cpu_dai,
+	unsigned int fmt)
 {
-	int ret = 0;
-	
-	switch (cmd) {
-	case SNDRV_PCM_TRIGGER_START:
-	case SNDRV_PCM_TRIGGER_RESUME:
-	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-			jz4750_snd_rx_ctrl(1);
-		else
-			jz4750_snd_tx_ctrl(1);
+	/* interface format */
+	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+	case SND_SOC_DAIFMT_I2S:
+		/* 1 : ac97 , 0 : i2s */
 		break;
-	case SNDRV_PCM_TRIGGER_STOP:
-	case SNDRV_PCM_TRIGGER_SUSPEND:
-	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-			jz4750_snd_rx_ctrl(0);
-		else
-			jz4750_snd_tx_ctrl(0);
+	case SND_SOC_DAIFMT_LEFT_J:
 		break;
 	default:
-		ret = -EINVAL;
+		return -EINVAL;
 	}
 
-	return ret;
+	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+	case SND_SOC_DAIFMT_CBS_CFS:
+	        /* 0 : slave */
+		break;
+	case SND_SOC_DAIFMT_CBM_CFS:
+		/* 1 : master */
+		break;
+	default:
+		break;
+	}
+
+	return 0;
 }
 
-static void jz4750_i2s_shutdown(struct snd_pcm_substream *substream,
-	struct snd_soc_dai *dai)
+static int jz4750_i2s_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
+	int clk_id, unsigned int freq, int dir)
 {
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-	} else {
-	}
-
-	return;
+	return 0;
 }
 
 static int jz4750_i2s_probe(struct platform_device *pdev,
-		struct snd_soc_dai *dai)
+	struct snd_soc_dai *dai)
 {
 	__i2s_internal_codec();
 	__i2s_as_slave();
@@ -274,12 +278,6 @@ static int jz4750_i2s_resume(struct snd_soc_dai *dai)
 #define jz4750_i2s_resume	NULL
 #endif
 
-#define JZ4750_I2S_RATES \
-		(SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_11025 | \
-		SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_22050 | \
-		SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_44100 | \
-		SNDRV_PCM_RATE_48000)
-
 static struct snd_soc_dai_ops jz4750_i2s_dai_ops = {
 	.startup = jz4750_i2s_startup,
 	.shutdown = jz4750_i2s_shutdown,
@@ -288,6 +286,9 @@ static struct snd_soc_dai_ops jz4750_i2s_dai_ops = {
 	.set_fmt = jz4750_i2s_set_dai_fmt,
 	.set_sysclk = jz4750_i2s_set_dai_sysclk,
 };
+
+#define JZ4750_I2S_FMTS (SNDRV_PCM_FMTBIT_S8 | \
+		SNDRV_PCM_FMTBIT_S16_LE)
 
 struct snd_soc_dai jz4750_i2s_dai = {
 	.name = "jz4750-i2s",
@@ -298,31 +299,137 @@ struct snd_soc_dai jz4750_i2s_dai = {
 	.playback = {
 		.channels_min = 1,
 		.channels_max = 2,
-		.rates = JZ4750_I2S_RATES,
-		.formats = SNDRV_PCM_FMTBIT_S8 | SNDRV_PCM_FMTBIT_S16_LE,}, 
+		.rates = SNDRV_PCM_RATE_8000_48000,
+		.formats = JZ4750_I2S_FMTS,
+	},
 	.capture = {
 		.channels_min = 1,
 		.channels_max = 2,
-		.rates = JZ4750_I2S_RATES,
-		.formats = SNDRV_PCM_FMTBIT_S8 | SNDRV_PCM_FMTBIT_S16_LE,},
+		.rates = SNDRV_PCM_RATE_8000_48000,
+		.formats = JZ4750_I2S_FMTS,
+	},
 	.ops = &jz4750_i2s_dai_ops,
 };
-
 EXPORT_SYMBOL_GPL(jz4750_i2s_dai);
+
+static int __devinit jz4750_i2s_dev_probe(struct platform_device *pdev)
+{
+	struct jz4750_i2s *i2s;
+	int ret;
+
+	i2s = kzalloc(sizeof(*i2s), GFP_KERNEL);
+	if (!i2s)
+		return -ENOMEM;
+
+	i2s->mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!i2s->mem) {
+		dev_err(&pdev->dev, "Failed to get DAI registers resource\n");
+		ret = -ENOENT;
+		goto err_free;
+	}
+
+	i2s->mem = request_mem_region(i2s->mem->start, resource_size(i2s->mem),
+				pdev->name);
+	if (!i2s->mem) {
+		ret = -EBUSY;
+		goto err_free;
+	}
+
+	i2s->base = ioremap_nocache(i2s->mem->start, resource_size(i2s->mem));
+	if (!i2s->base) {
+		dev_err(&pdev->dev, "Failed to request and map DAI registers\n");
+		ret = -EBUSY;
+		goto err_release_mem_region;
+	}
+#if 0
+	i2s->phys_base = i2s->mem->start;
+
+	i2s->clk_aic = devm_clk_get(&pdev->dev, "aic");
+	if (IS_ERR(i2s->clk_aic)) {
+		ret = PTR_ERR(i2s->clk_aic);
+		goto err_iounmap;
+	}
+
+	i2s->clk_i2s = devm_clk_get(&pdev->dev, "i2s");
+	if (IS_ERR(i2s->clk_i2s)) {
+		ret = PTR_ERR(i2s->clk_i2s);
+		goto err_clk_put_aic;
+	}
+
+	clk_enable(i2s->clk_aic);
+
+	// ?? jz4740_i2c_init_pcm_config(i2s);
+#endif
+
+	jz4750_i2s_dai.dev = &pdev->dev;
+	jz4750_i2s_dai.private_data = i2s;
+
+	ret = snd_soc_register_dai(&jz4750_i2s_dai);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to register DAI\n");
+		return ret;
+	}
+
+	platform_set_drvdata(pdev, i2s);
+
+	return 0;
+#if 0
+err_clk_put_i2s:
+	clk_disable(i2s->clk_aic);
+	clk_put(i2s->clk_i2s);
+err_clk_put_aic:
+	clk_put(i2s->clk_aic);
+#endif
+err_iounmap:
+	iounmap(i2s->base);
+err_release_mem_region:
+	release_mem_region(i2s->mem->start, resource_size(i2s->mem));
+err_free:
+	kfree(i2s);
+
+	return ret;
+}
+
+static int __devexit jz4750_i2s_dev_remove(struct platform_device *pdev)
+{
+	struct jz4750_i2s *i2s = platform_get_drvdata(pdev);
+
+	snd_soc_unregister_dai(&jz4750_i2s_dai);
+#if 0
+	clk_disable(i2s->clk_aic);
+	clk_put(i2s->clk_i2s);
+	clk_put(i2s->clk_aic);
+#endif
+	iounmap(i2s->base);
+	release_mem_region(i2s->mem->start, resource_size(i2s->mem));
+
+	platform_set_drvdata(pdev, NULL);
+	kfree(i2s);
+
+	return 0;
+}
+
+static struct platform_driver jz4750_i2s_driver = {
+	.probe = jz4750_i2s_dev_probe,
+	.remove = __devexit_p(jz4750_i2s_dev_remove),
+	.driver = {
+		.name = "jz4750-i2s",
+		.owner = THIS_MODULE,
+	},
+};
 
 static int __init jz4750_i2s_init(void)
 {
-	return snd_soc_register_dai(&jz4750_i2s_dai);
+	return platform_driver_register(&jz4750_i2s_driver);
 }
 module_init(jz4750_i2s_init);
 
 static void __exit jz4750_i2s_exit(void)
 {
-	snd_soc_unregister_dai(&jz4750_i2s_dai);
+	platform_driver_unregister(&jz4750_i2s_driver);
 }
 module_exit(jz4750_i2s_exit);
 
-/* Module information */
 MODULE_AUTHOR("Richard, cjfeng@ingenic.cn, www.ingenic.cn");
 MODULE_DESCRIPTION("jz4750 I2S SoC Interface");
 MODULE_LICENSE("GPL");

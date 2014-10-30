@@ -34,11 +34,11 @@ static int hw_params_cnt = 0;
 #endif
 
 struct jz4750_dma_buf_aic {
-	struct jz4750_dma_buf_aic	*next;
-	int			 size;		/* buffer size in bytes */
-	dma_addr_t		 data;		/* start of DMA data */
-	dma_addr_t		 ptr;		/* where the DMA got to [1] */
-	void			*id;		/* client's id */
+	struct jz4750_dma_buf_aic *next;
+	int size;		/* buffer size in bytes */
+	dma_addr_t data;	/* start of DMA data */
+	dma_addr_t  ptr;	/* where the DMA got to [1] */
+	void *id;		/* client's id */
 };
 
 struct jz4750_runtime_data {
@@ -65,29 +65,29 @@ struct jz4750_runtime_data {
 /* identify hardware playback capabilities */
 static const struct snd_pcm_hardware jz4750_pcm_hardware = {
 	.info			= SNDRV_PCM_INFO_MMAP |
-	                            SNDRV_PCM_INFO_PAUSE |
-	                            SNDRV_PCM_INFO_RESUME |	
-	                            SNDRV_PCM_INFO_MMAP_VALID |
-				    SNDRV_PCM_INFO_INTERLEAVED |
-	                            SNDRV_PCM_INFO_BLOCK_TRANSFER,
+				  SNDRV_PCM_INFO_PAUSE |
+				  SNDRV_PCM_INFO_RESUME |
+				  SNDRV_PCM_INFO_MMAP_VALID |
+				  SNDRV_PCM_INFO_INTERLEAVED |
+				  SNDRV_PCM_INFO_BLOCK_TRANSFER,
 	.formats		= SNDRV_PCM_FMTBIT_S16_LE |
-				    SNDRV_PCM_FMTBIT_U16_LE |
-				    SNDRV_PCM_FMTBIT_U8 |
-				    SNDRV_PCM_FMTBIT_S8,
-	.rates                  = SNDRV_PCM_RATE_8000_96000/*0x3fe*/,
-	.rate_min               = 8000,
-	.rate_max               = 96000,
-	.channels_min		= 1,//2
+				  SNDRV_PCM_FMTBIT_U16_LE |
+				  SNDRV_PCM_FMTBIT_U8 |
+				  SNDRV_PCM_FMTBIT_S8,
+	.rates			= SNDRV_PCM_RATE_8000_96000,
+	.rate_min		= 8000,
+	.rate_max		= 96000,
+	.channels_min		= 1,
 	.channels_max		= 2,
-	.buffer_bytes_max	= 128 * 1024,//16 * 1024
-	.period_bytes_min	= PAGE_SIZE,
-	.period_bytes_max	= PAGE_SIZE * 2,
+	.buffer_bytes_max	= 128 * 2 * PAGE_SIZE,
+	.period_bytes_min	= 16,
+	.period_bytes_max	= 2 * PAGE_SIZE,
 	.periods_min		= 2,
-	.periods_max		= 128,//16,
+	.periods_max		= 128,
 	.fifo_size		= 32,
 };
 
-/* jz4750__dma_buf_enqueue
+/* jz4750_dma_buf_enqueue
  *
  * queue an given buffer for dma transfer.
  *
@@ -96,7 +96,7 @@ static const struct snd_pcm_hardware jz4750_pcm_hardware = {
  *
 */
 static int jz4750_dma_buf_enqueue(struct jz4750_runtime_data *prtd,
-		dma_addr_t data, int size)
+	dma_addr_t data, int size)
 {   
 	struct jz4750_dma_buf_aic *aic_buf;
 
@@ -126,12 +126,12 @@ static int jz4750_dma_buf_enqueue(struct jz4750_runtime_data *prtd,
 	return 0;
 }
 
-void audio_start_dma(struct jz4750_runtime_data *prtd, int mode)
+static void audio_start_dma(struct jz4750_runtime_data *prtd, int mode)
 {
 	unsigned long flags;
 	struct jz4750_dma_buf_aic *aic_buf;
 	int channel;
-	
+
 	switch (mode) {
 	case DMA_MODE_WRITE:
 		/* free cur aic_buf */
@@ -148,9 +148,9 @@ void audio_start_dma(struct jz4750_runtime_data *prtd, int mode)
 			}
 		}
 
-		aic_buf = prtd->next;		
+		aic_buf = prtd->next;
 		channel = prtd->params->channel;
-		if (aic_buf) {			
+		if (aic_buf) {
 			flags = claim_dma_lock();
 			disable_dma(channel);
 			jz_set_alsa_dma(channel, mode, tran_bit);
@@ -183,10 +183,10 @@ void audio_start_dma(struct jz4750_runtime_data *prtd, int mode)
 		aic_buf = prtd->next;
 		channel = prtd->params->channel;
 
-		if (aic_buf) {			
+		if (aic_buf) {
 			flags = claim_dma_lock();
 			disable_dma(channel);
-                        jz_set_alsa_dma(channel, mode, tran_bit);
+			jz_set_alsa_dma(channel, mode, tran_bit);
 			set_dma_addr(channel, aic_buf->data);
 			set_dma_count(channel, aic_buf->size);
 			enable_dma(channel);
@@ -208,7 +208,6 @@ static void jz4750_pcm_enqueue(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct jz4750_runtime_data *prtd = runtime->private_data;
-	/*struct snd_dma_buffer *buf = &substream->dma_buffer;*/
 	dma_addr_t pos = prtd->dma_pos;
 	int ret;
 
@@ -240,7 +239,6 @@ static irqreturn_t jz4750_pcm_dma_irq(int dma_ch, void *dev_id)
 	struct snd_pcm_substream *substream = dev_id;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct jz4750_runtime_data *prtd = runtime->private_data;
-	/*struct jz4750_dma_buf_aic *aic_buf = prtd->curr;*/
 	int channel = prtd->params->channel;
 	unsigned long flags;
 
@@ -282,7 +280,7 @@ static irqreturn_t jz4750_pcm_dma_irq(int dma_ch, void *dev_id)
 
 /* some parameter about DMA operation */
 static int jz4750_pcm_hw_params(struct snd_pcm_substream *substream,
-		struct snd_pcm_hw_params *params)
+	struct snd_pcm_hw_params *params)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct jz4750_runtime_data *prtd = runtime->private_data;
@@ -313,13 +311,13 @@ static int jz4750_pcm_hw_params(struct snd_pcm_substream *substream,
 	/* prepare DMA */
 	prtd->params = dma;
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		ret = jz_request_dma(DMA_ID_AIC_TX, prtd->params->client->name, 
+		ret = jz_request_dma(DMA_ID_AIC_TX, "PCM Playback",
 				  jz4750_pcm_dma_irq, IRQF_DISABLED, substream);
 		if (ret < 0)
 			return ret;
 		prtd->params->channel = ret;
 	} else {
-		ret = jz_request_dma(DMA_ID_AIC_RX, prtd->params->client->name, 
+		ret = jz_request_dma(DMA_ID_AIC_RX, "PCM Capture",
 				  jz4750_pcm_dma_irq, IRQF_DISABLED, substream);
 		if (ret < 0)
 			return ret;
@@ -387,7 +385,6 @@ static int jz4750_dma_ctrl(int channel)
 static int jz4750_pcm_prepare(struct snd_pcm_substream *substream)
 {
 	struct jz4750_runtime_data *prtd = substream->runtime->private_data;
-	int ret = 0;
 
 	/* return if this is a bufferless transfer e.g */
 	if (!prtd->params)
@@ -401,7 +398,7 @@ static int jz4750_pcm_prepare(struct snd_pcm_substream *substream)
 	/* enqueue dma buffers */
 	jz4750_pcm_enqueue(substream);
 
-	return ret;
+	return 0;
 }
 
 static int jz4750_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
@@ -419,22 +416,18 @@ static int jz4750_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		} else {
 			audio_start_dma(prtd, DMA_MODE_READ);
 		}
-		
 		break;
-
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		prtd->state &= ~ST_RUNNING;
 		break;
-
 	case SNDRV_PCM_TRIGGER_RESUME:
 		printk(" RESUME \n");
 		break;
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		printk(" RESTART \n");
 		break;
-
 	default:
 		ret = -EINVAL;
 	}
@@ -454,7 +447,6 @@ static snd_pcm_uframes_t jz4750_pcm_pointer(struct snd_pcm_substream *substream)
 	int channel = prtd->params->channel;
 	
 	spin_lock(&prtd->lock);
-#if 1
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		count = get_dma_residue(channel);
@@ -468,37 +460,8 @@ static snd_pcm_uframes_t jz4750_pcm_pointer(struct snd_pcm_substream *substream)
 		res = ptr - prtd->dma_start;       
 	}
 
-# else
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if ((prtd->aic_dma_flag & AIC_START_DMA) == 0) {
-			count = get_dma_residue(channel);
-			count = aic_buf->size - count;
-			ptr = aic_buf->data + count;
-			REG_DMAC_DSAR(channel) = ptr;
-			res = ptr - prtd->dma_start;
-		} else {
-			ptr = REG_DMAC_DSAR(channel);
-			if (ptr == 0x0)
-				printk("\ndma address is 00000000 in running!\n");
-			res = ptr - prtd->dma_start;
-		}
-	} else {
-		if ((prtd->aic_dma_flag & AIC_START_DMA) == 0) {
-			count = get_dma_residue(channel);
-			count = aic_buf->size - count;
-			ptr = aic_buf->data + count;
-			REG_DMAC_DTAR(channel) = ptr;
-			res = ptr - prtd->dma_start;
-		} else {
-			ptr = REG_DMAC_DTAR(channel);
-			if (ptr == 0x0)
-				printk("\ndma address is 00000000 in running!\n");
-			res = ptr - prtd->dma_start;
-		}       
-	}
-#endif
 	spin_unlock(&prtd->lock);
+
 	x = bytes_to_frames(runtime, res);
 	if (x == runtime->buffer_size)
 		x = 0;
@@ -516,7 +479,9 @@ static int jz4750_pcm_open(struct snd_pcm_substream *substream)
 #endif
 	REG_DMAC_DMACKE(0) = 0x3f;
 	REG_DMAC_DMACKE(1) = 0x3f;
+
 	snd_soc_set_runtime_hwparams(substream, &jz4750_pcm_hardware);
+
 	prtd = kzalloc(sizeof(struct jz4750_runtime_data), GFP_KERNEL);
 	if (prtd == NULL)
 		return -ENOMEM;
@@ -533,11 +498,10 @@ static int jz4750_pcm_close(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct jz4750_runtime_data *prtd = runtime->private_data;
 	struct jz4750_dma_buf_aic *aic_buf = NULL;
-	
+
 #ifdef CONFIG_SND_OSSEMUL
 	hw_params_cnt = 0;
 #endif
-
 	if (prtd) 
 		aic_buf = prtd->curr;
 
@@ -549,7 +513,7 @@ static int jz4750_pcm_close(struct snd_pcm_substream *substream)
 		aic_buf = NULL;
 		aic_buf = prtd->curr;
 	}
-	
+
 	if (prtd) {
 		prtd->curr = NULL;
 		prtd->next = NULL;
@@ -561,13 +525,12 @@ static int jz4750_pcm_close(struct snd_pcm_substream *substream)
 }
 
 static int jz4750_pcm_mmap(struct snd_pcm_substream *substream,
-			   struct vm_area_struct *vma)//include/linux/mm.h
+	struct vm_area_struct *vma)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	unsigned long start;
 	unsigned long off;
-	u32 len;
-	int ret = -ENXIO;
+	uint32_t len;
 
 	off = vma->vm_pgoff << PAGE_SHIFT;
 	start = runtime->dma_addr;
@@ -588,14 +551,12 @@ static int jz4750_pcm_mmap(struct snd_pcm_substream *substream,
 	pgprot_val(vma->vm_page_prot) |= _CACHE_UNCACHED;
 	/* pgprot_val(vma->vm_page_prot) |= _CACHE_CACHABLE_NONCOHERENT; */
 #endif
-	ret = io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
-			       vma->vm_end - vma->vm_start,
-			       vma->vm_page_prot);
-
-	return ret;
+	return io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
+			vma->vm_end - vma->vm_start,
+			vma->vm_page_prot);
 }
 
-struct snd_pcm_ops jz4750_pcm_ops = {
+static struct snd_pcm_ops jz4750_pcm_ops = {
 	.open		= jz4750_pcm_open,
 	.close		= jz4750_pcm_close,
 	.ioctl		= snd_pcm_lib_ioctl,
@@ -612,27 +573,28 @@ static int jz4750_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 	struct snd_pcm_substream *substream = pcm->streams[stream].substream;
 	struct snd_dma_buffer *buf = &substream->dma_buffer;
 	size_t size = jz4750_pcm_hardware.buffer_bytes_max;
+
 	buf->dev.type = SNDRV_DMA_TYPE_DEV;
 	buf->dev.dev = pcm->card->dev;
 	buf->private_data = NULL;
 
-	/*buf->area = dma_alloc_coherent(pcm->card->dev, size,
-	  &buf->addr, GFP_KERNEL);*/
 	buf->area = dma_alloc_noncoherent(pcm->card->dev, size,
 					  &buf->addr, GFP_KERNEL);
 	if (!buf->area)
 		return -ENOMEM;
+
 	buf->bytes = size;
+
 	return 0;
 }
 
-static void jz4750_pcm_free_dma_buffers(struct snd_pcm *pcm)
+static void jz4750_pcm_free(struct snd_pcm *pcm)
 {
 	struct snd_pcm_substream *substream;
 	struct snd_dma_buffer *buf;
 	int stream;
 
-	for (stream = 0; stream < 2; stream++) {
+	for (stream = 0; stream < SNDRV_PCM_STREAM_LAST; stream++) {
 		substream = pcm->streams[stream].substream;
 		if (!substream)
 			continue;
@@ -642,7 +604,7 @@ static void jz4750_pcm_free_dma_buffers(struct snd_pcm *pcm)
 			continue;
 
 		dma_free_noncoherent(pcm->card->dev, buf->bytes,
-		  buf->area, buf->addr);
+				buf->area, buf->addr);
 		buf->area = NULL;
 	}
 }
@@ -656,6 +618,7 @@ int jz4750_pcm_new(struct snd_card *card, struct snd_soc_dai *dai,
 
 	if (!card->dev->dma_mask)
 		card->dev->dma_mask = &jz4750_pcm_dmamask;
+
 	if (!card->dev->coherent_dma_mask)
 		card->dev->coherent_dma_mask = DMA_BIT_MASK(32);
 
@@ -663,16 +626,16 @@ int jz4750_pcm_new(struct snd_card *card, struct snd_soc_dai *dai,
 		ret = jz4750_pcm_preallocate_dma_buffer(pcm,
 			SNDRV_PCM_STREAM_PLAYBACK);
 		if (ret)
-			goto out;
+			goto err;
 	}
 
 	if (dai->capture.channels_min) {
 		ret = jz4750_pcm_preallocate_dma_buffer(pcm,
 			SNDRV_PCM_STREAM_CAPTURE);
 		if (ret)
-			goto out;
+			goto err;
 	}
- out:
+err:
 
 	return ret;
 }
@@ -681,20 +644,40 @@ struct snd_soc_platform jz4750_soc_platform = {
 	.name		= "jz4750-pcm",
 	.pcm_ops 	= &jz4750_pcm_ops,
 	.pcm_new	= jz4750_pcm_new,
-	.pcm_free	= jz4750_pcm_free_dma_buffers,
+	.pcm_free	= jz4750_pcm_free,
 };
-
 EXPORT_SYMBOL_GPL(jz4750_soc_platform);
+
+static int __devinit jz4750_pcm_probe(struct platform_device *pdev)
+{
+	return snd_soc_register_platform(&jz4750_soc_platform);
+}
+
+static int __devexit jz4750_pcm_remove(struct platform_device *pdev)
+{
+	snd_soc_unregister_platform(&jz4750_soc_platform);
+
+	return 0;
+}
+
+static struct platform_driver jz4750_pcm_driver = {
+	.probe = jz4750_pcm_probe,
+	.remove = __devexit_p(jz4750_pcm_remove),
+	.driver = {
+		.name = "jz4750-pcm",
+		.owner = THIS_MODULE,
+	},
+};
 
 static int __init jz4750_soc_platform_init(void)
 {
-	return snd_soc_register_platform(&jz4750_soc_platform);
+	return platform_driver_register(&jz4750_pcm_driver);
 }
 module_init(jz4750_soc_platform_init);
 
 static void __exit jz4750_soc_platform_exit(void)
 {
-	snd_soc_unregister_platform(&jz4750_soc_platform);
+	platform_driver_unregister(&jz4750_pcm_driver);
 }
 module_exit(jz4750_soc_platform_exit);
 
