@@ -253,6 +253,9 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 	//&jz_i2c_device,
 	&jz_msc0_device,
 	&jz_msc1_device,
+	&jz_pcm_device,
+	&jz_i2s_device,
+	&jz_codec_device,
 	&a380_gpio_keys_device,
 	&a380_backlight_device,
 };
