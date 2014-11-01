@@ -216,8 +216,8 @@ struct platform_device jz_pcm_device = {
 /* Codec */
 static struct resource jz_codec_resources[] = {
 	{
-		.start	= JZ4750D_AIC_BASE_ADDR + 0x80,
-		.end	= JZ4750D_AIC_BASE_ADDR + 0x88 - 1,
+		.start	= JZ4750D_AIC_BASE_ADDR + 0xA0,
+		.end	= JZ4750D_AIC_BASE_ADDR + 0xA8 - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 };
