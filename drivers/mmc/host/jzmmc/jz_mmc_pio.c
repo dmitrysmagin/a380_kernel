@@ -64,7 +64,7 @@ static int jz_mmc_data_transfer(void *arg) {
 
 	for_each_sg(data->sg, sgentry, data->sg_len, i) {
 		buf = sg_virt(sgentry);
-		len = sg_dma_len(sgentry) >> 2; /* divide by 4 */
+		len = (sg_dma_len(sgentry)+3) >> 2; /* divide by 4 */
 
 		if (is_write)
 			ret = jz_mmc_pio_write(host, buf, len);

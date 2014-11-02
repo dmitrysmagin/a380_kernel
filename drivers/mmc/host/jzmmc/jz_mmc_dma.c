@@ -21,6 +21,8 @@
 #include "include/jz_mmc_dma.h"
 #include "include/jz_mmc_host.h"
 
+#define JZMMC_BUFFER_NEEDS_BOUNCE(buffer)  (((unsigned long)(buffer) & 0x3) || !virt_addr_valid((buffer)))
+
 void jz_mmc_stop_dma(struct jz_mmc_host *host)
 {
 	u32 old_counter = REG_DMAC_DTCR(host->dma.channel);
@@ -134,10 +136,11 @@ static void sg_to_desc(struct scatterlist *sgentry, JZ_MSC_DMA_DESC *first_desc,
 	dma_addr_t last_best_dma_addr = 0;
 	dma_addr_t dma_desc_phys_addr = CPHYSADDR((unsigned long)first_desc);
 
+	BUG_ON(JZMMC_BUFFER_NEEDS_BOUNCE(sg_virt(sgentry)));
+
 	dma_addr = sg_dma_address(sgentry);
 	dma_len = sg_dma_len(sgentry);
 
-	BUG_ON(dma_addr % 4);
 	BUG_ON(dma_len % 4); /* we do NOT support transfer size < 4byte */
 
 	ds = best_burst_size(dma_len);
@@ -447,7 +450,6 @@ void jz_mmc_start_dma(struct jz_mmc_host *host) {
 #ifdef USE_DMA_DESC
 	jz_mmc_start_scatter_dma(host->dma.channel, host, data->sg, host->dma.len, mode);
 #else
-	j = 0;
 	for_each_sg(data->sg, sgentry, host->dma.len, i) {
 		dma_cache_wback_inv((unsigned long)CKSEG0ADDR(sg_dma_address(sgentry) + data->sg->offset),
 				    sg_dma_len(sgentry));

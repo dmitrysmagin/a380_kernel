@@ -9,13 +9,14 @@
  */
 
 #include <linux/dma-mapping.h>
-//#include <linux/semaphore.h>
+#include <linux/semaphore.h>
 #include <linux/kthread.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/host.h>
 #include <linux/scatterlist.h>
+#include <linux/moduleparam.h>
 
 #include <asm/mach-jz4750d/jz4750d_mmc.h>
 #include <asm/mach-jz4750d/jz4750d_msc.h>
@@ -35,13 +36,15 @@
 static int jzmmc_trace_level = 0;
 static int jzmmc_trace_cmd_code = -1;
 static int jzmmc_trace_data_len = -1;
+static int jzmmc_trace_id = 0;
 module_param(jzmmc_trace_level, int, 0644);
 module_param(jzmmc_trace_cmd_code, int, 0644);
 module_param(jzmmc_trace_data_len, int, 0644);
+module_param(jzmmc_trace_id, int, 0644);
 
 #define TRACE_CMD_REQ()							\
 	({								\
-		if (jzmmc_trace_level & 0x1)				\
+		if ( (jzmmc_trace_id & (1 << host->pdev_id)) && (jzmmc_trace_level & 0x1)) \
 			if ( (jzmmc_trace_cmd_code == -1) || (jzmmc_trace_cmd_code == cmd->opcode) ) \
 				printk("%s:     execute_cmd: opcode = %d cmdat = %#0x arg = %#0x data_flags = %#0x\n", \
 				       mmc_hostname(host->mmc), cmd->opcode, REG_MSC_CMDAT(host->pdev_id), REG_MSC_ARG(host->pdev_id), \
@@ -50,7 +53,7 @@ module_param(jzmmc_trace_data_len, int, 0644);
 
 #define TRACE_CMD_RES()							\
 	({								\
-		if (jzmmc_trace_level & 0x1)				\
+		if ( (jzmmc_trace_id & (1 << host->pdev_id)) && (jzmmc_trace_level & 0x1)) \
 			if ( (jzmmc_trace_cmd_code == -1) || (jzmmc_trace_cmd_code == cmd->opcode) ) \
 				printk("%s:     cmd done: curr_res_type = %d resp[0] = %#0x err = %d state = %#0x\n", \
 				       mmc_hostname(host->mmc), host->curr_res_type, cmd->resp[0], cmd->error, \
@@ -59,7 +62,7 @@ module_param(jzmmc_trace_data_len, int, 0644);
 
 #define TRACE_DATA_REQ()						\
 	({								\
-		if ( (jzmmc_trace_level & 0x2) && host->curr_mrq->data ) {	\
+		if ((jzmmc_trace_id & (1 << host->pdev_id)) && (jzmmc_trace_level & 0x2) && host->curr_mrq->data ) { \
 			if ((jzmmc_trace_data_len == -1) ||		\
 			    (jzmmc_trace_data_len == host->curr_mrq->data->blksz * host->curr_mrq->data->blocks) ) \
 				printk("%s:     blksz %d blocks %d flags %08x "	\
@@ -73,7 +76,7 @@ module_param(jzmmc_trace_data_len, int, 0644);
 
 #define TRACE_DATA_DONE()						\
 	({								\
-		if (jzmmc_trace_level & 0x2)				\
+		if ((jzmmc_trace_id & (1 << host->pdev_id)) && (jzmmc_trace_level & 0x2)) \
 			if ((jzmmc_trace_data_len == -1) ||		\
 			    (jzmmc_trace_data_len == data->blksz * data->blocks) ) \
 				printk("%s:     stat = 0x%08x error = %d bytes_xfered = %d stop = %p\n", \
@@ -127,11 +130,12 @@ static void msc_irq_mask_all(int msc_id)
 void jz_mmc_reset(struct jz_mmc_host *host)
 {
 	u32 clkrt = REG_MSC_CLKRT(host->pdev_id);
-//	printk("---%d:%s\n",__LINE__,__func__);
-//	while (REG_MSC_STAT(host->pdev_id) & MSC_STAT_CLK_EN);        //lltang del
+
+//	while (REG_MSC_STAT(host->pdev_id) & MSC_STAT_CLK_EN);
 
 	REG_MSC_STRPCL(host->pdev_id) = MSC_STRPCL_RESET;
  	while (REG_MSC_STAT(host->pdev_id) & MSC_STAT_IS_RESETTING);
+
 	// __msc_start_clk(host->pdev_id);
 	REG_MSC_LPM(host->pdev_id) = 0x1;	// Low power mode
 	msc_irq_mask_all(host->pdev_id);
@@ -165,17 +169,17 @@ void jz_mmc_set_clock(struct jz_mmc_host *host, int rate)
 	*/
 
 	if (rate > SD_CLOCK_FAST) {
-		rate = SD_CLOCK_FAST;
-		//__cpm_select_msc_clk_high(host->pdev_id,1);	/* select clock source from CPM */
 		clk_set_rate(host->clk, 48 * 1000 * 1000);
 		clkrt = msc_calc_clkrt(0, rate);
+		// send cmd and data at clock rising
+		REG_MSC_LPM(host->pdev_id) |= 0x1 << 31;
 	} else {
-		//__cpm_select_msc_clk(host->pdev_id,1);	/* select clock source from CPM */
 		clk_set_rate(host->clk, 24 * 1000 * 1000);
 		clkrt = msc_calc_clkrt(1, rate);
+		// send cmd and data at clock falling
+		REG_MSC_LPM(host->pdev_id) &= ~(0x1 << 31);
 	}
 
-	// printk("clock rate = %d\n", __cpm_get_mscclk(0));
 	REG_MSC_CLKRT(host->pdev_id) = clkrt;
 }
 
@@ -355,7 +359,7 @@ static void jz_mmc_set_cmdat(struct jz_mmc_host *host) {
 	struct mmc_command *cmd = mrq->cmd;
 	u32 cmdat;
 
-	cmdat = host->cmdat & (~0x7);
+	cmdat = host->cmdat;
 	rmb();
 	host->cmdat &= ~MSC_CMDAT_INIT;
 
@@ -504,7 +508,7 @@ static u32 jz_mmc_wait_status(struct jz_mmc_host *host, u32 st_mask,
 //extern volatile int error_may_happen;
 
 static u32 jz_mmc_wait_cmd_done(struct jz_mmc_host *host) {
-	u32 timeout = 0x7fffff;
+	u32 timeout = 0x7fffffff;
 	struct mmc_command *cmd = host->curr_mrq->cmd;
 	int cmd_succ = 0;
 	u32 stat = 0;
@@ -544,7 +548,7 @@ static u32 jz_mmc_wait_cmd_done(struct jz_mmc_host *host) {
 	REG_MSC_IREG(host->pdev_id) = MSC_IREG_END_CMD_RES;	/* clear irq flag */
 
 	if (cmd_succ && need_wait_prog_done(cmd)) {
-		timeout = 0x7fffff;
+		timeout = 0x7fffffff;
 		while (--timeout && !(REG_MSC_IREG(host->pdev_id) & MSC_IREG_PRG_DONE) && (host->eject == 0))
 			;
 
@@ -585,7 +589,7 @@ static int jz_mmc_data_done(struct jz_mmc_host *host)
 {
 	struct mmc_data *data = host->curr_mrq->data;
 	int stat = 0;
-	u32 timeout = 0x7fffff;
+	u32 timeout = 0x7fffffff;
 
 	if (!data)
 		return -EINVAL;
@@ -704,6 +708,10 @@ static void jz_mmc_execute_cmd(struct jz_mmc_host *host)
 						       ((host->data_ack) || (host->eject)
 							|| (REG_MSC_STAT(host->pdev_id) & WAITMASK)),
 						       6 * HZ);
+
+		while(!((REG_MSC_STAT(host->pdev_id) & MSC_STAT_DATA_TRAN_DONE) || (host->eject)));
+		REG_MSC_STAT(host->pdev_id) &= ~(MSC_STAT_DATA_TRAN_DONE);
+
 		acked = host->data_ack;
 		host->data_ack = 0;
 

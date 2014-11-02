@@ -17,33 +17,23 @@
 #include "include/jz_mmc_gpio.h"
 #include "include/jz_mmc_msc.h"
 
-#define	TRY_TIME	20
-#define	RETRY_TIME	50
+#define TRY_TIME	10
+#define RETRY_TIME	50
 
-#define DETECT_CHANGE_DELAY 20
-#define DEBUG
-//#undef  DEBUG
-#ifdef DEBUG
-#define dprintk(x...)	printk(x)
-#define print_dbg(f, arg...) printk("dbg::" __FILE__ ",LINE(%d): " f "\n", __LINE__, ## arg)
-#else
-#define dprintk(x...)
-#define print_dbg(f, arg...) do {} while (0)
-#endif
-
+#define DETECT_CHANGE_DELAY 50
 
 static void jz_mmc_enable_detect(unsigned long arg) {
 	struct jz_mmc_host *host = (struct jz_mmc_host *)arg;
 
 	atomic_inc(&host->detect_refcnt);
-	if (host->plat->status(mmc_dev(host->mmc))) {
+
+	if (host->eject) {
 		/* wait for card insertion */
 		host->plat->plug_change(CARD_REMOVED);
 	} else {
 		/* wait for card removal */
 		host->plat->plug_change(CARD_INSERTED);
 	}
-//	printk("---enable eject=%d\n",eject);
 	enable_irq(host->plat->status_irq);
 }
 
@@ -64,7 +54,6 @@ static void jiq_de_quiver(struct work_struct *ptr){
 		jz_mmc_enable_card_detect(host);
 		return;
 	}
-//	printk("---%d:%s\n",__LINE__,__func__);
 
 	for (time_to_try = 0; time_to_try < RETRY_TIME; time_to_try++) {
 		for (i = 0; i < TRY_TIME; i++) {
@@ -95,48 +84,38 @@ static void jiq_de_quiver(struct work_struct *ptr){
 stable:
 	/* oldstat: 1 -- eject, 0 -- inserted */
 	/* eject: 1 -- eject, 0 -- inserted */
-//	printk("---oldstat:%d\t eject:%d\ttime_to_try=%d\n",host->oldstat,host->eject,time_to_try);
-        dprintk("%s %d host->oldstat is %d host->eject is %d host->sleeping is %d\n",__FILE__,__LINE__,host->oldstat,host->eject,host->sleeping);
 
+#ifdef CONFIG_PM
 	if ( (0 == host->oldstat) && (0 == host->eject) && host->sleeping) {
 		mmc_resume_host(host->mmc);
 	}
-        if ( (0 == host->oldstat) && (0 == host->eject) ) {
-          mmc_resume_host(host->mmc);
-          mdelay(300);
-        }
-        if ( (1 == host->oldstat) && (1 == host->eject) ) {
-          mmc_resume_host(host->mmc);
-          mdelay(300);
-        }
-        dprintk("%s %d host->oldstat is %d host->eject is %d host->sleeping is %d\n",__FILE__,__LINE__,host->oldstat,host->eject,host->sleeping);
+#endif
 
 	if ( (0== host->oldstat) && (1 == host->eject) ) {
+#ifdef CONFIG_PM
 		if (host->sleeping) {
 			mmc_resume_host(host->mmc);
-		} else {
+		} else
+#endif
+		{
 			mmc_detect_change(host->mmc, 50);
-				if (REG_MSC_STAT(host->pdev_id) & MSC_STAT_CLK_EN){
-					printk(" ====> Clock is on\n");
-					jz_mmc_reset(host);
-				}
+			if (REG_MSC_STAT(host->pdev_id) & MSC_STAT_CLK_EN) {
+				printk(" ====> Clock is on\n");
+				jz_mmc_reset(host);
+			}
 
 
 		}
 
 		wake_up_interruptible(&host->data_wait_queue);
 	}
-        dprintk("%s %d host->oldstat is %d host->eject is %d host->sleeping is %d\n",__FILE__,__LINE__,host->oldstat,host->eject,host->sleeping);
 
 	if ( (1 == host->oldstat) && (0 == host->eject) ) {
 		mmc_detect_change(host->mmc, 50);
 	}
-//	printk("---%d:%s\n",__LINE__,__func__);
-        dprintk("%s %d host->oldstat is %d host->eject is %d host->sleeping is %d\n",__FILE__,__LINE__,host->oldstat,host->eject,host->sleeping);
 
 	host->sleeping = 0;
 	host->oldstat = host->eject;
-        dprintk("%s %d host->oldstat is %d host->eject is %d host->sleeping is %d\n",__FILE__,__LINE__,host->oldstat,host->eject,host->sleeping);
 
 	jz_mmc_enable_card_detect(host);
 }
@@ -154,7 +133,7 @@ int jz_mmc_detect(struct jz_mmc_host *host, int from_resuming) {
 	if (from_resuming)
 		schedule_timeout(HZ / 2); /* 500ms, wait for MMC Block module resuming*/
 
-	ret = schedule_delayed_work( &(host->gpio_jiq_work), HZ ); /* 10ms, a little time */
+	ret = schedule_delayed_work( &(host->gpio_jiq_work), HZ / 100); /* 10ms, a little time */
 
 	return ret;
 }
@@ -175,7 +154,6 @@ static irqreturn_t jz_mmc_detect_irq(int irq, void *devid)
 		error_may_happen = 1;
 	}
 #endif
-//	printk("\n\n---%d:%s\n",__LINE__,__func__);
 	jz_mmc_detect((struct jz_mmc_host *) devid, 0);
 
 	return IRQ_HANDLED;

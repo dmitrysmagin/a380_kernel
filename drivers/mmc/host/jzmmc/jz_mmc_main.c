@@ -16,7 +16,6 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/dma-mapping.h>
-
 #include <linux/mmc/host.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
@@ -26,7 +25,6 @@
 #include <linux/signal.h>
 #include <linux/pm.h>
 #include <linux/scatterlist.h>
-
 #include <asm/io.h>
 #include <asm/scatterlist.h>
 
@@ -153,7 +151,7 @@ static const struct mmc_host_ops jz_mmc_ops = {
 	.request = jz_mmc_request,
 	.get_ro = jz_mmc_get_ro,
 	.set_ios = jz_mmc_set_ios,
-//	.get_cd = jz_mmc_get_cd,
+	.get_cd = jz_mmc_get_cd,
 };
 
 #ifdef MSC_DEBUG_DMA
@@ -280,8 +278,6 @@ static int jz_mmc_probe(struct platform_device *pdev)
 	mmc->f_max = SD_CLOCK_HIGH;
 	mmc->ocr_avail = plat->ocr_mask;
 	mmc->caps |= host->plat->max_bus_width;
-	if (host->plat->nonremovable)
-		mmc->caps |= MMC_CAP_NONREMOVABLE;
 	mmc->max_segs = NR_SG;
 	mmc->max_blk_size = 4095;
 	mmc->max_blk_count = 65535;
@@ -361,6 +357,8 @@ static int jz_mmc_resume(struct platform_device *dev)
 	struct jz_mmc_host *host = mmc_priv(mmc);
 
 	if (mmc) {
+		clk_enable(host->clk);
+
 		if ( (mmc->card == NULL) || (mmc->card->type != MMC_TYPE_SDIO) )
 			jz_mmc_detect(host, 1);
 	}
@@ -397,7 +395,6 @@ static void __exit jz_mmc_exit(void)
 
 module_init(jz_mmc_init);
 module_exit(jz_mmc_exit);
-
 
 MODULE_DESCRIPTION("JZ47XX SD/Multimedia Card Interface Driver");
 MODULE_LICENSE("GPL");
