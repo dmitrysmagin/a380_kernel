@@ -152,7 +152,7 @@ static void enable_dma_irq(struct irq_data *data)
 		printk("%s, unexpected dma irq #%d\n", __FILE__, irq);
 		return;
 	}
-	__intc_unmask_irq(irq);
+	__intc_unmask_irq(intc_irq);
 	__dmac_channel_enable_irq(irq - IRQ_DMA_0);
 }
 
@@ -178,7 +178,7 @@ static void mask_and_ack_dma_irq(struct irq_data *data)
 		printk("%s, unexpected dma irq #%d\n", __FILE__, irq);
 		return ;
 	}
-	__intc_ack_irq(irq);
+	__intc_ack_irq(intc_irq);
 	//__dmac_channel_ack_irq(irq-IRQ_DMA_0); /* needed?? add 20080506, Wolfgang */
 	//__dmac_channel_disable_irq(irq - IRQ_DMA_0);
 }
