@@ -209,7 +209,7 @@ struct platform_device jz_i2s_device = {
 
 /* PCM */
 struct platform_device jz_pcm_device = {
-	.name		= "jz4750-pcm", /* jz2750-audio */
+	.name		= "jz4750-pcm-audio",
 	.id		= -1,
 };
 
@@ -223,7 +223,7 @@ static struct resource jz_codec_resources[] = {
 };
 
 struct platform_device jz_codec_device = {
-	.name		= "jz4750-codec", /* JZDLV */
+	.name		= "jz4750-codec",
 	.id		= -1,
 	.num_resources	= ARRAY_SIZE(jz_codec_resources),
 	.resource	= jz_codec_resources,
