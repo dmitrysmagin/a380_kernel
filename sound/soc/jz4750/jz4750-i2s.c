@@ -29,8 +29,9 @@
 struct jz4750_i2s {
 	struct resource *mem;
 	void __iomem *base;
-	dma_addr_t phys_base;
 #if 0
+	dma_addr_t phys_base;
+
 	struct clk *clk_aic;
 	struct clk *clk_i2s;
 
@@ -90,8 +91,7 @@ static void jz4750_snd_rx_ctrl(int on)
 static int jz4750_i2s_startup(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *dai)
 {
-	/*struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	  struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;*/
+	//struct jz4750_i2s *i2s = snd_soc_dai_get_drvdata(dai);
 
 	return 0;
 }
@@ -99,6 +99,8 @@ static int jz4750_i2s_startup(struct snd_pcm_substream *substream,
 static void jz4750_i2s_shutdown(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *dai)
 {
+	//struct jz4750_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 	} else {
 	}
@@ -109,6 +111,7 @@ static void jz4750_i2s_shutdown(struct snd_pcm_substream *substream,
 static int jz4750_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	struct snd_soc_dai *dai)
 {
+	//struct jz4750_i2s *i2s = snd_soc_dai_get_drvdata(dai);
 	int ret = 0;
 
 	switch (cmd) {
@@ -138,6 +141,8 @@ static int jz4750_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
+	//struct jz4750_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
 	int channels = params_channels(params);
 
 	jz4750_snd_rx_ctrl(0);
@@ -189,9 +194,11 @@ static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int jz4750_i2s_set_dai_fmt(struct snd_soc_dai *cpu_dai,
+static int jz4750_i2s_set_dai_fmt(struct snd_soc_dai *dai,
 	unsigned int fmt)
 {
+	//struct jz4750_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
 	/* interface format */
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:
@@ -217,15 +224,22 @@ static int jz4750_i2s_set_dai_fmt(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
-static int jz4750_i2s_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
+static int jz4750_i2s_set_dai_sysclk(struct snd_soc_dai *dai,
 	int clk_id, unsigned int freq, int dir)
 {
+	//struct jz4750_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
 	return 0;
 }
 
-static int jz4750_i2s_probe(struct platform_device *pdev,
-	struct snd_soc_dai *dai)
+static int jz4750_i2s_dai_probe(struct snd_soc_dai *dai)
 {
+	//struct jz4750_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
+	//clk_enable(i2s->clk_aic);
+
+	//jz4750_i2c_init_pcm_config(i2s);
+
 	__i2s_internal_codec();
 	__i2s_as_slave();
 	__i2s_select_i2s();
@@ -256,17 +270,29 @@ static int jz4750_i2s_probe(struct platform_device *pdev,
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int jz4750_i2s_suspend(struct snd_soc_dai *dai)
+static int jz4750_i2s_dai_remove(struct snd_soc_dai *dai)
 {
+	//struct jz4750_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
+	//clk_disable(i2s->clk_aic);
+	return 0;
+}
+
+#ifdef CONFIG_PM
+static int jz4750_i2s_dai_suspend(struct snd_soc_dai *dai)
+{
+	//struct jz4750_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
 	if (!dai->active)
 		return 0;
 
 	return 0;
 }
 
-static int jz4750_i2s_resume(struct snd_soc_dai *dai)
+static int jz4750_i2s_dai_resume(struct snd_soc_dai *dai)
 {
+	//struct jz4750_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
 	if (!dai->active)
 		return 0;
 
@@ -274,8 +300,8 @@ static int jz4750_i2s_resume(struct snd_soc_dai *dai)
 }
 
 #else
-#define jz4750_i2s_suspend	NULL
-#define jz4750_i2s_resume	NULL
+#define jz4750_i2s_dai_suspend	NULL
+#define jz4750_i2s_dai_resume	NULL
 #endif
 
 static struct snd_soc_dai_ops jz4750_i2s_dai_ops = {
@@ -290,12 +316,11 @@ static struct snd_soc_dai_ops jz4750_i2s_dai_ops = {
 #define JZ4750_I2S_FMTS (SNDRV_PCM_FMTBIT_S8 | \
 		SNDRV_PCM_FMTBIT_S16_LE)
 
-struct snd_soc_dai jz4750_i2s_dai = {
-	.name = "jz4750-i2s",
-	.id = 0,
-	.probe = jz4750_i2s_probe,
-	.suspend = jz4750_i2s_suspend,
-	.resume = jz4750_i2s_resume,
+static struct snd_soc_dai_driver jz4750_i2s_dai = {
+	.probe = jz4750_i2s_dai_probe,
+	.remove = jz4750_i2s_dai_remove,
+	.suspend = jz4750_i2s_dai_suspend,
+	.resume = jz4750_i2s_dai_resume,
 	.playback = {
 		.channels_min = 1,
 		.channels_max = 2,
@@ -310,7 +335,6 @@ struct snd_soc_dai jz4750_i2s_dai = {
 	},
 	.ops = &jz4750_i2s_dai_ops,
 };
-EXPORT_SYMBOL_GPL(jz4750_i2s_dai);
 
 static int __devinit jz4750_i2s_dev_probe(struct platform_device *pdev)
 {
@@ -355,32 +379,23 @@ static int __devinit jz4750_i2s_dev_probe(struct platform_device *pdev)
 		ret = PTR_ERR(i2s->clk_i2s);
 		goto err_clk_put_aic;
 	}
-
-	clk_enable(i2s->clk_aic);
-
-	// ?? jz4740_i2c_init_pcm_config(i2s);
 #endif
+	platform_set_drvdata(pdev, i2s);
 
-	jz4750_i2s_dai.dev = &pdev->dev;
-	jz4750_i2s_dai.private_data = i2s;
-
-	ret = snd_soc_register_dai(&jz4750_i2s_dai);
+	ret = snd_soc_register_dai(&pdev->dev, &jz4750_i2s_dai);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to register DAI\n");
 		return ret;
 	}
 
-	platform_set_drvdata(pdev, i2s);
-
 	return 0;
 #if 0
 err_clk_put_i2s:
-	clk_disable(i2s->clk_aic);
 	clk_put(i2s->clk_i2s);
 err_clk_put_aic:
 	clk_put(i2s->clk_aic);
-#endif
 err_iounmap:
+#endif
 	iounmap(i2s->base);
 err_release_mem_region:
 	release_mem_region(i2s->mem->start, resource_size(i2s->mem));
@@ -394,9 +409,8 @@ static int __devexit jz4750_i2s_dev_remove(struct platform_device *pdev)
 {
 	struct jz4750_i2s *i2s = platform_get_drvdata(pdev);
 
-	snd_soc_unregister_dai(&jz4750_i2s_dai);
+	snd_soc_unregister_dai(&pdev->dev);
 #if 0
-	clk_disable(i2s->clk_aic);
 	clk_put(i2s->clk_i2s);
 	clk_put(i2s->clk_aic);
 #endif

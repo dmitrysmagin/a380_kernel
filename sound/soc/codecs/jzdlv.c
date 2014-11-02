@@ -58,17 +58,19 @@
 #define JZDLV_CACHEREGNUM  (DLV_AGC5+1)
 #define JZDLV_SYSCLK	0
 
-/* codec private data */
-struct jz4750_codec {
-	unsigned int sysclk;
-	struct snd_soc_codec codec;
-
-	uint16_t reg_cache[JZDLV_CACHEREGNUM];
+static const uint8_t jz4750_codec_regs[JZDLV_CACHEREGNUM] = {
+	0x0C, 0xAA, 0x78, 0x00, 0x00, 0xFF, 0x03, 0x51,
+	0x3F, 0x00, 0x00, 0x04, 0x04, 0x04, 0x04, 0x04,
+	0x04, 0x0A, 0x0A, 0x00, 0xC0, 0x34, 0x07, 0x44,
+	0x1F, 0x00
 };
 
-/*
- * jzdlv register cache
- */
+struct jz4750_codec {
+	void __iomem *base;
+	struct resource *mem;
+
+	unsigned int sysclk;
+};
 
 int read_codec_file(int addr)
 {
@@ -112,7 +114,8 @@ EXPORT_SYMBOL(write_codec_file_bit);
 static inline unsigned int jzdlv_read_reg_cache(struct snd_soc_codec *codec,
 	unsigned int reg)
 {
-	uint16_t *reg_cache = codec->reg_cache;
+	//struct jz4750_codec *jz4750_codec = snd_soc_codec_get_drvdata(codec);
+	uint8_t *reg_cache = codec->reg_cache;
 
 	if (reg >= JZDLV_CACHEREGNUM)
 		return -1;
@@ -123,7 +126,8 @@ static inline unsigned int jzdlv_read_reg_cache(struct snd_soc_codec *codec,
 static inline void jzdlv_write_reg_cache(struct snd_soc_codec *codec,
 	unsigned int reg, u16 value)
 {
-	uint16_t *reg_cache = codec->reg_cache;
+	//struct jz4750_codec *jz4750_codec = snd_soc_codec_get_drvdata(codec);
+	uint8_t *reg_cache = codec->reg_cache;
 
 	if (reg >= JZDLV_CACHEREGNUM) {
 		return;
@@ -327,8 +331,7 @@ static int jzdlv_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_device *socdev = rtd->socdev;
-	struct snd_soc_codec *codec = socdev->card->codec;
+	struct snd_soc_codec *codec = rtd->codec;
 	int speed = 0;
 	int val = 0;
 	
@@ -436,9 +439,8 @@ static int jzdlv_pcm_trigger(struct snd_pcm_substream *substream,
 static int jzdlv_pcm_prepare(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
-	/*struct snd_soc_pcm_runtime *rtd = substream->drv_data;
-	struct snd_soc_device *socdev = rtd->socdev;
-	struct snd_soc_codec *codec = socdev->card->codec; */
+	//struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	//struct snd_soc_codec *codec = rtd->codec;
 
 	return 0;
 }
@@ -447,8 +449,7 @@ static void jzdlv_shutdown(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_device *socdev = rtd->socdev;
-	struct snd_soc_codec *codec = socdev->card->codec;
+	struct snd_soc_codec *codec = rtd->codec;
 
 	/* deactivate */
 	if (!codec->active) {
@@ -459,7 +460,7 @@ static void jzdlv_shutdown(struct snd_pcm_substream *substream,
 static int jzdlv_mute(struct snd_soc_dai *dai, int mute)
 {
 	struct snd_soc_codec *codec = dai->codec;
-	u16 reg_val = jzdlv_read_reg_cache(codec, 2/*DLV_1_LOW*/);
+	uint8_t reg_val = jzdlv_read_reg_cache(codec, 2/*DLV_1_LOW*/);
 
 	if (mute != 0) 
 		mute = 1;
@@ -475,10 +476,10 @@ static int jzdlv_mute(struct snd_soc_dai *dai, int mute)
 static int jzdlv_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 		int clk_id, unsigned int freq, int dir)
 {
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct jz4750_codec *jz4750_codec = codec->drvdata;
+	/*struct snd_soc_codec *codec = codec_dai->codec;
+	struct jz4750_codec *jz4750_codec = codec->private_data;
 
-	jz4750_codec->sysclk = freq;
+	jz4750_codec->sysclk = freq;*/
 	return 0;
 }
 
@@ -537,7 +538,6 @@ static int jzdlv_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		return -EINVAL;
 		}
 
-	/* jzcodec_write(codec, 0, val); */
 	return 0;
 }
 
@@ -554,8 +554,8 @@ static struct snd_soc_dai_ops jz4750_codec_dai_ops = {
 #define JZ4750_CODEC_FMTS (SNDRV_PCM_FMTBIT_S8 | \
 			   SNDRV_PCM_FMTBIT_S16_LE)
 
-struct snd_soc_dai jz4750_codec_dai = {
-	.name = "jz4750",
+static struct snd_soc_dai_driver jz4750_codec_dai = {
+	.name = "jz4750-hifi",
 	.playback = {
 		.stream_name = "Playback",
 		.channels_min = 1,
@@ -573,27 +573,66 @@ struct snd_soc_dai jz4750_codec_dai = {
 	.ops = &jz4750_codec_dai_ops,
 	.symmetric_rates = 1,
 };
-EXPORT_SYMBOL_GPL(jz4750_codec_dai);
 
-static struct snd_soc_device *jzdlv_socdev;
-static struct snd_soc_codec *jz4750_codec_codec;
-
-static int jzdlv_probe(struct platform_device *pdev)
+static int jz4750_codec_set_bias_level(struct snd_soc_codec *codec,
+	enum snd_soc_bias_level level)
 {
-	int ret;
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = jz4750_codec_codec;
+#if 0
+	unsigned int mask;
+	unsigned int value;
+#endif
+	switch (level) {
+	case SND_SOC_BIAS_ON:
+		break;
+	case SND_SOC_BIAS_PREPARE:
+#if 0
+		mask = JZ4740_CODEC_1_VREF_DISABLE |
+				JZ4740_CODEC_1_VREF_AMP_DISABLE |
+				JZ4740_CODEC_1_HEADPHONE_POWERDOWN_M;
+		value = 0;
 
-	jzdlv_socdev = socdev;
+		snd_soc_update_bits(codec, JZ4740_REG_CODEC_1, mask, value);
+#endif
+		break;
+	case SND_SOC_BIAS_STANDBY:
+		/* The only way to clear the suspend flag is to reset the codec */
+#if 0
+		if (codec->bias_level == SND_SOC_BIAS_OFF)
+			jz4740_codec_wakeup(codec);
 
-	socdev->card->codec = codec;
-	mutex_init(&codec->mutex);
+		mask = JZ4740_CODEC_1_VREF_DISABLE |
+			JZ4740_CODEC_1_VREF_AMP_DISABLE |
+			JZ4740_CODEC_1_HEADPHONE_POWERDOWN_M;
+		value = JZ4740_CODEC_1_VREF_DISABLE |
+			JZ4740_CODEC_1_VREF_AMP_DISABLE |
+			JZ4740_CODEC_1_HEADPHONE_POWERDOWN_M;
 
-	ret = snd_soc_new_pcms(socdev, SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to create pcms %d\n", ret);
-		return ret;
+		snd_soc_update_bits(codec, JZ4740_REG_CODEC_1, mask, value);
+#endif
+		break;
+	case SND_SOC_BIAS_OFF:
+#if 0
+		mask = JZ4740_CODEC_1_SUSPEND;
+		value = JZ4740_CODEC_1_SUSPEND;
+
+		snd_soc_update_bits(codec, JZ4740_REG_CODEC_1, mask, value);
+#endif
+		break;
+	default:
+		break;
 	}
+
+	codec->bias_level = level;
+
+	return 0;
+}
+
+
+static int jzdlv_probe(struct snd_soc_codec *codec)
+{
+	//snd_soc_update_bits(codec, JZ4740_REG_CODEC_1,
+	//		JZ4740_CODEC_1_SW2_ENABLE, JZ4740_CODEC_1_SW2_ENABLE);
+	jzdlv_reset(codec);
 
 	snd_soc_add_controls(codec, jzdlv_snd_controls,
 		ARRAY_SIZE(jzdlv_snd_controls));
@@ -606,108 +645,72 @@ static int jzdlv_probe(struct platform_device *pdev)
 
 	snd_soc_dapm_new_widgets(codec);
 
+	jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	jzdlv_power_on();
-
+#if 0
 	ret = request_irq(IRQ_AIC, aic_codec_irq, IRQF_DISABLED,
 			"aic_codec_irq", NULL);
 	if (ret) {
 		dev_err(&pdev->dev, "Couldn't get aic codec irq %d\n", IRQ_AIC);
 		return ret;
 	}
-
+#endif
 	return 0;
 }
 
-static int jzdlv_remove(struct platform_device *pdev)
+static int jzdlv_remove(struct snd_soc_codec *codec)
 {
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = jz4750_codec_codec;
-
-	snd_soc_free_pcms(socdev);
-	snd_soc_dapm_free(socdev);
-
-	kfree(codec->drvdata);
-	kfree(codec);
+	jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
 	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int jzdlv_suspend(struct platform_device *pdev, pm_message_t state)
+static int jzdlv_suspend(struct snd_soc_codec *codec, pm_message_t state)
 {
-	return 0;
+	return jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_OFF);
 }
 
-static int jzdlv_resume(struct platform_device *pdev)
+static int jzdlv_resume(struct snd_soc_codec *codec)
 {
-	return 0;
+	return jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 }
 #else
 #define jzdlv_suspend	NULL
 #define jzdlv_resume	NULL
 #endif
 
-struct snd_soc_codec_device soc_codec_dev_jzdlv = {
-	.probe		= jzdlv_probe,
-	.remove		= jzdlv_remove,
-	.suspend	= jzdlv_suspend,
-	.resume		= jzdlv_resume,
+static struct snd_soc_codec_driver soc_codec_dev_jzdlv = {
+	.probe			= jzdlv_probe,
+	.remove			= jzdlv_remove,
+	.suspend		= jzdlv_suspend,
+	.resume			= jzdlv_resume,
+	.read			= jzdlv_read_reg_cache,
+	.write			= jzdlv_write,
+	.set_bias_level		= jz4750_codec_set_bias_level,
+	.reg_cache_default	= jz4750_codec_regs,
+	.reg_word_size		= sizeof(uint8_t),
+	.reg_cache_size		= JZDLV_CACHEREGNUM,
 };
-EXPORT_SYMBOL(soc_codec_dev_jzdlv);
 
 static int __devinit jz4750_codec_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct jz4750_codec *jz4750_codec;
-	struct snd_soc_codec *codec;
 
 	jz4750_codec = kzalloc(sizeof(*jz4750_codec), GFP_KERNEL);
 	if (!jz4750_codec)
 		return -ENOMEM;
 
-	jz4750_codec_dai.dev = &pdev->dev;
-
-	codec = &jz4750_codec->codec;
-
-	codec->dev		= &pdev->dev;
-	codec->name		= "jz4750";
-	codec->owner		= THIS_MODULE;
-
-	codec->read		= jzdlv_read_reg_cache;
-	codec->write		= jzdlv_write;
-
-	codec->dai		= &jz4750_codec_dai;
-	codec->num_dai		= 1;
-
-	codec->reg_cache	= jz4750_codec->reg_cache;
-	codec->reg_cache_size	= sizeof(jz4750_codec->reg_cache);
-
-	mutex_init(&codec->mutex);
-	INIT_LIST_HEAD(&codec->dapm_widgets);
-	INIT_LIST_HEAD(&codec->dapm_paths);
-
-	jz4750_codec_codec = codec;
-
-	platform_set_drvdata(pdev, jz4750_codec);
-
-	jzdlv_reset(codec);
-
-	ret = snd_soc_register_codec(codec);
+	ret = snd_soc_register_codec(&pdev->dev,
+			&soc_codec_dev_jzdlv, &jz4750_codec_dai, 1);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to register codec.\n");
 		return ret;
 	}
 
-	ret = snd_soc_register_dai(&jz4750_codec_dai);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to register codec dai.\n");
-		goto err_unregister_codec;
-	}
-
 	return 0;
 
-err_unregister_codec:
-	snd_soc_unregister_codec(codec);
 err_free_codec:
 	kfree(jz4750_codec);
 
@@ -718,8 +721,7 @@ static int __devexit jz4750_codec_remove(struct platform_device *pdev)
 {
 	struct jz4750_codec *jz4750_codec = platform_get_drvdata(pdev);
 
-	snd_soc_unregister_dai(&jz4750_codec_dai);
-	snd_soc_unregister_codec(&jz4750_codec->codec);
+	snd_soc_unregister_codec(&pdev->dev);
 
 	kfree(jz4750_codec);
 

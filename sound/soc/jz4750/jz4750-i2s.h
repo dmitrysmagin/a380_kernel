@@ -13,6 +13,4 @@
 /* I2S clock */
 #define JZ4750_I2S_SYSCLK		0
 
-extern struct snd_soc_dai jz4750_i2s_dai;
-
 #endif

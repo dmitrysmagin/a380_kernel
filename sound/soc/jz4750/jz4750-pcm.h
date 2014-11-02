@@ -20,7 +20,4 @@ struct jz4750_pcm_dma_params {
 	int dma_size;			/* Size of the DMA transfer */
 };
 
-/* platform data */
-extern struct snd_soc_platform jz4750_soc_platform;
-
 #endif

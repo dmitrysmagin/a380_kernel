@@ -41,6 +41,11 @@ static int a380_hptv_event(
 	return 0;
 }
 
+static const struct snd_kcontrol_new a380_controls[] = {
+	SOC_DAPM_PIN_SWITCH("Speaker"),
+	SOC_DAPM_PIN_SWITCH("Headphones + TV-out"),
+};
+
 static const struct snd_soc_dapm_widget a380_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic", NULL),
 	SND_SOC_DAPM_SPK("Speaker", a380_spk_event),
@@ -59,10 +64,11 @@ static const struct snd_soc_dapm_route a380_routes[] = {
 		     SND_SOC_DAIFMT_NB_NF | \
 		     SND_SOC_DAIFMT_CBM_CFM)
 
-static int a380_codec_init(struct snd_soc_codec *codec)
+static int a380_codec_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_soc_codec *codec = rtd->codec;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int ret;
-	struct snd_soc_dai *cpu_dai = codec->socdev->card->dai_link->cpu_dai;
 
 	snd_soc_dapm_nc_pin(codec, "LIN");
 	snd_soc_dapm_nc_pin(codec, "RIN");
@@ -72,6 +78,8 @@ static int a380_codec_init(struct snd_soc_codec *codec)
 		dev_err(codec->dev, "Failed to set cpu dai format: %d\n", ret);
 		return ret;
 	}
+
+	snd_soc_add_controls(codec, a380_controls, ARRAY_SIZE(a380_controls));
 
 	snd_soc_dapm_new_controls(codec, a380_widgets, ARRAY_SIZE(a380_widgets));
 	snd_soc_dapm_add_routes(codec, a380_routes, ARRAY_SIZE(a380_routes));
@@ -83,8 +91,10 @@ static int a380_codec_init(struct snd_soc_codec *codec)
 static struct snd_soc_dai_link a380_dai = {
 	.name = "jz4750",
 	.stream_name = "jz4750",
-	.cpu_dai = &jz4750_i2s_dai,
-	.codec_dai = &jz4750_codec_dai,
+	.cpu_dai_name = "jz4750-i2s",
+	.platform_name = "jz4750-pcm-audio",
+	.codec_dai_name = "jz4750-hifi",
+	.codec_name = "jz4750-codec",
 	.init = a380_codec_init,
 };
 
@@ -92,12 +102,6 @@ static struct snd_soc_card a380 = {
 	.name = "Dingoo A380",
 	.dai_link = &a380_dai,
 	.num_links = 1,
-	.platform = &jz4750_soc_platform,
-};
-
-static struct snd_soc_device a380_snd_devdata = {
-	.card = &a380,
-	.codec_dev = &soc_codec_dev_jzdlv,
 };
 
 static struct platform_device *a380_snd_device;
@@ -122,14 +126,14 @@ static int __init a380_init(void)
 	if (ret) {
 		pr_err("a380 snd: Failed to request AMP GPIO(%d): %d\n",
 				A380_HPTV_GPIO, ret);
-		goto err_gpio_free_snd;
+		goto err_gpio_free_spk;
 	}
 
 	gpio_direction_output(A380_SPK_GPIO, 0);
 	gpio_direction_output(A380_HPTV_GPIO, 0);
 
-	platform_set_drvdata(a380_snd_device, &a380_snd_devdata);
-	a380_snd_devdata.dev = &a380_snd_device->dev;
+	platform_set_drvdata(a380_snd_device, &a380);
+
 	ret = platform_device_add(a380_snd_device);
 	if (ret) {
 		pr_err("a380 snd: Failed to add snd soc device: %d\n", ret);
@@ -140,9 +144,9 @@ static int __init a380_init(void)
 
 err_unset_pdata:
 	platform_set_drvdata(a380_snd_device, NULL);
-/*err_gpio_free_amp:*/
+/*err_gpio_free_hptv:*/
 	gpio_free(A380_HPTV_GPIO);
-err_gpio_free_snd:
+err_gpio_free_spk:
 	gpio_free(A380_SPK_GPIO);
 err_device_put:
 	platform_device_put(a380_snd_device);
