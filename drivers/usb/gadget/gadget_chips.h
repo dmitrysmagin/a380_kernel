@@ -16,7 +16,7 @@
 #define __GADGET_CHIPS_H
 
 #ifdef CONFIG_USB_GADGET_JZ4740
-#define	gadget_is_jz4740(g)	!strcmp("ingenic_hsusb", (g)->name)
+#define	gadget_is_jz4740(g)	!strcmp("jz4740-udc", (g)->name)
 #else
 #define	gadget_is_jz4740(g)	0
 #endif
