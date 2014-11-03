@@ -214,6 +214,12 @@ config SND_SOC_JZ4740_CODEC
 	select REGMAP_MMIO
 	tristate
 
+config SND_SOC_JZ4750_CODEC
+	tristate "Jz4750 internal codec"
+	depends on SND_SOC && SND_JZ4750_SOC_A380 && SND_JZ4750_SOC_I2S
+	help
+	  Say Y if you want to use internal codec on Ingenic Jz4750 a380 board.
+
 config SND_SOC_L3
        tristate
 
