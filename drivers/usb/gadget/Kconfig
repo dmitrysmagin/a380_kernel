@@ -180,7 +180,7 @@ config USB_FUSB300
 
 config USB_JZ4740
 	tristate "JZ4740 UDC"
-	depends on MACH_JZ4740
+	depends on MACH_JZ4740 || MACH_JZ4750D
 	select USB_GADGET_DUALSPEED
 	help
 	   Select this to support the Ingenic JZ4740 processor
