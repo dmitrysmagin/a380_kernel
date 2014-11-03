@@ -1,0 +1,4 @@
+platform-$(CONFIG_MACH_JZ4750D)	+= jz4750d/
+cflags-$(CONFIG_MACH_JZ4750D)	+= -I$(srctree)/arch/mips/include/asm/mach-jz4750d
+load-$(CONFIG_MACH_JZ4750D)	+= 0xffffffff80010000
+
