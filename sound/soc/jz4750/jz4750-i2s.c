@@ -24,7 +24,7 @@
 
 #include "jz4750-pcm.h"
 #include "jz4750-i2s.h"
-#include "../codecs/jzdlv.h"
+#include "../codecs/jz4750.h"
 
 struct jz4750_i2s {
 	struct resource *mem;

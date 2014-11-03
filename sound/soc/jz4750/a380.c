@@ -19,7 +19,7 @@
 #include <sound/soc-dapm.h>
 #include <linux/gpio.h>
 
-#include "../codecs/jzdlv.h"
+#include "../codecs/jz4750.h"
 #include "jz4750-pcm.h"
 #include "jz4750-i2s.h"
 

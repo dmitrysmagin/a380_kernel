@@ -32,6 +32,7 @@ source "sound/soc/ep93xx/Kconfig"
 source "sound/soc/fsl/Kconfig"
 source "sound/soc/imx/Kconfig"
 source "sound/soc/jz4740/Kconfig"
+source "sound/soc/jz4750/Kconfig"
 source "sound/soc/nuc900/Kconfig"
 source "sound/soc/omap/Kconfig"
 source "sound/soc/kirkwood/Kconfig"
@@ -40,9 +41,6 @@ source "sound/soc/s3c24xx/Kconfig"
 source "sound/soc/s6000/Kconfig"
 source "sound/soc/sh/Kconfig"
 source "sound/soc/txx9/Kconfig"
-
-# JZ47xx soc
-source "sound/soc/jz4750/Kconfig"
 
 # Supported codecs
 source "sound/soc/codecs/Kconfig"

@@ -23,7 +23,7 @@
 #include <asm/mach-jz4750d/jz4750d_intc.h>
 
 #include "../jz4750/jz4750-pcm.h"
-#include "jzdlv.h"
+#include "jz4750.h"
 
 /* JZ4750 codec register space */
 #define DLV_AICR    0x00
