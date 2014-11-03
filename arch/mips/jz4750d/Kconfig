@@ -1,0 +1,15 @@
+choice
+	prompt "Machine type"
+	depends on MACH_JZ4750D
+	default JZ4750D_RZX50
+
+config JZ4750D_RZX50
+	bool "Ritmix RZX50 game handheld"
+
+config JZ4750D_A380
+	bool "Dingoo A380 game handheld"
+
+config JZ4750D_A320E
+	bool "Dingoo A320E game handheld"
+
+endchoice
