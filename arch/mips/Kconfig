@@ -226,6 +226,22 @@ config MACH_JZ4740
 	select GENERIC_IRQ_CHIP
 	select CPU_SUPPORTS_CPUFREQ
 
+config MACH_JZ4750D
+	bool "Ingenic JZ4750D based machines"
+	select SYS_HAS_CPU_MIPS32_R1
+	select SYS_SUPPORTS_32BIT_KERNEL
+	select SYS_SUPPORTS_LITTLE_ENDIAN
+	select DMA_NONCOHERENT
+	select IRQ_CPU
+	select GENERIC_GPIO
+	select ARCH_REQUIRE_GPIOLIB
+	select SYS_HAS_EARLY_PRINTK
+	select HAVE_PWM
+	select HAVE_CLK
+	select GENERIC_IRQ_CHIP
+	select CPU_SUPPORTS_CPUFREQ
+	select MIPS_CPUFREQ
+
 config LANTIQ
 	bool "Lantiq based platforms"
 	select DMA_NONCOHERENT
@@ -845,6 +861,7 @@ source "arch/mips/bcm47xx/Kconfig"
 source "arch/mips/bcm63xx/Kconfig"
 source "arch/mips/jazz/Kconfig"
 source "arch/mips/jz4740/Kconfig"
+source "arch/mips/jz4750d/Kconfig"
 source "arch/mips/lantiq/Kconfig"
 source "arch/mips/lasat/Kconfig"
 source "arch/mips/pmc-sierra/Kconfig"
