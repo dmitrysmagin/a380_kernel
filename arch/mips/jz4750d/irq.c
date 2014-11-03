@@ -215,19 +215,19 @@ void __init arch_init_irq(void)
 	/* Set up INTC irq */
 	for (i = 0; i < NUM_INTC; i++) {
 		disable_intc_irq(&irq_desc[i].irq_data);
-		set_irq_chip_and_handler(i, &intc_irq_type, handle_level_irq);
+		irq_set_chip_and_handler(i, &intc_irq_type, handle_level_irq);
 	}
 	
 	/* Set up DMAC irq */
 	for (i = IRQ_DMA_0; i < IRQ_DMA_0 + NUM_DMA; i++) {
 		disable_dma_irq(&irq_desc[i].irq_data);
-		set_irq_chip_and_handler(i, &dma_irq_type, handle_level_irq);
+		irq_set_chip_and_handler(i, &dma_irq_type, handle_level_irq);
 	}
 
 	/* Set up GPIO irq */
 	for (i = IRQ_GPIO_0; i < IRQ_GPIO_0 + NUM_GPIO; i++) {
 		disable_gpio_irq(&irq_desc[i].irq_data);
-		set_irq_chip_and_handler(i, &gpio_irq_type, handle_level_irq);
+		irq_set_chip_and_handler(i, &gpio_irq_type, handle_level_irq);
 	}
 }
 
