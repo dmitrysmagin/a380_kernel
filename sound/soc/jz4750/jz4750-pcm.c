@@ -478,14 +478,21 @@ static int jz4750_pcm_open(struct snd_pcm_substream *substream)
 #ifdef CONFIG_SND_OSSEMUL
 	hw_params_cnt = 0;
 #endif
-	REG_DMAC_DMACKE(0) = 0x3f;
-	REG_DMAC_DMACKE(1) = 0x3f;
-
-	snd_soc_set_runtime_hwparams(substream, &jz4750_pcm_hardware);
+	//REG_DMAC_DMACKE(0) = 0x3f;
+	//REG_DMAC_DMACKE(1) = 0x3f;
 
 	prtd = kzalloc(sizeof(struct jz4750_runtime_data), GFP_KERNEL);
 	if (prtd == NULL)
 		return -ENOMEM;
+
+	snd_soc_set_runtime_hwparams(substream, &jz4750_pcm_hardware);
+
+	/* Force period and buffer size to be a multiple of the DMA transfer
+	 * size, which is 16 bytes. */
+	snd_pcm_hw_constraint_step(runtime, 0,
+				   SNDRV_PCM_HW_PARAM_PERIOD_BYTES, 16);
+	snd_pcm_hw_constraint_step(runtime, 0,
+				   SNDRV_PCM_HW_PARAM_BUFFER_BYTES, 16);
 
 	spin_lock_init(&prtd->lock);
 
