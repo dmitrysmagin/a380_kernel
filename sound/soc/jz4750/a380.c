@@ -16,7 +16,6 @@
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
-#include <sound/soc-dapm.h>
 #include <linux/gpio.h>
 
 #include "../codecs/jz4750.h"
@@ -68,10 +67,11 @@ static int a380_codec_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_dapm_context *dapm = &codec->dapm;
 	int ret;
 
-	snd_soc_dapm_nc_pin(codec, "LIN");
-	snd_soc_dapm_nc_pin(codec, "RIN");
+	snd_soc_dapm_nc_pin(dapm, "LIN");
+	snd_soc_dapm_nc_pin(dapm, "RIN");
 	
 	ret = snd_soc_dai_set_fmt(cpu_dai, A380_DAIFMT);
 	if (ret < 0) {
@@ -81,9 +81,9 @@ static int a380_codec_init(struct snd_soc_pcm_runtime *rtd)
 
 	snd_soc_add_controls(codec, a380_controls, ARRAY_SIZE(a380_controls));
 
-	snd_soc_dapm_new_controls(codec, a380_widgets, ARRAY_SIZE(a380_widgets));
-	snd_soc_dapm_add_routes(codec, a380_routes, ARRAY_SIZE(a380_routes));
-	snd_soc_dapm_sync(codec);
+	snd_soc_dapm_new_controls(dapm, a380_widgets, ARRAY_SIZE(a380_widgets));
+	snd_soc_dapm_add_routes(dapm, a380_routes, ARRAY_SIZE(a380_routes));
+	snd_soc_dapm_sync(dapm);
 
 	return 0;
 }
