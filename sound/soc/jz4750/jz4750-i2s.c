@@ -177,8 +177,6 @@ static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
 		__i2s_set_receive_trigger(3);
 		__i2s_set_oss_sample_size(16);
 		__i2s_set_iss_sample_size(16);
-		/* DAC path and ADC path */
-		write_codec_file(2, 0x00);
 		break;
 	}
 
@@ -248,7 +246,6 @@ static int jz4750_i2s_dai_probe(struct snd_soc_dai *dai)
         __aic_play_lastsample();
 	__i2s_set_transmit_trigger(7);
 	__i2s_set_receive_trigger(7);
-	__i2s_send_rfirst();
 
 	__aic_write_tfifo(0x0);
 	__aic_write_tfifo(0x0);

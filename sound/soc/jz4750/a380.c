@@ -18,9 +18,7 @@
 #include <sound/soc.h>
 #include <linux/gpio.h>
 
-#include "../codecs/jz4750.h"
 #include "jz4750-pcm.h"
-#include "jz4750-i2s.h"
 
 #define A380_SPK_GPIO JZ_GPIO_PORTE(9)
 #define A380_HPTV_GPIO JZ_GPIO_PORTE(5)
