@@ -150,13 +150,7 @@
 /* AIC Controller I2S/MSB-justified Control Register (AIC_I2SCR) */
 
 #define	AIC_I2SCR_STPBK		(1 << 12) /* Stop BIT_CLK for I2S/MSB-justified */
-#define	AIC_I2SCR_WL_BIT	1  /* Input/Output Sample Size for I2S/MSB-justified */
-#define	AIC_I2SCR_WL_MASK	(0x7 << AIC_I2SCR_WL_BIT)
-  #define AIC_I2SCR_WL_24BIT	(0 << AIC_I2SCR_WL_BIT) /* Word Length is 24 bit */
-  #define AIC_I2SCR_WL_20BIT	(1 << AIC_I2SCR_WL_BIT) /* Word Length is 20 bit */
-  #define AIC_I2SCR_WL_18BIT	(2 << AIC_I2SCR_WL_BIT) /* Word Length is 18 bit */
-  #define AIC_I2SCR_WL_16BIT	(3 << AIC_I2SCR_WL_BIT) /* Word Length is 16 bit */
-  #define AIC_I2SCR_WL_8BIT	(4 << AIC_I2SCR_WL_BIT) /* Word Length is 8 bit */
+#define AIC_I2SCR_ESCLK		(1 << 4)  /* SYSCLK enable for internal codec */
 #define	AIC_I2SCR_AMSL		(1 << 0) /* 0:I2S, 1:MSB-justified */
 
 /* AIC Controller FIFO Status Register (AIC_SR) */
@@ -371,13 +365,6 @@ do {									\
 #define __ac97_set_oass(n) \
  ( REG_AIC_ACCR2 = (REG_AIC_ACCR2 & ~AIC_ACCR2_OASS_MASK) | AIC_ACCR2_OASS_##n##BIT )
 
-#define __i2s_select_i2s()		( REG_AIC_I2SCR &= ~AIC_I2SCR_AMSL )
-#define __i2s_select_msbjustified()	( REG_AIC_I2SCR |= AIC_I2SCR_AMSL )
-
-/* n=8,16,18,20,24 */
-/*#define __i2s_set_sample_size(n) \
- ( REG_AIC_I2SCR |= (REG_AIC_I2SCR & ~AIC_I2SCR_WL_MASK) | AIC_I2SCR_WL_##n##BIT )*/
-
 #define __i2s_set_oss_sample_size(n) \
  ( REG_AIC_CR = (REG_AIC_CR & ~AIC_CR_OSS_MASK) | AIC_CR_OSS_##n##BIT )
 #define __i2s_set_iss_sample_size(n) \
@@ -385,6 +372,12 @@ do {									\
 
 #define __i2s_stop_bitclk()	( REG_AIC_I2SCR |= AIC_I2SCR_STPBK )
 #define __i2s_start_bitclk()	( REG_AIC_I2SCR &= ~AIC_I2SCR_STPBK )
+
+#define __i2s_enable_sysclk()	( REG_AIC_I2SCR |= AIC_I2SCR_ESCLK )
+#define __i2s_disable_sysclk()	( REG_AIC_I2SCR &= ~AIC_I2SCR_ESCLK )
+
+#define __i2s_select_i2s()		( REG_AIC_I2SCR &= ~AIC_I2SCR_AMSL )
+#define __i2s_select_msbjustified()	( REG_AIC_I2SCR |= AIC_I2SCR_AMSL )
 
 #define __aic_transmit_request()	( REG_AIC_SR & AIC_SR_TFS )
 #define __aic_receive_request()		( REG_AIC_SR & AIC_SR_RFS )
