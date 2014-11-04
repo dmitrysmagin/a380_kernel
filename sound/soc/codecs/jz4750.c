@@ -21,43 +21,104 @@
 #include <asm/mach-jz4750d/jz4750d_aic.h>
 #include <asm/mach-jz4750d/jz4750d_intc.h>
 
-#include "../jz4750/jz4750-pcm.h"
 #include "jz4750.h"
 
 /* JZ4750 codec register space */
-#define DLV_AICR    0x00
-#define DLV_CR1     0x01
-#define DLV_CR2     0x02
-#define DLV_CCR1    0x03
-#define DLV_CCR2    0x04
-#define DLV_PMR1    0x05
-#define DLV_PMR2    0x06
-#define DLV_CRR     0x07
-#define DLV_ICR     0x08
-#define DLV_IFR     0x09
-#define DLV_CGR1    0x0a
-#define DLV_CGR2    0x0b
-#define DLV_CGR3    0x0c
-#define DLV_CGR4    0x0d
-#define DLV_CGR5    0x0e
-#define DLV_CGR6    0x0f
-#define DLV_CGR7    0x10
-#define DLV_CGR8    0x11
-#define DLV_CGR9    0x12
-#define DLV_CGR10   0x13
-#define DLV_TR1     0x14
-#define DLV_TR2     0x15
-#define DLV_CR3     0x16
-#define DLV_AGC1    0x17
-#define DLV_AGC2    0x18
-#define DLV_AGC3    0x19
-#define DLV_AGC4    0x1a
-#define DLV_AGC5    0x1b
+#define REG_AICR    0x00
+#define REG_CR1     0x01
+#define REG_CR2     0x02
+#define REG_CCR1    0x03
+#define REG_CCR2    0x04
+#define REG_PMR1    0x05
+#define REG_PMR2    0x06
+#define REG_CRR     0x07
+#define REG_ICR     0x08
+#define REG_IFR     0x09
+#define REG_CGR1    0x0a
+#define REG_CGR2    0x0b
+#define REG_CGR3    0x0c
+#define REG_CGR4    0x0d
+#define REG_CGR5    0x0e
+#define REG_CGR6    0x0f
+#define REG_CGR7    0x10
+#define REG_CGR8    0x11
+#define REG_CGR9    0x12
+#define REG_CGR10   0x13
+#define REG_TR1     0x14
+#define REG_TR2     0x15
+#define REG_CR3     0x16
+#define REG_AGC1    0x17
+#define REG_AGC2    0x18
+#define REG_AGC3    0x19
+#define REG_AGC4    0x1a
+#define REG_AGC5    0x1b
 
-#define JZDLV_CACHEREGNUM  (DLV_AGC5+1)
-#define JZDLV_SYSCLK	0
+#define JZ4750_REGS_NUM		(REG_AGC5 + 1)
+#define JZ4750_CODEC_SYSCLK	0
 
-static const uint8_t jz4750_codec_regs[JZDLV_CACHEREGNUM] = {
+#define REG_AICR_CONFIG1_MASK	0x0F
+#define REG_AICR_CONFIG1_OFFSET	0
+
+#define REG_CR1_BYPASS		(1 << 2)
+#define REG_CR1_DACSEL		(1 << 3)
+#define REG_CR1_HP_DIS		(1 << 4)
+#define REG_CR1_DAC_MUTE	(1 << 5)
+#define REG_CR1_MONO		(1 << 6)
+#define REG_CR1_SB_MICBIAS	(1 << 7)
+
+#define REG_CR2_ADC_HPF		(1 << 2)
+#define REG_CR2_ADC_ADWL_MASK	(3 << 3)
+#define REG_CR2_DAC_ADWL_MASK	(3 << 5)
+#define REG_CR2_DAC_DEEMP	(1 << 7)
+
+#define REG_CR3_INSEL_MASK	(3 << 0)
+#define REG_CR3_MICSTEREO	(1 << 2)
+#define REG_CR3_MICDIFF		(1 << 3)
+#define REG_CR3_SIDETONE2	(1 << 4)
+#define REG_CR3_SIDETONE1	(1 << 5)
+#define REG_CR3_SB_MIC2		(1 << 6)
+#define REG_CR3_SB_MIC1		(1 << 7)
+
+#define REG_CCR1_CONFIG4_MASK	(0x0F << 0)
+
+#define REG_CCR2_AFREQ_MASK	(0x0F << 0)
+#define REG_CCR2_DFREQ_MASK	(0x0F << 4)
+
+#define REG_PMR1_SB_IND		(1 << 0)
+#define REG_PMR1_SB_LIN		(1 << 3)
+#define REG_PMR1_SB_ADC		(1 << 4)
+#define REG_PMR1_SB_MIX		(1 << 5)
+#define REG_PMR1_SB_OUT		(1 << 6)
+#define REG_PMR1_SB_DAC		(1 << 7)
+
+#define REG_PMR2_SB_SLEEP	(1 << 0)
+#define REG_PMR2_SB		(1 << 1)
+#define REG_PMR2_SB_MIC		(1 << 2)
+#define REG_PMR2_GIM		(1 << 3)
+#define REG_PMR2_GOD_MASK	(3 << 4)
+#define REG_PMR2_GI_MASK	(3 << 6)
+
+#define REG_CRR_THRESH_MASK	(3 << 0)
+#define REG_CRR_KFAST_MASK	(7 << 2)
+#define REG_CRR_RATIO_MASK	(3 << 5)
+
+#define REG_ICR_GDD		(1 << 0)
+#define REG_ICR_GUD		(1 << 1)
+#define REG_ICR_RDD		(1 << 2)
+#define REG_ICR_RUD		(1 << 3)
+#define REG_ICR_CCMC		(1 << 4)
+#define REG_ICR_JACK		(1 << 5)
+#define REG_ICR_INT_FORM_MASK	(3 << 6)
+
+#define REG_IFR_GDD		(1 << 0)
+#define REG_IFR_GUD		(1 << 1)
+#define REG_IFR_RDD		(1 << 2)
+#define REG_IFR_RUD		(1 << 3)
+#define REG_IFR_CCMC		(1 << 4)
+#define REG_IFR_JACK_EVENT	(1 << 5)
+#define REG_IFR_JACK		(1 << 6)
+
+static const uint8_t jz4750_codec_regs[JZ4750_REGS_NUM] = {
 	0x0C, 0xAA, 0x78, 0x00, 0x00, 0xFF, 0x03, 0x51,
 	0x3F, 0x00, 0x00, 0x04, 0x04, 0x04, 0x04, 0x04,
 	0x04, 0x0A, 0x0A, 0x00, 0x00, 0x00, 0xC0, 0x34,
@@ -90,56 +151,52 @@ void write_codec_file(int addr, int val)
 }
 EXPORT_SYMBOL(write_codec_file);
 
-int write_codec_file_bit(int addr, int bitval, int mask_bit)
+int write_codec_file_bit(int addr, int bitval, int bitoffset)
 {
 	int val;
 
 	val = read_codec_file(addr);
-	val &= ~(1 << mask_bit);
+	val &= ~(1 << bitoffset);
 
 	if (bitval == 1)
-		val |= 1 << mask_bit;
+		val |= 1 << bitoffset;
 
 	write_codec_file(addr, val);
 	val = read_codec_file(addr);
 
-	if (((val >> mask_bit) & bitval) == bitval)
+	if (((val >> bitoffset) & bitval) == bitval)
 		return 1;
 	else 
 		return 0;
 }
 EXPORT_SYMBOL(write_codec_file_bit);
 
-static inline unsigned int jzdlv_read_reg_cache(struct snd_soc_codec *codec,
+static unsigned int jz4750_codec_read(struct snd_soc_codec *codec,
 	unsigned int reg)
 {
 	//struct jz4750_codec *jz4750_codec = snd_soc_codec_get_drvdata(codec);
 	uint8_t *reg_cache = codec->reg_cache;
 
-	if (reg >= JZDLV_CACHEREGNUM)
+	if (reg >= JZ4750_REGS_NUM)
 		return -1;
+
+	reg_cache[reg] = read_codec_file(reg);
 
 	return reg_cache[reg];
 }
 
-static inline void jzdlv_write_reg_cache(struct snd_soc_codec *codec,
-	unsigned int reg, u16 value)
+static int jz4750_codec_write(struct snd_soc_codec *codec, unsigned int reg,
+	unsigned int value)
 {
 	//struct jz4750_codec *jz4750_codec = snd_soc_codec_get_drvdata(codec);
 	uint8_t *reg_cache = codec->reg_cache;
 
-	if (reg >= JZDLV_CACHEREGNUM) {
-		return;
+	if (reg >= JZ4750_REGS_NUM) {
+		return -1;
 	}
 
-	reg_cache[reg] = value;
-}
-
-static int jzdlv_write(struct snd_soc_codec *codec, unsigned int reg,
-	unsigned int value)
-{
-	jzdlv_write_reg_cache(codec, reg, value);
-	write_codec_file(reg, value);
+	reg_cache[reg] = (uint8_t)value;
+	write_codec_file(reg, (uint8_t)value);
 
 	return 0;
 }
@@ -294,13 +351,13 @@ static int jzdlv_reset(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static const struct snd_kcontrol_new jzdlv_snd_controls[] = {
+static const struct snd_kcontrol_new jz4750_codec_controls[] = {
 
-	SOC_DOUBLE_R("Master Playback Volume", DLV_CGR8, DLV_CGR9, 0, 31, 0),
-	SOC_DOUBLE_R("Line", DLV_CGR10, DLV_CGR10, 0, 31, 0),
+	SOC_DOUBLE_R("Master Playback Volume", REG_CGR8, REG_CGR9, 0, 31, 0),
+	SOC_DOUBLE_R("Line", REG_CGR10, REG_CGR10, 0, 31, 0),
 };
 
-static const struct snd_soc_dapm_widget jzdlv_dapm_widgets[] = {
+static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("LOUT"),
 	SND_SOC_DAPM_OUTPUT("ROUT"),
 	SND_SOC_DAPM_OUTPUT("LHPOUT"),
@@ -310,7 +367,7 @@ static const struct snd_soc_dapm_widget jzdlv_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("RIN"),
 };
 
-static const struct snd_soc_dapm_route intercon_routes [] = {
+static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
 	{"Line Input", NULL, "LIN"},
 	{"Line Input", NULL, "RIN"},
 
@@ -326,7 +383,7 @@ static const struct snd_soc_dapm_route intercon_routes [] = {
 	{"ROUT", NULL, "Output Mixer"},
 };
 
-static int jzdlv_hw_params(struct snd_pcm_substream *substream,
+static int jz4750_codec_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -378,16 +435,16 @@ static int jzdlv_hw_params(struct snd_pcm_substream *substream,
 		speed = 0;
 		break;
 	default:
-		printk(" invalid rate :0x%08x\n",params_rate(params));
+		printk("Invalid rate: %d\n", params_rate(params));
 	}
 
 	val = (speed << 4) | speed;
-	jzdlv_write(codec, DLV_CCR2, val);
+	jz4750_codec_write(codec, REG_CCR2, val);
 
 	return 0;
 }
 
-static int jzdlv_pcm_trigger(struct snd_pcm_substream *substream,
+static int jz4750_codec_pcm_trigger(struct snd_pcm_substream *substream,
 		int cmd, struct snd_soc_dai *dai)
 {
 	int ret = 0;
@@ -403,13 +460,13 @@ static int jzdlv_pcm_trigger(struct snd_pcm_substream *substream,
 			set_audio_data_replay();
 			write_codec_file_bit(5, 0, 7);//PMR1.SB_DAC->0
 			mdelay(300);
-			REG_AIC_I2SCR = 0x10;
+			REG_AIC_I2SCR = 0x10; // enable SYSCLK
 			mdelay(20);
 			__aic_flush_fifo_tx();
 		} else {
 			set_record_mic_input_audio_without_playback();
 			mdelay(10);
-			REG_AIC_I2SCR = 0x10;
+			REG_AIC_I2SCR = 0x10; // enable SYSCLK
 			mdelay(20);
 			__aic_flush_fifo_tx();
 			write_codec_file_bit(5, 1, 7);
@@ -435,7 +492,7 @@ static int jzdlv_pcm_trigger(struct snd_pcm_substream *substream,
 	return ret;
 }
 
-static int jzdlv_pcm_prepare(struct snd_pcm_substream *substream,
+static int jz4750_codec_pcm_prepare(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
 	//struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -444,7 +501,7 @@ static int jzdlv_pcm_prepare(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static void jzdlv_shutdown(struct snd_pcm_substream *substream,
+static void jz4750_codec_shutdown(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -456,10 +513,10 @@ static void jzdlv_shutdown(struct snd_pcm_substream *substream,
 	}
 }
 
-static int jzdlv_mute(struct snd_soc_dai *dai, int mute)
+static int jz4750_codec_mute(struct snd_soc_dai *dai, int mute)
 {
 	struct snd_soc_codec *codec = dai->codec;
-	uint8_t reg_val = jzdlv_read_reg_cache(codec, 2/*DLV_1_LOW*/);
+	uint8_t reg_val = jz4750_codec_read(codec, 2/*REG_1_LOW*/);
 
 	if (mute != 0) 
 		mute = 1;
@@ -468,11 +525,11 @@ static int jzdlv_mute(struct snd_soc_dai *dai, int mute)
 	else
 		reg_val = reg_val & ~(0x1 << 14);
 
-	//jzdlv_write(codec, DLV_1_LOW, reg_val);
+	//jz4750_codec_write(codec, REG_1_LOW, reg_val);
 	return 0;
 }
 
-static int jzdlv_set_dai_sysclk(struct snd_soc_dai *codec_dai,
+static int jz4750_codec_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 		int clk_id, unsigned int freq, int dir)
 {
 	/*struct snd_soc_codec *codec = codec_dai->codec;
@@ -485,7 +542,7 @@ static int jzdlv_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 /*
  * Set's ADC and Voice DAC format. called by apus_hw_params() in apus.c
  */
-static int jzdlv_set_dai_fmt(struct snd_soc_dai *codec_dai,
+static int jz4750_codec_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		unsigned int fmt)
 {
 	/* struct snd_soc_codec *codec = codec_dai->codec; */
@@ -541,13 +598,13 @@ static int jzdlv_set_dai_fmt(struct snd_soc_dai *codec_dai,
 }
 
 static struct snd_soc_dai_ops jz4750_codec_dai_ops = {
-	.trigger = jzdlv_pcm_trigger,
-	.prepare = jzdlv_pcm_prepare,
-	.hw_params = jzdlv_hw_params,
-	.shutdown = jzdlv_shutdown,
-	.digital_mute = jzdlv_mute,
-	.set_sysclk = jzdlv_set_dai_sysclk,
-	.set_fmt = jzdlv_set_dai_fmt,
+	.trigger	= jz4750_codec_pcm_trigger,
+	.prepare	= jz4750_codec_pcm_prepare,
+	.hw_params	= jz4750_codec_hw_params,
+	.shutdown	= jz4750_codec_shutdown,
+	.digital_mute	= jz4750_codec_mute,
+	.set_sysclk	= jz4750_codec_set_dai_sysclk,
+	.set_fmt	= jz4750_codec_set_dai_fmt,
 };
 
 #define JZ4750_CODEC_FMTS (SNDRV_PCM_FMTBIT_S8 | \
@@ -627,7 +684,7 @@ static int jz4750_codec_set_bias_level(struct snd_soc_codec *codec,
 }
 
 
-static int jzdlv_probe(struct snd_soc_codec *codec)
+static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 {
 	jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	//snd_soc_update_bits(codec, JZ4740_REG_CODEC_1,
@@ -646,7 +703,7 @@ static int jzdlv_probe(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static int jzdlv_remove(struct snd_soc_codec *codec)
+static int jz4750_codec_dev_remove(struct snd_soc_codec *codec)
 {
 	jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
@@ -654,38 +711,39 @@ static int jzdlv_remove(struct snd_soc_codec *codec)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int jzdlv_suspend(struct snd_soc_codec *codec, pm_message_t state)
+static int jz4750_codec_dev_suspend(struct snd_soc_codec *codec,
+		pm_message_t state)
 {
 	return jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_OFF);
 }
 
-static int jzdlv_resume(struct snd_soc_codec *codec)
+static int jz4750_codec_dev_resume(struct snd_soc_codec *codec)
 {
 	return jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 }
 #else
-#define jzdlv_suspend	NULL
-#define jzdlv_resume	NULL
+#define jz4750_codec_dev_suspend	NULL
+#define jz4750_codec_dev_resume		NULL
 #endif
 
 static struct snd_soc_codec_driver soc_codec_dev_jzdlv = {
-	.probe			= jzdlv_probe,
-	.remove			= jzdlv_remove,
-	.suspend		= jzdlv_suspend,
-	.resume			= jzdlv_resume,
-	.read			= jzdlv_read_reg_cache,
-	.write			= jzdlv_write,
+	.probe			= jz4750_codec_dev_probe,
+	.remove			= jz4750_codec_dev_remove,
+	.suspend		= jz4750_codec_dev_suspend,
+	.resume			= jz4750_codec_dev_resume,
+	.read			= jz4750_codec_read,
+	.write			= jz4750_codec_write,
 	.set_bias_level		= jz4750_codec_set_bias_level,
 	.reg_cache_default	= jz4750_codec_regs,
 	.reg_word_size		= sizeof(uint8_t),
-	.reg_cache_size		= JZDLV_CACHEREGNUM,
+	.reg_cache_size		= JZ4750_REGS_NUM,
 
-	.controls = jzdlv_snd_controls,
-	.num_controls = ARRAY_SIZE(jzdlv_snd_controls),
-	.dapm_widgets = jzdlv_dapm_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(jzdlv_dapm_widgets),
-	.dapm_routes = intercon_routes,
-	.num_dapm_routes = ARRAY_SIZE(intercon_routes),
+	.controls		= jz4750_codec_controls,
+	.num_controls		= ARRAY_SIZE(jz4750_codec_controls),
+	.dapm_widgets		= jz4750_codec_dapm_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(jz4750_codec_dapm_widgets),
+	.dapm_routes		= jz4750_codec_dapm_routes,
+	.num_dapm_routes	= ARRAY_SIZE(jz4750_codec_dapm_routes),
 };
 
 static int __devinit jz4750_codec_probe(struct platform_device *pdev)
