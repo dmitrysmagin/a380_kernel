@@ -395,8 +395,7 @@ static void jz4750d_transition(struct dpm_regs *regs)
 	 * Stop module clocks before scaling PLL
 	 */
 	__cpm_stop_eth();
-	__cpm_stop_aic(1);
-	__cpm_stop_aic(2);
+	__cpm_stop_aic();
 #endif
 
 	/* ... add more as necessary */
@@ -425,8 +424,7 @@ static void jz4750d_transition(struct dpm_regs *regs)
 	 * Restart module clocks before scaling PLL
 	 */
 	__cpm_start_eth();
-	__cpm_start_aic(1);
-	__cpm_start_aic(2);
+	__cpm_start_aic();
 
 	/* ... add more as necessary */
 
