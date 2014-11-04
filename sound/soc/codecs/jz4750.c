@@ -21,8 +21,6 @@
 #include <asm/mach-jz4750d/jz4750d_aic.h>
 #include <asm/mach-jz4750d/jz4750d_intc.h>
 
-#include "jz4750.h"
-
 /* JZ4750 codec register space */
 #define REG_AICR    0x00
 #define REG_CR1     0x01
@@ -308,10 +306,6 @@ static irqreturn_t aic_codec_irq(int irq, void *dev_id)
 
 static void jzdlv_power_on(void)
 {
-	mdelay(10);
-	REG_AIC_I2SCR = 0x10;
-	mdelay(20);
-
 	/* power on DLV */
 	write_codec_file(8, 0x3f);
 	write_codec_file(9, 0xff);
@@ -333,16 +327,7 @@ static void init_codec(void)
 
 static int jzdlv_reset(struct snd_soc_codec *codec)
 {
-	/*REG_CPM_CPCCR &= ~(1 << 31);
-	  REG_CPM_CPCCR &= ~(1 << 30);*/
 	write_codec_file(0, 0xf);
-
-	REG_AIC_I2SCR = 0x10;
-	__i2s_internal_codec();
-	__i2s_as_slave();
-	__i2s_select_i2s();
-	__aic_select_i2s();
-	__aic_reset();
 
 	jzdlv_power_on();
 
@@ -454,22 +439,13 @@ static int jz4750_codec_pcm_trigger(struct snd_pcm_substream *substream,
 		break;
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
-		
 		init_codec();
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			set_audio_data_replay();
 			write_codec_file_bit(5, 0, 7);//PMR1.SB_DAC->0
-			mdelay(300);
-			REG_AIC_I2SCR = 0x10; // enable SYSCLK
-			mdelay(20);
-			__aic_flush_fifo_tx();
 		} else {
 			set_record_mic_input_audio_without_playback();
-			mdelay(10);
-			REG_AIC_I2SCR = 0x10; // enable SYSCLK
-			mdelay(20);
-			__aic_flush_fifo_tx();
-			write_codec_file_bit(5, 1, 7);
+			write_codec_file_bit(5, 1, 7);//PMR1.SB_DAC->1
 		}
 		break;
 
@@ -691,7 +667,6 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 	//		JZ4740_CODEC_1_SW2_ENABLE, JZ4740_CODEC_1_SW2_ENABLE);
 
 	jzdlv_reset(codec);
-	jzdlv_power_on();
 #if 0
 	ret = request_irq(IRQ_AIC, aic_codec_irq, IRQF_DISABLED,
 			"aic_codec_irq", NULL);

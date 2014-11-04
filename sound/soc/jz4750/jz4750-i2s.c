@@ -19,12 +19,14 @@
 #include <sound/soc.h>
 
 #include <asm/mach-jz4750d/jz4750d_aic.h>
+#include <asm/mach-jz4750d/jz4750d_cpm.h>
 #include <asm/mach-jz4750d/jz4750d_dmac.h>
 #include <asm/mach-jz4750d/dma.h>
 
 #include "jz4750-pcm.h"
-#include "jz4750-i2s.h"
-#include "../codecs/jz4750.h"
+
+/* I2S clock */
+#define JZ4750_I2S_SYSCLK		0
 
 struct jz4750_i2s {
 	struct resource *mem;
@@ -118,6 +120,7 @@ static int jz4750_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		//__aic_flush_fifo_tx(); // ?
 		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 			jz4750_snd_rx_ctrl(1);
 		else
@@ -148,8 +151,6 @@ static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
 	jz4750_snd_rx_ctrl(0);
 	jz4750_snd_rx_ctrl(0);
 
-	write_codec_file_bit(5, 0, 7);//PMR1.SB_DAC->0
-
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		snd_soc_dai_set_dma_data(dai, substream,
 					&jz4750_i2s_pcm_stereo_out);
@@ -162,16 +163,6 @@ static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
 		snd_soc_dai_set_dma_data(dai, substream,
 					&jz4750_i2s_pcm_stereo_in);
 
-#if 1
-	switch (channels) {
-	case 1:
-		write_codec_file_bit(1, 1, 6);//CR1.MONO->1 for Mono
-		break;
-	case 2:
-		write_codec_file_bit(1, 0, 6);//CR1.MONO->0 for Stereo
-		break;
-	}
-#endif
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S8:
 		__i2s_set_transmit_trigger(4);
@@ -240,29 +231,30 @@ static int jz4750_i2s_dai_probe(struct snd_soc_dai *dai)
 
 	//jz4750_i2c_init_pcm_config(i2s);
 
-	__i2s_internal_codec();
-	__i2s_as_slave();
-	__i2s_select_i2s();
-	__aic_select_i2s();
-	mdelay(2);
+	__cpm_start_aic();
+	__i2s_enable_sysclk();
 
 	__i2s_disable();
-	mdelay(2);
-	REG_AIC_I2SCR = 0x10;
-	__i2s_disable();
-	__i2s_internal_codec();
-	__i2s_as_slave();
-	__i2s_select_i2s();
-	__aic_select_i2s();
-	__i2s_set_oss_sample_size(16);
-	__i2s_set_iss_sample_size(16);
-        __aic_play_lastsample();
-
+	__aic_disable_transmit_dma();
+	__aic_disable_receive_dma();
 	__i2s_disable_record();
 	__i2s_disable_replay();
 	__i2s_disable_loopback();
+
+	__i2s_internal_codec();
+	__i2s_as_slave();
+	__i2s_select_i2s();
+	__aic_select_i2s();
+        __aic_play_lastsample();
 	__i2s_set_transmit_trigger(7);
 	__i2s_set_receive_trigger(7);
+	__i2s_send_rfirst();
+
+	__aic_write_tfifo(0x0);
+	__aic_write_tfifo(0x0);
+	__i2s_enable_replay();
+	__i2s_enable();
+	mdelay(1);
 
 	jz4750_snd_tx_ctrl(0);
 	jz4750_snd_rx_ctrl(0);
