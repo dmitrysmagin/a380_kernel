@@ -229,6 +229,7 @@ static int jz4750_i2s_dai_probe(struct snd_soc_dai *dai)
 
 	//jz4750_i2c_init_pcm_config(i2s);
 
+	__cpm_select_i2sclk_exclk();
 	__cpm_start_aic();
 	__i2s_enable_sysclk();
 
