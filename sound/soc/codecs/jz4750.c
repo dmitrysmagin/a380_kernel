@@ -123,6 +123,15 @@ static const uint8_t jz4750_codec_regs[JZ4750_REGS_NUM] = {
 	0x07, 0x44, 0x1F, 0x00
 };
 
+static int jz_codec_debug = 1;
+module_param(jz_codec_debug, int, 0644);
+
+#define DEBUG_MSG(msg...)			\
+	do {					\
+		if (jz_codec_debug)		\
+			printk("ICDC: " msg);	\
+	} while(0)
+
 struct jz4750_codec {
 	void __iomem *base;
 	struct resource *mem;
@@ -192,6 +201,8 @@ static int jz4750_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 	if (reg >= JZ4750_REGS_NUM) {
 		return -1;
 	}
+
+	DEBUG_MSG("write reg=0x%02x to val=0x%02x\n", reg, value);
 
 	reg_cache[reg] = (uint8_t)value;
 	write_codec_file(reg, (uint8_t)value);
@@ -432,7 +443,14 @@ static int jz4750_codec_hw_params(struct snd_pcm_substream *substream,
 static int jz4750_codec_pcm_trigger(struct snd_pcm_substream *substream,
 		int cmd, struct snd_soc_dai *dai)
 {
+	//struct snd_soc_codec *codec = dai->codec;
 	int ret = 0;
+
+	DEBUG_MSG("enter %s:%d substream = %s bypass_to_hp = %d bypassto_lineout = %d cmd = %d\n",
+		  __func__, __LINE__,
+		  (substream->stream == SNDRV_PCM_STREAM_PLAYBACK ? "playback" : "capture"),
+		  bypass_to_hp, bypass_to_lineout,
+		  cmd);
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
@@ -482,6 +500,8 @@ static void jz4750_codec_shutdown(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_codec *codec = rtd->codec;
+
+	DEBUG_MSG("enter jz4750_codec_shutdown, playback = %d\n", playback);
 
 	/* deactivate */
 	if (!codec->active) {

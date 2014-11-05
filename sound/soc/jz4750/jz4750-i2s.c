@@ -28,6 +28,14 @@
 /* I2S clock */
 #define JZ4750_I2S_SYSCLK		0
 
+static int jz_i2s_debug = 1;
+module_param(jz_i2s_debug, int, 0644);
+#define I2S_DEBUG_MSG(msg...)			\
+	do {					\
+		if (jz_i2s_debug)		\
+			printk("I2S: " msg);	\
+	} while(0)
+
 struct jz4750_i2s {
 	struct resource *mem;
 	void __iomem *base;
@@ -56,6 +64,7 @@ static struct jz4750_pcm_dma_params jz4750_i2s_pcm_stereo_in = {
 
 static void jz4750_snd_tx_ctrl(int on)
 {
+	I2S_DEBUG_MSG("enter %s, on = %d\n", __func__, on);
 	if (on) { 
                 /* enable replay */
 	        __i2s_enable_transmit_dma();
@@ -74,6 +83,7 @@ static void jz4750_snd_tx_ctrl(int on)
 
 static void jz4750_snd_rx_ctrl(int on)
 {
+	I2S_DEBUG_MSG("enter %s, on = %d\n", __func__, on);
 	if (on) { 
                 /* enable capture */
 		__i2s_enable_receive_dma();
@@ -116,6 +126,12 @@ static int jz4750_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	//struct jz4750_i2s *i2s = snd_soc_dai_get_drvdata(dai);
 	int ret = 0;
 
+	I2S_DEBUG_MSG("enter %s, substream = %s cmd = %d\n",
+		      __func__,
+		      (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+				? "playback" : "capture",
+		      cmd);
+
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
@@ -150,6 +166,10 @@ static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	jz4750_snd_rx_ctrl(0);
 	jz4750_snd_rx_ctrl(0);
+
+	I2S_DEBUG_MSG("enter %s, substream = %s\n",
+		      __func__,
+		      (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture");
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		snd_soc_dai_set_dma_data(dai, substream,

@@ -25,6 +25,20 @@
 
 #include "jz4750-pcm.h"
 
+#define ST_RUNNING		(1<<0)
+#define ST_OPENED		(1<<1)
+
+#define AIC_START_DMA           (1<<0)
+#define AIC_END_DMA             (1<<1)
+
+static int jz_pcm_debug = 1;
+module_param(jz_pcm_debug, int, 0644);
+#define PCM_DEBUG_MSG(msg...)			\
+	do {					\
+		if (jz_pcm_debug)		\
+			printk("PCM: " msg);	\
+	} while(0)
+
 static long sum_bytes = 0;
 static int first_transfer = 0;
 static int printk_flag = 0;
@@ -475,6 +489,10 @@ static int jz4750_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct jz4750_runtime_data *prtd;
 
+	PCM_DEBUG_MSG("enter jz4750_pcm_open, substream is %s\n",
+		      (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+				? "playback" : "capture");
+
 #ifdef CONFIG_SND_OSSEMUL
 	hw_params_cnt = 0;
 #endif
@@ -506,6 +524,10 @@ static int jz4750_pcm_close(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct jz4750_runtime_data *prtd = runtime->private_data;
 	struct jz4750_dma_buf_aic *aic_buf = NULL;
+
+	PCM_DEBUG_MSG("enter jz4750_pcm_close, substream is %s\n",
+		      (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+				? "playback" : "capture");
 
 #ifdef CONFIG_SND_OSSEMUL
 	hw_params_cnt = 0;
