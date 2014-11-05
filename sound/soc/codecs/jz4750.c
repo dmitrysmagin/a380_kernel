@@ -139,6 +139,9 @@ struct jz4750_codec {
 	unsigned int sysclk;
 };
 
+static int bypass_to_hp = 0;
+static int bypass_to_lineout = 0;
+
 int read_codec_file(int addr)
 {
 	while (__icdc_rgwr_ready());
@@ -500,6 +503,8 @@ static void jz4750_codec_shutdown(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_codec *codec = rtd->codec;
+
+	int playback = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK);
 
 	DEBUG_MSG("enter jz4750_codec_shutdown, playback = %d\n", playback);
 
