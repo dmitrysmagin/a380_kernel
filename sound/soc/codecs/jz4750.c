@@ -789,18 +789,9 @@ static struct platform_driver jz4750_codec_driver = {
 	},
 };
 
-static int __init jz4750_codec_init(void)
-{
-	return platform_driver_register(&jz4750_codec_driver);
-}
-module_init(jz4750_codec_init);
+module_platform_driver(jz4750_codec_driver);
 
-static void __exit jz4750_codec_exit(void)
-{
-	platform_driver_unregister(&jz4750_codec_driver);
-}
-module_exit(jz4750_codec_exit);
-
+MODULE_AUTHOR("Richard, <cjfeng@ingenic.cn>");
 MODULE_DESCRIPTION("JZ4750 SoC internal driver");
-MODULE_AUTHOR("Richard");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:jz4750-codec");

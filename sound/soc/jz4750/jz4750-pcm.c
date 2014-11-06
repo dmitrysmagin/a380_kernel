@@ -700,18 +700,8 @@ static struct platform_driver jz4750_pcm_driver = {
 	},
 };
 
-static int __init jz4750_soc_platform_init(void)
-{
-	return platform_driver_register(&jz4750_pcm_driver);
-}
-module_init(jz4750_soc_platform_init);
+module_platform_driver(jz4750_pcm_driver);
 
-static void __exit jz4750_soc_platform_exit(void)
-{
-	platform_driver_unregister(&jz4750_pcm_driver);
-}
-module_exit(jz4750_soc_platform_exit);
-
-MODULE_AUTHOR("Richard");
-MODULE_DESCRIPTION("Ingenic Jz4750 PCM DMA module");
+MODULE_AUTHOR("Richard, <cjfeng@ingenic.cn>");
+MODULE_DESCRIPTION("Ingenic JZ4750 SoC PCM DMA driver");
 MODULE_LICENSE("GPL");

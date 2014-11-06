@@ -442,18 +442,9 @@ static struct platform_driver jz4750_i2s_driver = {
 	},
 };
 
-static int __init jz4750_i2s_init(void)
-{
-	return platform_driver_register(&jz4750_i2s_driver);
-}
-module_init(jz4750_i2s_init);
+module_platform_driver(jz4750_i2s_driver);
 
-static void __exit jz4750_i2s_exit(void)
-{
-	platform_driver_unregister(&jz4750_i2s_driver);
-}
-module_exit(jz4750_i2s_exit);
-
-MODULE_AUTHOR("Richard, cjfeng@ingenic.cn, www.ingenic.cn");
-MODULE_DESCRIPTION("jz4750 I2S SoC Interface");
+MODULE_AUTHOR("Richard, <cjfeng@ingenic.cn>");
+MODULE_DESCRIPTION("Ingenic JZ4750 SoC I2S driver");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:jz4750-i2s");

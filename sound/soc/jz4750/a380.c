@@ -1,5 +1,5 @@
 /*
- * apus.c  --  SoC audio for APUS
+ * a380.c  --  SoC audio for Dingoo A380
  *
  *  This program is free software; you can redistribute  it and/or modify it
  *  under  the terms of  the GNU General  Public License as published by the
@@ -17,8 +17,6 @@
 #include <sound/pcm.h>
 #include <sound/soc.h>
 #include <linux/gpio.h>
-
-#include "jz4750-pcm.h"
 
 #define A380_SPK_GPIO JZ_GPIO_PORTE(9)
 #define A380_HPTV_GPIO JZ_GPIO_PORTE(5)
@@ -161,7 +159,7 @@ static struct platform_driver a380_driver = {
 
 module_platform_driver(a380_driver);
 
-MODULE_AUTHOR("Richard");
-MODULE_DESCRIPTION("ALSA SoC Apus");
+MODULE_AUTHOR("Richard, <cjfeng@ingenic.cn>");
+MODULE_DESCRIPTION("ALSA SoC Dingoo A380 Audio support");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:a380-audio");
