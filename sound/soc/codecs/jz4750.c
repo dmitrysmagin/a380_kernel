@@ -711,26 +711,25 @@ static int jz4750_codec_dev_remove(struct snd_soc_codec *codec)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int jz4750_codec_dev_suspend(struct snd_soc_codec *codec,
-		pm_message_t state)
+static int jz4750_codec_suspend(struct snd_soc_codec *codec)
 {
 	return jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_OFF);
 }
 
-static int jz4750_codec_dev_resume(struct snd_soc_codec *codec)
+static int jz4750_codec_resume(struct snd_soc_codec *codec)
 {
 	return jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 }
 #else
-#define jz4750_codec_dev_suspend	NULL
-#define jz4750_codec_dev_resume		NULL
+#define jz4750_codec_suspend	NULL
+#define jz4750_codec_resume	NULL
 #endif
 
 static struct snd_soc_codec_driver soc_codec_dev_jzdlv = {
 	.probe			= jz4750_codec_dev_probe,
 	.remove			= jz4750_codec_dev_remove,
-	.suspend		= jz4750_codec_dev_suspend,
-	.resume			= jz4750_codec_dev_resume,
+	.suspend		= jz4750_codec_suspend,
+	.resume			= jz4750_codec_resume,
 	.read			= jz4750_codec_read,
 	.write			= jz4750_codec_write,
 	.set_bias_level		= jz4750_codec_set_bias_level,
