@@ -40,7 +40,6 @@
 
 #include <asm/irq.h>
 #include <asm/pgtable.h>
-#include <asm/system.h>
 #include <asm/uaccess.h>
 #include <asm/processor.h>
 #include "console/fbcon.h"
