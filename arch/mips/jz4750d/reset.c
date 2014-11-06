@@ -18,7 +18,6 @@
 #include <asm/pgtable.h>
 #include <asm/processor.h>
 #include <asm/reboot.h>
-#include <asm/system.h>
 
 #include <asm/mach-jz4750d/jz4750d_cpm.h>
 #include <asm/mach-jz4750d/jz4750d_wdt.h>

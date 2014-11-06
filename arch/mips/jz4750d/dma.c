@@ -26,7 +26,6 @@
 #include <linux/interrupt.h>
 #include <linux/soundcard.h>
 
-#include <asm/system.h>
 #include <asm/addrspace.h>
 
 #include <asm/mach-jz4750d/jz4750d_dmac.h>
