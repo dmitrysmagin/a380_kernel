@@ -238,6 +238,12 @@ static struct platform_pwm_backlight_data a380_backlight_pdata = {
 	.pwm_period_ns = 40000, /* 25 kHz: outside human hearing range */
 };
 
+/* Audio */
+static struct platform_device a380_audio_device = {
+	.name = "a380-audio",
+	.id = -1,
+};
+
 static struct platform_device a380_backlight_device = {
 	.name = "pwm-backlight",
 	.id = -1,
@@ -258,6 +264,7 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 	&jz_codec_device,
 	&a380_gpio_keys_device,
 	&a380_backlight_device,
+	&a380_audio_device,
 };
 
 static int __init a380_init_platform_devices(void)
