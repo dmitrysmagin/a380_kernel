@@ -11,12 +11,13 @@
 #include <linux/pm.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
-#include <sound/soc.h>
-#include <sound/soc-dai.h>
 #include <sound/initval.h>
+#include <sound/soc.h>
+#include <sound/tlv.h>
 
 #include <asm/mach-jz4750d/jz4750d_aic.h>
 #include <asm/mach-jz4750d/jz4750d_intc.h>
@@ -64,8 +65,8 @@
 #define REG_CR1_SB_MICBIAS	(1 << 7)
 
 #define REG_CR2_ADC_HPF		(1 << 2)
-#define REG_CR2_ADC_ADWL_MASK	(3 << 3)
-#define REG_CR2_DAC_ADWL_MASK	(3 << 5)
+#define REG_CR2_ADC_ADWL(A)	(((A) & 3) << 3)
+#define REG_CR2_DAC_ADWL(A)	(((A) & 3) << 5)
 #define REG_CR2_DAC_DEEMP	(1 << 7)
 
 #define REG_CR3_INSEL(A)	(((A) & 3) << 0)
@@ -167,6 +168,46 @@ static inline void write_codec_file(int reg, int val)
 	mdelay(1);
 }
 
+static void dump_regs(void)
+{
+	unsigned int cr1, cr2, cr3, pmr1, pmr2;
+
+	cr1 = read_codec_file(REG_CR1);
+	cr2 = read_codec_file(REG_CR2);
+	cr3 = read_codec_file(REG_CR3);
+	pmr1 = read_codec_file(REG_PMR1);
+	pmr2 = read_codec_file(REG_PMR2);
+
+	printk( "CR1_DAC_MUTE=%i\n"
+		"CR1_HP_DIS=%i\n"
+		"CR1_DACSEL=%i\n"
+		"CR1_BYPASS=%i\n"
+		"CR2=0x%02x\n"
+		"CR3=0x%02x\n"
+		"PMR1_SB_DAC=%i\n"
+		"PMR1_SB_OUT=%i\n"
+		"PMR1_SB_MIX=%i\n"
+		"PMR1_SB_ADC=%i\n"
+		"PMR1_SB_LIN=%i\n"
+		"PMR1_SB_IND=%i\n"
+		"PMR2_SB=%i\n"
+		"PMR2_SB_SLEEP=%i\n",
+		!!(cr1 & REG_CR1_DAC_MUTE),
+		!!(cr1 & REG_CR1_HP_DIS),
+		!!(cr1 & REG_CR1_DACSEL),
+		!!(cr1 & REG_CR1_BYPASS),
+		cr2, cr3,
+		!!(pmr1 & REG_PMR1_SB_DAC),
+		!!(pmr1 & REG_PMR1_SB_OUT),
+		!!(pmr1 & REG_PMR1_SB_MIX),
+		!!(pmr1 & REG_PMR1_SB_ADC),
+		!!(pmr1 & REG_PMR1_SB_LIN),
+		!!(pmr1 & REG_PMR1_SB_IND),
+		!!(pmr2 & REG_PMR2_SB),
+		!!(pmr2 & REG_PMR2_SB_SLEEP)
+	      );
+}
+
 static unsigned int jz4750_codec_read(struct snd_soc_codec *codec,
 	unsigned int reg)
 {
@@ -201,8 +242,8 @@ static int jz4750_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 
 static void set_audio_data_replay(struct snd_soc_codec *codec)
 {
-	snd_soc_update_bits(codec, REG_IFR, 0xff, 0xff);
-	snd_soc_update_bits(codec, REG_ICR, 0xff, REG_ICR_CCMC);
+	snd_soc_write(codec, REG_IFR, 0xff);
+	snd_soc_write(codec, REG_ICR, REG_ICR_CCMC);
 	mdelay(10);
 
 	snd_soc_update_bits(codec, REG_CR1,
@@ -213,7 +254,11 @@ static void set_audio_data_replay(struct snd_soc_codec *codec)
 			REG_PMR1_SB_IND | REG_PMR1_SB_LIN | REG_PMR1_SB_MIX |
 			REG_PMR1_SB_OUT | REG_PMR1_SB_DAC,
 			REG_PMR1_SB_IND | REG_PMR1_SB_LIN);
+	snd_soc_update_bits(codec, REG_CR3,
+			REG_CR3_SB_MIC2 | REG_CR3_SB_MIC1,
+			REG_CR3_SB_MIC2 | REG_CR3_SB_MIC1);
 
+	dump_regs();
 }
 
 static void unset_audio_data_replay(struct snd_soc_codec *codec)
@@ -230,6 +275,8 @@ static void unset_audio_data_replay(struct snd_soc_codec *codec)
 
 	snd_soc_update_bits(codec, REG_IFR, 0xff, 0xff);
 	snd_soc_update_bits(codec, REG_ICR, 0xff, 0x3f);
+
+	dump_regs();
 }
 
 static void set_record_mic_input_audio_without_playback(struct snd_soc_codec *codec)
@@ -239,7 +286,7 @@ static void set_record_mic_input_audio_without_playback(struct snd_soc_codec *co
 			REG_CR1_BYPASS | REG_CR1_SB_MICBIAS,
 			REG_CR1_BYPASS);
 
-	snd_soc_update_bits(codec, REG_CR3, 0xff, REG_CR3_SB_MIC2);
+	snd_soc_write(codec, REG_CR3, REG_CR3_SB_MIC2);
 	snd_soc_update_bits(codec, REG_AGC1, (1 << 7), 0);//AGC1.AGC_EN->0
 
 	snd_soc_update_bits(codec, REG_CR1,
@@ -273,48 +320,6 @@ static void unset_record_mic_input_audio_without_playback(struct snd_soc_codec *
 			REG_CR3_SB_MIC2 | REG_CR3_SB_MIC1);
 }
 
-static irqreturn_t aic_codec_irq(int irq, void *dev_id)
-{
-	struct snd_soc_codec *codec = dev_id;
-	u8 file_9 = read_codec_file(9);
-	u8 file_8 = read_codec_file(8);
-
-	if ((file_9 & 0x1f) == 0x10) {
-		snd_soc_update_bits(codec, REG_ICR, 0xff, 0x3f);
-		snd_soc_update_bits(codec, REG_PMR1,
-			REG_PMR1_SB_OUT,
-			REG_PMR1_SB_OUT);
-		mdelay(300);
-		while ((read_codec_file(9) & 0x4) != 0x4);
-		while ((read_codec_file(9) & 0x10) == 0x10) {
-			snd_soc_update_bits(codec, REG_IFR, 0xff, 0x10);
-		}
-		snd_soc_update_bits(codec, REG_PMR1,
-			REG_PMR1_SB_OUT, 0);
-		mdelay(300);
-		while ((read_codec_file(9) & 0x8) != 0x8);
-		snd_soc_update_bits(codec, REG_IFR, 0xff, file_9);
-		snd_soc_update_bits(codec, REG_ICR, 0xff, file_8);
-
-		return IRQ_HANDLED;
-	}
-	/*if (file_9 & 0x8)
-		ramp_up_end = jiffies;
-	else if (file_9 & 0x4)
-		ramp_down_end = jiffies;
-	else if (file_9 & 0x2)
-		gain_up_end = jiffies;
-	else if (file_9 & 0x1)
-	gain_down_end = jiffies;*/
-
-	snd_soc_update_bits(codec, REG_IFR, 0xff, file_9);
-	/*if (file_9 & 0xf)
-	  wake_up(&pop_wait_queue);*/
-	while (REG_ICDC_RGDATA & 0x100);
-
-	return IRQ_HANDLED;
-}
-
 static void init_codec(struct snd_soc_codec *codec)
 {
 	snd_soc_update_bits(codec, REG_PMR2,
@@ -324,6 +329,8 @@ static void init_codec(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec, REG_PMR1,
 			REG_PMR1_SB_ADC | REG_PMR1_SB_DAC, 0);
 	mdelay(10);
+
+	dump_regs();
 }
 
 static int codec_reset(struct snd_soc_codec *codec)
@@ -331,8 +338,12 @@ static int codec_reset(struct snd_soc_codec *codec)
 	/* magic value AICR.CONTROL1 = 0x0f */
 	snd_soc_update_bits(codec, REG_AICR, 0xf, 0xf);
 
-	snd_soc_update_bits(codec, REG_IFR, 0xff, 0xff);
-	snd_soc_update_bits(codec, REG_ICR, 0x3f, 0x3f);
+	snd_soc_write(codec, REG_IFR, 0xff);
+	snd_soc_write(codec, REG_ICR, 0x3f);
+	mdelay(10);
+
+	snd_soc_update_bits(codec, REG_CR2,
+			REG_CR2_DAC_ADWL(3) | REG_CR2_ADC_ADWL(3), 0);
 	mdelay(10);
 
 	init_codec(codec);
@@ -340,18 +351,53 @@ static int codec_reset(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static const struct snd_kcontrol_new jz4750_codec_controls[] = {
+static const DECLARE_TLV_DB_SCALE(dac_tlv, -2250, 150, 0);
 
-	SOC_DOUBLE_R("Master Playback Volume", REG_CGR8, REG_CGR9, 0, 31, 0),
-	SOC_DOUBLE_R("Line", REG_CGR10, REG_CGR10, 0, 31, 0),
+static const unsigned int in_tlv[] = {
+	TLV_DB_RANGE_HEAD(2),
+	31-31, 31-20, TLV_DB_SCALE_ITEM(-2250, 0, 0),
+	31-19, 31-00, TLV_DB_SCALE_ITEM(-2250, 150, 0),
+};
+
+static const DECLARE_TLV_DB_SCALE(line_tlv, 0, 150, 0);
+
+static const struct snd_kcontrol_new jz4750_codec_controls[] = {
+	SOC_DOUBLE_TLV("DAC Mixing", REG_CGR1, 4, 0, 15, 1, dac_tlv),
+	SOC_DOUBLE_R_TLV("Line 1 Mixing", REG_CGR2, REG_CGR3, 0, 31, 1, in_tlv),
+	SOC_DOUBLE_R_TLV("Mic 1 Mixing", REG_CGR4, REG_CGR5, 0, 31, 1, in_tlv),
+	SOC_DOUBLE_R_TLV("Mic 2 Mixing", REG_CGR6, REG_CGR7, 0, 31, 1, in_tlv),
+	SOC_DOUBLE_R_TLV("Master Playback", REG_CGR8, REG_CGR9, 0, 31, 1, in_tlv),
+	SOC_DOUBLE_TLV("Line", REG_CGR10, 4, 0, 15, 0, line_tlv),
+};
+
+static const struct snd_kcontrol_new jz4750_codec_output_controls[] = {
+	SOC_DAPM_SINGLE("Bypass Switch", REG_CR1,
+			REG_CR1_BYPASS, 1, 0),
+	SOC_DAPM_SINGLE("DAC Switch", REG_CR1,
+			REG_CR1_DACSEL, 1, 1),
 };
 
 static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
-	SND_SOC_DAPM_OUTPUT("LOUT"),
-	SND_SOC_DAPM_OUTPUT("ROUT"),
+	SND_SOC_DAPM_ADC("ADC", "Capture", REG_PMR1,
+			REG_PMR1_SB_ADC, 1),
+	SND_SOC_DAPM_DAC("DAC", "Playback", REG_PMR1,
+			REG_PMR1_SB_DAC, 1),
+
+	SND_SOC_DAPM_MIXER("Output Mixer", REG_CR1,
+			REG_CR1_HP_DIS, 1,
+			jz4750_codec_output_controls,
+			ARRAY_SIZE(jz4750_codec_output_controls)),
+
+	SND_SOC_DAPM_MIXER("Line Input", SND_SOC_NOPM, 0, 0, NULL, 0),
+
 	SND_SOC_DAPM_OUTPUT("LHPOUT"),
 	SND_SOC_DAPM_OUTPUT("RHPOUT"),
+
+	SND_SOC_DAPM_OUTPUT("LOUT"),
+	SND_SOC_DAPM_OUTPUT("ROUT"),
+
 	SND_SOC_DAPM_INPUT("MIC"),
+
 	SND_SOC_DAPM_INPUT("LIN"),
 	SND_SOC_DAPM_INPUT("RIN"),
 };
@@ -368,8 +414,8 @@ static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
 	{"Output Mixer", "Bypass Switch", "Input Mixer"},
 	{"Output Mixer", "DAC Switch", "DAC"},
 
-	{"LOUT", NULL, "Output Mixer"},
-	{"ROUT", NULL, "Output Mixer"},
+	{"LHPOUT", NULL, "Output Mixer"},
+	{"RHPOUT", NULL, "Output Mixer"},
 };
 
 static int jz4750_codec_hw_params(struct snd_pcm_substream *substream,
@@ -675,21 +721,10 @@ static int jz4750_codec_set_bias_level(struct snd_soc_codec *codec,
 
 static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 {
-	//int ret;
-
 	jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-	//snd_soc_update_bits(codec, JZ4740_REG_CODEC_1,
-	//		JZ4740_CODEC_1_SW2_ENABLE, JZ4740_CODEC_1_SW2_ENABLE);
 
 	codec_reset(codec);
-#if 0
-	ret = request_irq(IRQ_AIC, aic_codec_irq, IRQF_DISABLED,
-			"aic_codec_irq", codec);
-	if (ret) {
-		pr_err("Couldn't get aic codec irq %d\n", IRQ_AIC);
-		return ret;
-	}
-#endif
+
 	return 0;
 }
 
