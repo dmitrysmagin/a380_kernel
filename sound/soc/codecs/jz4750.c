@@ -54,8 +54,7 @@
 #define JZ4750_REGS_NUM		(REG_AGC5 + 1)
 #define JZ4750_CODEC_SYSCLK	0
 
-#define REG_AICR_CONFIG1_MASK	0x0F
-#define REG_AICR_CONFIG1_OFFSET	0
+#define REG_AICR_CONFIG1(A)	(((A) & 0x0f) << 0)
 
 #define REG_CR1_BYPASS		(1 << 2)
 #define REG_CR1_DACSEL		(1 << 3)
@@ -69,7 +68,7 @@
 #define REG_CR2_DAC_ADWL_MASK	(3 << 5)
 #define REG_CR2_DAC_DEEMP	(1 << 7)
 
-#define REG_CR3_INSEL_MASK	(3 << 0)
+#define REG_CR3_INSEL(A)	(((A) & 3) << 0)
 #define REG_CR3_MICSTEREO	(1 << 2)
 #define REG_CR3_MICDIFF		(1 << 3)
 #define REG_CR3_SIDETONE2	(1 << 4)
@@ -77,10 +76,10 @@
 #define REG_CR3_SB_MIC2		(1 << 6)
 #define REG_CR3_SB_MIC1		(1 << 7)
 
-#define REG_CCR1_CONFIG4_MASK	(0x0F << 0)
+#define REG_CCR1_CONFIG4(A)	(((A) & 0x0f) << 0)
 
-#define REG_CCR2_AFREQ_MASK	(0x0F << 0)
-#define REG_CCR2_DFREQ_MASK	(0x0F << 4)
+#define REG_CCR2_AFREQ(A)	(((A) & 0x0f) << 0)
+#define REG_CCR2_DFREQ(A)	(((A) & 0x0f) << 4)
 
 #define REG_PMR1_SB_IND		(1 << 0)
 #define REG_PMR1_SB_LIN		(1 << 3)
@@ -93,12 +92,12 @@
 #define REG_PMR2_SB		(1 << 1)
 #define REG_PMR2_SB_MIC		(1 << 2)
 #define REG_PMR2_GIM		(1 << 3)
-#define REG_PMR2_GOD_MASK	(3 << 4)
-#define REG_PMR2_GI_MASK	(3 << 6)
+#define REG_PMR2_GOD(A)		(((A) & 3) << 4)
+#define REG_PMR2_GI(A)		(((A) & 3) << 5)
 
-#define REG_CRR_THRESH_MASK	(3 << 0)
-#define REG_CRR_KFAST_MASK	(7 << 2)
-#define REG_CRR_RATIO_MASK	(3 << 5)
+#define REG_CRR_THRESH(A)	(((A) & 3) << 0)
+#define REG_CRR_KFAST(A)	(((A) & 7) << 2)
+#define REG_CRR_RATIO(A)	(((A) & 3) << 5)
 
 #define REG_ICR_GDD		(1 << 0)
 #define REG_ICR_GUD		(1 << 1)
@@ -106,7 +105,7 @@
 #define REG_ICR_RUD		(1 << 3)
 #define REG_ICR_CCMC		(1 << 4)
 #define REG_ICR_JACK		(1 << 5)
-#define REG_ICR_INT_FORM_MASK	(3 << 6)
+#define REG_ICR_INT_FORM(A)	(((A) & 3) << 6)
 
 #define REG_IFR_GDD		(1 << 0)
 #define REG_IFR_GUD		(1 << 1)
@@ -115,6 +114,14 @@
 #define REG_IFR_CCMC		(1 << 4)
 #define REG_IFR_JACK_EVENT	(1 << 5)
 #define REG_IFR_JACK		(1 << 6)
+
+#define REG_CR3_INSEL(A)	(((A) & 3) << 0)
+#define REG_CR3_MICSTEREO	(1 << 2)
+#define REG_CR3_MICDIFF		(1 << 3)
+#define REG_CR3_SIDETONE2	(1 << 4)
+#define REG_CR3_SIDETONE1	(1 << 5)
+#define REG_CR3_SB_MIC2		(1 << 6)
+#define REG_CR3_SB_MIC1		(1 << 7)
 
 static const uint8_t jz4750_codec_regs[JZ4750_REGS_NUM] = {
 	0x0C, 0xAA, 0x78, 0x00, 0x00, 0xFF, 0x03, 0x51,
@@ -142,44 +149,23 @@ struct jz4750_codec {
 static int bypass_to_hp = 0;
 static int bypass_to_lineout = 0;
 
-int read_codec_file(int addr)
+static inline int read_codec_file(int reg)
 {
 	while (__icdc_rgwr_ready());
-	__icdc_set_addr(addr);
+	__icdc_set_addr(reg);
 	mdelay(1);
 	return(__icdc_get_value());
 }
 
-void write_codec_file(int addr, int val)
+static inline void write_codec_file(int reg, int val)
 {
 	while (__icdc_rgwr_ready());
-	__icdc_set_addr(addr);
+	__icdc_set_addr(reg);
 	__icdc_set_cmd(val); /* write */
 	mdelay(1);
 	__icdc_set_rgwr();
 	mdelay(1);
 }
-EXPORT_SYMBOL(write_codec_file);
-
-int write_codec_file_bit(int addr, int bitval, int bitoffset)
-{
-	int val;
-
-	val = read_codec_file(addr);
-	val &= ~(1 << bitoffset);
-
-	if (bitval == 1)
-		val |= 1 << bitoffset;
-
-	write_codec_file(addr, val);
-	val = read_codec_file(addr);
-
-	if (((val >> bitoffset) & bitval) == bitval)
-		return 1;
-	else 
-		return 0;
-}
-EXPORT_SYMBOL(write_codec_file_bit);
 
 static unsigned int jz4750_codec_read(struct snd_soc_codec *codec,
 	unsigned int reg)
@@ -213,91 +199,102 @@ static int jz4750_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 	return 0;
 }
 
-void set_audio_data_replay(void)
+static void set_audio_data_replay(struct snd_soc_codec *codec)
 {
-	write_codec_file(9, 0xff);
-	write_codec_file(8, 0x20);// only CCMC
+	snd_soc_update_bits(codec, REG_IFR, 0xff, 0xff);
+	snd_soc_update_bits(codec, REG_ICR, 0xff, REG_ICR_CCMC);
 	mdelay(10);
 
-	write_codec_file_bit(1, 0, 4);//CR1.HP_DIS->0
-	write_codec_file_bit(5, 1, 3);//PMR1.SB_LIN->1
-	write_codec_file_bit(5, 1, 0);//PMR1.SB_IND->1
+	snd_soc_update_bits(codec, REG_CR1,
+			REG_CR1_BYPASS | REG_CR1_DACSEL | REG_CR1_HP_DIS |
+			REG_CR1_DAC_MUTE | REG_CR1_SB_MICBIAS,
+			REG_CR1_DACSEL | REG_CR1_SB_MICBIAS);
+	snd_soc_update_bits(codec, REG_PMR1,
+			REG_PMR1_SB_IND | REG_PMR1_SB_LIN | REG_PMR1_SB_MIX |
+			REG_PMR1_SB_OUT | REG_PMR1_SB_DAC,
+			REG_PMR1_SB_IND | REG_PMR1_SB_LIN);
 
-	write_codec_file_bit(1, 0, 2);//CR1.BYPASS->0
-	write_codec_file_bit(1, 1, 3);//CR1.DACSEL->1
-
-	write_codec_file_bit(5, 0, 5);//PMR1.SB_MIX->0
-	mdelay(100);
-	write_codec_file_bit(5, 0, 6);//PMR1.SB_OUT->0
-	write_codec_file_bit(5, 0, 7);//PMR1.SB_DAC->0
-	write_codec_file_bit(1, 1, 7);//CR1.SB_MICBIAS->1
-	mdelay(100);
-	write_codec_file_bit(1, 0, 5);//DAC_MUTE->0
 }
 
-void unset_audio_data_replay(void)
+static void unset_audio_data_replay(struct snd_soc_codec *codec)
 {
-	write_codec_file_bit(1, 1, 5);//DAC_MUTE->1
+	snd_soc_update_bits(codec, REG_CR1, REG_CR1_DAC_MUTE, REG_CR1_DAC_MUTE);
 	mdelay(200);
-	write_codec_file_bit(5, 1, 6);//SB_OUT->1
-	write_codec_file_bit(5, 1, 7);//SB_DAC->1
-	write_codec_file_bit(5, 1, 4);//SB_MIX->1
-	write_codec_file_bit(6, 1, 0);//SB_SLEEP->1
-	write_codec_file_bit(6, 1, 1);//SB->1
 
-	write_codec_file(9, 0xff);
-	write_codec_file(8, 0x3f);
+	snd_soc_update_bits(codec, REG_PMR1,
+			REG_PMR1_SB_MIX | REG_PMR1_SB_OUT | REG_PMR1_SB_DAC,
+			REG_PMR1_SB_MIX | REG_PMR1_SB_OUT | REG_PMR1_SB_DAC);
+	snd_soc_update_bits(codec, REG_PMR2,
+			REG_PMR2_SB_SLEEP | REG_PMR2_SB,
+			REG_PMR2_SB_SLEEP | REG_PMR2_SB);
+
+	snd_soc_update_bits(codec, REG_IFR, 0xff, 0xff);
+	snd_soc_update_bits(codec, REG_ICR, 0xff, 0x3f);
 }
 
-static void set_record_mic_input_audio_without_playback(void)
+static void set_record_mic_input_audio_without_playback(struct snd_soc_codec *codec)
 {
 	/* ADC path for MIC IN */
-	write_codec_file_bit(1, 1, 2);
-	write_codec_file_bit(1, 0, 7);//CR1.SB_MICBIAS->0
-	//write_codec_file_bit(1, 1, 6);//CR1.MONO->1
+	snd_soc_update_bits(codec, REG_CR1,
+			REG_CR1_BYPASS | REG_CR1_SB_MICBIAS,
+			REG_CR1_BYPASS);
 
-	write_codec_file(22, 0x40);//mic 1
-	write_codec_file_bit(23, 0, 7);//AGC1.AGC_EN->0
-	write_codec_file_bit(3, 1, 7);//CR1.HP_DIS->1
-	write_codec_file_bit(5, 1, 3);//PMR1.SB_LIN->1
-	write_codec_file_bit(5, 1, 0);//PMR1.SB_IND->1
+	snd_soc_update_bits(codec, REG_CR3, 0xff, REG_CR3_SB_MIC2);
+	snd_soc_update_bits(codec, REG_AGC1, (1 << 7), 0);//AGC1.AGC_EN->0
 
-	write_codec_file_bit(1, 0, 2);//CR1.BYPASS->0
-	write_codec_file_bit(1, 0, 3);//CR1.DACSEL->0
-	write_codec_file_bit(6, 1, 3);// gain set
+	snd_soc_update_bits(codec, REG_CR1,
+			REG_CR1_BYPASS | REG_CR1_DACSEL | REG_CR1_HP_DIS,
+			REG_CR1_HP_DIS);
 
-	write_codec_file_bit(5, 0, 5);//PMR1.SB_MIX->0
+	snd_soc_update_bits(codec, REG_PMR1,
+			REG_PMR1_SB_IND | REG_PMR1_SB_LIN |
+			REG_PMR1_SB_MIX | REG_PMR1_SB_OUT | REG_PMR1_SB_DAC,
+			REG_PMR1_SB_IND | REG_PMR1_SB_LIN | REG_PMR1_SB_DAC);
+
+
+	snd_soc_update_bits(codec, REG_PMR2,
+			REG_PMR2_GIM, REG_PMR2_GIM);
 	mdelay(100);
-	write_codec_file_bit(5, 0, 6);//PMR1.SB_OUT->0
-	write_codec_file(1, 0x4);
+
+	snd_soc_update_bits(codec, REG_CR1, 0xff, REG_CR1_BYPASS);
 }
 
-static void unset_record_mic_input_audio_without_playback(void)
+static void unset_record_mic_input_audio_without_playback(struct snd_soc_codec *codec)
 {
 	/* ADC path for MIC IN */
-	write_codec_file_bit(5, 1, 4);//SB_ADC->1
-	write_codec_file_bit(1, 1, 7);//CR1.SB_MICBIAS->1
-	write_codec_file(22, 0xc0);//CR3.SB_MIC1
+	snd_soc_update_bits(codec, REG_PMR1,
+			REG_PMR1_SB_ADC, REG_PMR1_SB_ADC);
+
+	snd_soc_update_bits(codec, REG_CR1,
+			REG_CR1_SB_MICBIAS, REG_CR1_SB_MICBIAS);
+
+	snd_soc_update_bits(codec, REG_CR3,
+			REG_CR3_SB_MIC2 | REG_CR3_SB_MIC1,
+			REG_CR3_SB_MIC2 | REG_CR3_SB_MIC1);
 }
 
 static irqreturn_t aic_codec_irq(int irq, void *dev_id)
 {
+	struct snd_soc_codec *codec = dev_id;
 	u8 file_9 = read_codec_file(9);
 	u8 file_8 = read_codec_file(8);
 
 	if ((file_9 & 0x1f) == 0x10) {
-		write_codec_file(8, 0x3f);
-		write_codec_file_bit(5, 1, 6);//SB_OUT->1
+		snd_soc_update_bits(codec, REG_ICR, 0xff, 0x3f);
+		snd_soc_update_bits(codec, REG_PMR1,
+			REG_PMR1_SB_OUT,
+			REG_PMR1_SB_OUT);
 		mdelay(300);
 		while ((read_codec_file(9) & 0x4) != 0x4);
 		while ((read_codec_file(9) & 0x10) == 0x10) {
-			write_codec_file(9, 0x10);
+			snd_soc_update_bits(codec, REG_IFR, 0xff, 0x10);
 		}
-		write_codec_file_bit(5, 0, 6);//SB_OUT->0
+		snd_soc_update_bits(codec, REG_PMR1,
+			REG_PMR1_SB_OUT, 0);
 		mdelay(300);
 		while ((read_codec_file(9) & 0x8) != 0x8);
-		write_codec_file(9, file_9);
-		write_codec_file(8, file_8);
+		snd_soc_update_bits(codec, REG_IFR, 0xff, file_9);
+		snd_soc_update_bits(codec, REG_ICR, 0xff, file_8);
 
 		return IRQ_HANDLED;
 	}
@@ -310,7 +307,7 @@ static irqreturn_t aic_codec_irq(int irq, void *dev_id)
 	else if (file_9 & 0x1)
 	gain_down_end = jiffies;*/
 
-	write_codec_file(9, file_9);
+	snd_soc_update_bits(codec, REG_IFR, 0xff, file_9);
 	/*if (file_9 & 0xf)
 	  wake_up(&pop_wait_queue);*/
 	while (REG_ICDC_RGDATA & 0x100);
@@ -318,34 +315,27 @@ static irqreturn_t aic_codec_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void jzdlv_power_on(void)
+static void init_codec(struct snd_soc_codec *codec)
 {
-	/* power on DLV */
-	write_codec_file(8, 0x3f);
-	write_codec_file(9, 0xff);
+	snd_soc_update_bits(codec, REG_PMR2,
+			REG_PMR2_SB_SLEEP | REG_PMR2_SB, 0);
+	mdelay(200);
+
+	snd_soc_update_bits(codec, REG_PMR1,
+			REG_PMR1_SB_ADC | REG_PMR1_SB_DAC, 0);
 	mdelay(10);
 }
 
-static void init_codec(void)
+static int codec_reset(struct snd_soc_codec *codec)
 {
-	/* reset DLV codec. from hibernate mode to sleep mode */
-	write_codec_file(0, 0xf);
-	write_codec_file_bit(6, 0, 0);
-	write_codec_file_bit(6, 0, 1);
-	mdelay(200);
-	//write_codec_file(0, 0xf);
-	write_codec_file_bit(5, 0, 7);//PMR1.SB_DAC->0
-	write_codec_file_bit(5, 0, 4);//PMR1.SB_ADC->0
-	mdelay(10);//wait for stability
-}
+	/* magic value AICR.CONTROL1 = 0x0f */
+	snd_soc_update_bits(codec, REG_AICR, 0xf, 0xf);
 
-static int jzdlv_reset(struct snd_soc_codec *codec)
-{
-	write_codec_file(0, 0xf);
+	snd_soc_update_bits(codec, REG_IFR, 0xff, 0xff);
+	snd_soc_update_bits(codec, REG_ICR, 0x3f, 0x3f);
+	mdelay(10);
 
-	jzdlv_power_on();
-
-	init_codec();
+	init_codec(codec);
 
 	return 0;
 }
@@ -392,10 +382,10 @@ static int jz4750_codec_hw_params(struct snd_pcm_substream *substream,
 	
 	switch (params_channels(params)) {
 	case 1:
-		write_codec_file_bit(1, 1, 6);//CR1.MONO->1 for Mono
+		snd_soc_update_bits(codec, REG_CR1, REG_CR1_MONO, REG_CR1_MONO);
 		break;
 	case 2:
-		write_codec_file_bit(1, 0, 6);//CR1.MONO->0 for Stereo
+		snd_soc_update_bits(codec, REG_CR1, REG_CR1_MONO, 0);
 		break;
 	}
 
@@ -438,7 +428,7 @@ static int jz4750_codec_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	val = (speed << 4) | speed;
-	jz4750_codec_write(codec, REG_CCR2, val);
+	snd_soc_update_bits(codec, REG_CCR2, 0xff, val);
 
 	return 0;
 }
@@ -446,7 +436,7 @@ static int jz4750_codec_hw_params(struct snd_pcm_substream *substream,
 static int jz4750_codec_pcm_trigger(struct snd_pcm_substream *substream,
 		int cmd, struct snd_soc_dai *dai)
 {
-	//struct snd_soc_codec *codec = dai->codec;
+	struct snd_soc_codec *codec = dai->codec;
 	int ret = 0;
 
 	DEBUG_MSG("enter %s:%d substream = %s bypass_to_hp = %d bypassto_lineout = %d cmd = %d\n",
@@ -460,13 +450,11 @@ static int jz4750_codec_pcm_trigger(struct snd_pcm_substream *substream,
 		break;
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
-		init_codec();
+		init_codec(codec);
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			set_audio_data_replay();
-			write_codec_file_bit(5, 0, 7);//PMR1.SB_DAC->0
+			set_audio_data_replay(codec);
 		} else {
-			set_record_mic_input_audio_without_playback();
-			write_codec_file_bit(5, 1, 7);//PMR1.SB_DAC->1
+			set_record_mic_input_audio_without_playback(codec);
 		}
 		break;
 
@@ -476,9 +464,9 @@ static int jz4750_codec_pcm_trigger(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			unset_audio_data_replay();
+			unset_audio_data_replay(codec);
 		} else {
-			unset_record_mic_input_audio_without_playback();
+			unset_record_mic_input_audio_without_playback(codec);
 		}
 		break;
 
@@ -687,16 +675,18 @@ static int jz4750_codec_set_bias_level(struct snd_soc_codec *codec,
 
 static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 {
+	//int ret;
+
 	jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	//snd_soc_update_bits(codec, JZ4740_REG_CODEC_1,
 	//		JZ4740_CODEC_1_SW2_ENABLE, JZ4740_CODEC_1_SW2_ENABLE);
 
-	jzdlv_reset(codec);
+	codec_reset(codec);
 #if 0
 	ret = request_irq(IRQ_AIC, aic_codec_irq, IRQF_DISABLED,
-			"aic_codec_irq", NULL);
+			"aic_codec_irq", codec);
 	if (ret) {
-		dev_err(&pdev->dev, "Couldn't get aic codec irq %d\n", IRQ_AIC);
+		pr_err("Couldn't get aic codec irq %d\n", IRQ_AIC);
 		return ret;
 	}
 #endif
