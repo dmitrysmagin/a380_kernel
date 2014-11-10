@@ -229,6 +229,12 @@ struct platform_device jz_codec_device = {
 	.resource	= jz_codec_resources,
 };
 
+/* PWM */
+struct platform_device jz_pwm_device = {
+	.name	= "jz4750-pwm",
+	.id	= -1,
+};
+
 /* ADC controller */
 static struct resource jz_adc_resources[] = {
 	{

@@ -12,6 +12,7 @@ extern struct platform_device jz_lcd_device;
 extern struct platform_device jz_i2s_device;
 extern struct platform_device jz_pcm_device;
 extern struct platform_device jz_codec_device;
+extern struct platform_device jz_pwm_device;
 extern struct platform_device jz_adc_device;
 extern struct platform_device jz_wdt_device;
 

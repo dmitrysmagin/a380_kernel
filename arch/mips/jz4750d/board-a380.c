@@ -17,6 +17,7 @@
 #include <linux/mmc/host.h>
 #include <linux/input.h>
 #include <linux/gpio_keys.h>
+#include <linux/pwm.h>
 #include <linux/pwm_backlight.h>
 #include <linux/input/matrix_keypad.h>
 
@@ -262,6 +263,7 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 	&jz_pcm_device,
 	&jz_i2s_device,
 	&jz_codec_device,
+	&jz_pwm_device,
 	&a380_gpio_keys_device,
 	&a380_backlight_device,
 	&a380_audio_device,
