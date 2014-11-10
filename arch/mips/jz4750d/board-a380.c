@@ -231,18 +231,17 @@ static struct platform_device a380_gpio_keys_device = {
 	},
 };
 
-/* LCD backlight */
-static struct platform_pwm_backlight_data a380_backlight_pdata = {
-	.pwm_id = 2,
-	.max_brightness = 255,
-	.dft_brightness = 145,
-	.pwm_period_ns = 40000, /* 25 kHz: outside human hearing range */
-};
-
 /* Audio */
 static struct platform_device a380_audio_device = {
 	.name = "a380-audio",
 	.id = -1,
+};
+
+/* LCD backlight */
+static struct platform_pwm_backlight_data a380_backlight_pdata = {
+	.max_brightness = 255,
+	.dft_brightness = 145,
+	.pwm_period_ns = 40000, /* 25 kHz: outside human hearing range */
 };
 
 static struct platform_device a380_backlight_device = {
@@ -251,6 +250,10 @@ static struct platform_device a380_backlight_device = {
 	.dev = {
 		.platform_data = &a380_backlight_pdata,
 	},
+};
+
+struct pwm_lookup a380_pwm_table[] = {
+	PWM_LOOKUP("jz4750-pwm", 2, "pwm-backlight", 0),
 };
 
 /* All */
@@ -275,6 +278,8 @@ static int __init a380_init_platform_devices(void)
 	jz_msc1_device.dev.platform_data = &cetus_tf_data;
 
 	jz4750d_serial_device_register();
+
+	pwm_add_table(a380_pwm_table, ARRAY_SIZE(a380_pwm_table));
 
 	return platform_add_devices(jz_platform_devices, ARRAY_SIZE(jz_platform_devices));
 }
