@@ -159,7 +159,7 @@ static const struct pwm_ops jz4750_pwm_ops = {
 	.owner		= THIS_MODULE,
 };
 
-static int __devinit jz4750_pwm_probe(struct platform_device *pdev)
+static int jz4750_pwm_probe(struct platform_device *pdev)
 {
 	struct jz4750_pwm_chip *jz4750;
 	int ret;
@@ -188,7 +188,7 @@ static int __devinit jz4750_pwm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit jz4750_pwm_remove(struct platform_device *pdev)
+static int jz4750_pwm_remove(struct platform_device *pdev)
 {
 	struct jz4750_pwm_chip *jz4750 = platform_get_drvdata(pdev);
 	int ret;
@@ -208,7 +208,7 @@ static struct platform_driver jz4750_pwm_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe	= jz4750_pwm_probe,
-	.remove	= __devexit_p(jz4750_pwm_remove),
+	.remove	= jz4750_pwm_remove,
 };
 module_platform_driver(jz4750_pwm_driver);
 
