@@ -34,6 +34,7 @@
 #include <linux/init.h>
 #include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
+#include <linux/interrupt.h>
 #include <linux/pm.h>
 #include <linux/proc_fs.h>
 #include <linux/kthread.h>
@@ -1820,7 +1821,7 @@ static void slcd_init(void)
 #endif
 }
 
-static int __devinit jz4750_fb_probe(struct platform_device *dev)
+static int jz4750_fb_probe(struct platform_device *dev)
 {
 	struct lcd_cfb_info *cfb;
 	int err = 0;
@@ -1880,7 +1881,7 @@ failed:
 	return err;
 }
 
-static int __devexit jz4750_fb_remove(struct platform_device *pdev)
+static int jz4750_fb_remove(struct platform_device *pdev)
 {
 	struct lcd_cfb_info *cfb = jz4750fb_info;
 
@@ -1901,18 +1902,7 @@ static struct platform_driver jz4750_fb_driver = {
 	},
 };
 
-static int __init jz4750_fb_init(void)
-{
-	return platform_driver_register(&jz4750_fb_driver);
-}
-
-static void __exit jz4750_fb_cleanup(void)
-{
-	platform_driver_unregister(&jz4750_fb_driver);
-}
-
-module_init(jz4750_fb_init);
-module_exit(jz4750_fb_cleanup);
+module_platform_driver(jz4750_fb_driver);
 
 MODULE_DESCRIPTION("Jz4750 LCD Controller driver");
 MODULE_AUTHOR("Wolfgang Wang, <lgwang@ingenic.cn>");
