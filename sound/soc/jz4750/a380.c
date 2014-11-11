@@ -98,7 +98,7 @@ static struct snd_soc_card a380 = {
 	.num_links = 1,
 };
 
-static int __devinit a380_probe(struct platform_device *pdev)
+static int a380_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &a380;
 	int ret;
@@ -139,7 +139,7 @@ err_gpio_free_spk:
 	return ret;
 }
 
-static int __devexit a380_remove(struct platform_device *pdev)
+static int a380_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 
@@ -155,7 +155,7 @@ static struct platform_driver a380_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe		= a380_probe,
-	.remove		= __devexit_p(a380_remove),
+	.remove		= a380_remove,
 };
 
 module_platform_driver(a380_driver);

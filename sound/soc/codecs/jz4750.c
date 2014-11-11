@@ -770,7 +770,7 @@ static struct snd_soc_codec_driver soc_codec_dev_jzdlv = {
 	.num_dapm_routes	= ARRAY_SIZE(jz4750_codec_dapm_routes),
 };
 
-static int __devinit jz4750_codec_probe(struct platform_device *pdev)
+static int jz4750_codec_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct jz4750_codec *jz4750_codec;
@@ -794,7 +794,7 @@ err_free_codec:
 	return ret;
 }
 
-static int __devexit jz4750_codec_remove(struct platform_device *pdev)
+static int jz4750_codec_remove(struct platform_device *pdev)
 {
 	struct jz4750_codec *jz4750_codec = platform_get_drvdata(pdev);
 
@@ -807,7 +807,7 @@ static int __devexit jz4750_codec_remove(struct platform_device *pdev)
 
 static struct platform_driver jz4750_codec_driver = {
 	.probe = jz4750_codec_probe,
-	.remove = __devexit_p(jz4750_codec_remove),
+	.remove = jz4750_codec_remove,
 	.driver = {
 		.name = "jz4750-codec",
 		.owner = THIS_MODULE,
