@@ -2461,7 +2461,11 @@ void mmc_start_host(struct mmc_host *host)
 		mmc_power_off(host);
 	else
 		mmc_power_up(host);
+#ifdef CONFIG_JZ_SYSTEM_AT_CARD
+	mmc_rescan(&host->detect.work);
+#else
 	mmc_detect_change(host, 0);
+#endif
 }
 
 void mmc_stop_host(struct mmc_host *host)
