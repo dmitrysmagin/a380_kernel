@@ -493,6 +493,9 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 
 		break;
 #endif
+	case FBIO_WAITFORVSYNC:
+		/* Implement later, just avoid log message below */
+		break;
 	default:
 		printk("%s, unknown command(0x%x)", __FILE__, cmd);
 
