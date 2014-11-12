@@ -44,11 +44,18 @@ static int emc_read_proc (char *page, char **start, off_t off,
 {
 	int len = 0;
 
-	len += sprintf (page+len, "SMCR(0-5): 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n", REG_EMC_SMCR0, REG_EMC_SMCR1, REG_EMC_SMCR2, REG_EMC_SMCR3, REG_EMC_SMCR4);
-	len += sprintf (page+len, "SACR(0-5): 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n", REG_EMC_SACR0, REG_EMC_SACR1, REG_EMC_SACR2, REG_EMC_SACR3, REG_EMC_SACR4);
-	len += sprintf (page+len, "DMCR:      0x%08x\n", REG_EMC_DMCR);
-	len += sprintf (page+len, "RTCSR:     0x%04x\n", REG_EMC_RTCSR);
-	len += sprintf (page+len, "RTCOR:     0x%04x\n", REG_EMC_RTCOR);
+	len += sprintf(page + len, "SMCR(0-5): "
+			"0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			REG_EMC_SMCR0, REG_EMC_SMCR1, REG_EMC_SMCR2,
+			REG_EMC_SMCR3, REG_EMC_SMCR4);
+	len += sprintf(page + len, "SACR(0-5): "
+			"0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			REG_EMC_SACR0, REG_EMC_SACR1, REG_EMC_SACR2,
+			REG_EMC_SACR3, REG_EMC_SACR4);
+	len += sprintf(page + len, "DMCR:      0x%08x\n", REG_EMC_DMCR);
+	len += sprintf(page + len, "RTCSR:     0x%04x\n", REG_EMC_RTCSR);
+	len += sprintf(page + len, "RTCOR:     0x%04x\n", REG_EMC_RTCOR);
+
 	return len;
 }
 
@@ -62,14 +69,17 @@ static int pmc_read_proc (char *page, char **start, off_t off,
 	unsigned long lcr = REG_CPM_LCR;
 	unsigned long clkgr = REG_CPM_CLKGR;
 
-	len += sprintf (page+len, "Low Power Mode : %s\n", 
+	len += sprintf (page + len, "Low Power Mode : %s\n", 
 			((lcr & CPM_LCR_LPM_MASK) == (CPM_LCR_LPM_IDLE)) ?
-			"IDLE" : (((lcr & CPM_LCR_LPM_MASK) == (CPM_LCR_LPM_SLEEP)) ? 
+			"IDLE" : (((lcr & CPM_LCR_LPM_MASK) ==
+							(CPM_LCR_LPM_SLEEP)) ? 
 				  "SLEEP" : "HIBERNATE"));
 	len += sprintf (page+len, "Doze Mode      : %s\n", 
 			(lcr & CPM_LCR_DOZE_ON) ? "on" : "off");
 	if (lcr & CPM_LCR_DOZE_ON)
-		len += sprintf (page+len, "     duty      : %d\n", (int)((lcr & CPM_LCR_DOZE_DUTY_MASK) >> CPM_LCR_DOZE_DUTY_BIT));
+		len += sprintf (page+len, "     duty      : %d\n",
+				(int)((lcr & CPM_LCR_DOZE_DUTY_MASK) >>
+				CPM_LCR_DOZE_DUTY_BIT));
 	len += sprintf (page+len, "AUX_CPU        : %s\n",
 			(clkgr & CPM_CLKGR_AUX_CPU) ? "stopped" : "running");
 	len += sprintf (page+len, "AHB1           : %s\n",
@@ -187,7 +197,7 @@ static int __init jz_proc_init(void)
 	struct proc_dir_entry *res;
 
 	proc_jz_root = proc_mkdir("jz", 0);
-
+#if 0
 	/* External Memory Controller */
 	res = create_proc_entry("emc", 0644, proc_jz_root);
 	if (res) {
@@ -211,7 +221,7 @@ static int __init jz_proc_init(void)
 		res->write_proc = cgm_write_proc;
 		res->data = NULL;
 	}
-
+#endif
 	return 0;
 }
 
