@@ -1864,14 +1864,14 @@ static int jz4750_fb_probe(struct platform_device *dev)
 	}
 
 	ctrl_enable();
-
+#if 0
 	//maddrone add
 	res = create_proc_entry("jz/tvout", 0, NULL);
 	if(res) {
 		res->read_proc = proc_tvout_read_proc;
 		res->write_proc = proc_tvout_write_proc;
 	}
-
+#endif
 	return 0;
 
 failed:
