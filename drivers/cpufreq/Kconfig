@@ -254,7 +254,7 @@ config LOONGSON2_CPUFREQ
 config CPU_FREQ_JZ
 	tristate "CPUfreq driver for JZ CPUs"
 	select CPU_FREQ_TABLE
-	depends on MACH_JZ4740
+	depends on MACH_JZ4740 || MACH_JZ4750D
 	default n
 	help
 	  This enables the CPUfreq driver for JZ CPUs.

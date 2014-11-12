@@ -22,9 +22,6 @@
 #include <asm/mach-jz4750d/jz4750d_emc.h>
 #include <asm/mach-jz4750d/jz4750d_cpm.h>
 
-#define dprintk(msg...) cpufreq_debug_printk(CPUFREQ_DEBUG_DRIVER, \
-						"cpufreq-jz4750d", msg)
-
 //#define CHANGE_PLL 1
 #undef CHANGE_PLL
 
@@ -245,7 +242,8 @@ static void jz_scale_divisors(struct dpm_regs *regs)
 	cpccr |= CPM_CPCCR_CE;       /* update immediately */
 
 	cur_mclk = __cpm_get_mclk();
-	new_mclk = __cpm_get_pllout() / div[(cpccr & CPM_CPCCR_MDIV_MASK) >> CPM_CPCCR_MDIV_BIT];
+	new_mclk = __cpm_get_pllout() /
+		   div[(cpccr & CPM_CPCCR_MDIV_MASK) >> CPM_CPCCR_MDIV_BIT];
 
 	/* Update some DRAM parameters before changing frequency */
 	jz_update_dram_prev(cur_mclk, new_mclk);
@@ -338,12 +336,14 @@ static void jz_scale_pll(struct dpm_regs *regs)
 	int od[] = {1, 2, 2, 4};
 
 	cppcr = REG_CPM_CPPCR;
-	cppcr &= ~(regs->cppcr_mask | CPM_CPPCR_PLLS | CPM_CPPCR_PLLEN | CPM_CPPCR_PLLST_MASK);
+	cppcr &= ~(regs->cppcr_mask | CPM_CPPCR_PLLS |
+				     CPM_CPPCR_PLLEN | CPM_CPPCR_PLLST_MASK);
 	regs->cppcr &= ~CPM_CPPCR_PLLEN;
 	cppcr |= (regs->cppcr | 0xff);
 
 	/* Update some DRAM parameters before changing frequency */
-	new_pll = JZ_EXTAL * ((cppcr>>23)+2) / ((((cppcr>>18)&0x1f)+2) * od[(cppcr>>16)&0x03]);
+	new_pll = JZ_EXTAL * ((cppcr>>23)+2) /
+			((((cppcr>>18)&0x1f)+2) * od[(cppcr>>16)&0x03]);
 	cur_mclk = __cpm_get_mclk();
 	new_mclk = new_pll / div[(REG_CPM_CPCCR>>16) & 0xf];
 
@@ -459,7 +459,8 @@ static unsigned int index_to_divisor(unsigned int index, struct dpm_regs *regs)
 	unsigned int div_of_cclk, new_freq, i;
 
 	regs->pll_up_flag = PLL_UNCHANGED;
-	regs->cpccr_mask = CPM_CPCCR_CDIV_MASK | CPM_CPCCR_HDIV_MASK | CPM_CPCCR_PDIV_MASK | CPM_CPCCR_MDIV_MASK;
+	regs->cpccr_mask = CPM_CPCCR_CDIV_MASK | CPM_CPCCR_HDIV_MASK |
+			   CPM_CPCCR_PDIV_MASK | CPM_CPCCR_MDIV_MASK;
 
 	new_freq = jz4750d_freq_table.table[index].frequency;
 
@@ -490,7 +491,8 @@ static unsigned int index_to_divisor(unsigned int index, struct dpm_regs *regs)
 	return  div_of_cclk;
 }
 
-static void jz4750d_set_cpu_divider_index(unsigned int cpu, unsigned int index)
+static void jz4750d_set_cpu_divider_index(struct cpufreq_policy *policy,
+		unsigned int index)
 {
 	unsigned long divisor, old_divisor;
 	struct cpufreq_freqs freqs;
@@ -500,15 +502,15 @@ static void jz4750d_set_cpu_divider_index(unsigned int cpu, unsigned int index)
 	divisor = index_to_divisor(index, &regs);
 
 	freqs.old = __cpm_get_cclk() / 1000;
-	freqs.new =  __cpm_get_pllout() / (1000 * divisor);
-	freqs.cpu = cpu;
+	freqs.new = __cpm_get_pllout() / (1000 * divisor);
+	freqs.cpu = policy->cpu;
 
-	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
+	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
 
 	if (old_divisor != divisor)
 		jz4750d_transition(&regs);
 
-	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
+	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
 }
 
 static int jz4750d_freq_target(struct cpufreq_policy *policy,
@@ -522,7 +524,7 @@ static int jz4750d_freq_target(struct cpufreq_policy *policy,
 					   target_freq, relation, &new_index))
 		return -EINVAL;
 
-	jz4750d_set_cpu_divider_index(policy->cpu, new_index);
+	jz4750d_set_cpu_divider_index(policy, new_index);
 
 	printk("New frequency is %d MHz (REG_CPM_CPCCR:0x%x)\n",
 		__cpm_get_cclk() / 1000000, REG_CPM_CPCCR);
@@ -542,31 +544,33 @@ static int __init jz4750d_cpufreq_driver_init(struct cpufreq_policy *policy)
 	struct cpufreq_frequency_table *table =	&jz4750d_freq_table.table[0];
 	unsigned int MAX_FREQ;
 
-	dprintk(KERN_INFO "Jz4750d cpufreq driver\n");
+	printk(KERN_INFO "Jz4750d cpufreq driver\n");
 
 	if (policy->cpu != 0)
 		return -EINVAL;
 
-	policy->cur = MAX_FREQ = __cpm_get_cclk() / 1000; /* in kHz. Current and max frequency is determined by u-boot */
+	/* in kHz. Current and max frequency is determined by u-boot */
+	policy->cur = MAX_FREQ = __cpm_get_cclk() / 1000;
 	policy->governor = CPUFREQ_DEFAULT_GOVERNOR;
 
 	policy->cpuinfo.min_freq = MAX_FREQ/8;
 	policy->cpuinfo.max_freq = MAX_FREQ;
-	policy->cpuinfo.transition_latency = 100000; /* in 10^(-9) s = nanoseconds */
+	/* in 10^(-9) s = nanoseconds */
+	policy->cpuinfo.transition_latency = 100000;
 
-	table[0].index = 0;
+	//table[0].index = 0;
 	table[0].frequency = MAX_FREQ/8;
-	table[1].index = 1;
+	//table[1].index = 1;
 	table[1].frequency = MAX_FREQ/6;
-	table[2].index = 2;
+	//table[2].index = 2;
 	table[2].frequency = MAX_FREQ/4;
-	table[3].index = 3;
+	//table[3].index = 3;
 	table[3].frequency = MAX_FREQ/3;
-	table[4].index = 4;
+	//table[4].index = 4;
 	table[4].frequency = MAX_FREQ/2;
-	table[5].index = 5;
+	//table[5].index = 5;
 	table[5].frequency = MAX_FREQ;
-	table[6].index = 6;
+	//table[6].index = 6;
 	table[6].frequency = CPUFREQ_TABLE_END;
 
 #ifdef CONFIG_CPU_FREQ_STAT_DETAILS
