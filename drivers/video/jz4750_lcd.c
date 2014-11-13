@@ -37,6 +37,7 @@
 #include <linux/interrupt.h>
 #include <linux/pm.h>
 #include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 #include <linux/kthread.h>
 
 #include <asm/irq.h>
@@ -1705,16 +1706,15 @@ static int jz4750_fb_resume(struct platform_device *pdev)
 
 #endif /* CONFIG_PM */
 
-static int proc_tvout_read_proc(
-			char *page, char **start, off_t off,
-			int count, int *eof, void *data)
+static int tvout_show(struct seq_file *m, void *v)
 {
-	return sprintf(page, "%lu\n", tvout_flag);
+	seq_printf(m, "%lu\n", tvout_flag);
+
+	return 0;
 }
 
-static int proc_tvout_write_proc(
-			struct file *file, const char *buffer,
-			unsigned long count, void *data)
+static ssize_t tvout_write(struct file *file, const char __user *buffer,
+			size_t count, loff_t *pos)
 {
 	tvout_flag = simple_strtoul(buffer, 0, 10);
 
@@ -1733,6 +1733,20 @@ static int proc_tvout_write_proc(
 
 	return count;
 }
+
+static int tvout_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, tvout_show, NULL);
+}
+
+static const struct file_operations tvout_fops = {
+	.open		= tvout_open,
+	.read		= seq_read,
+	.write		= tvout_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 
 static void gpio_init(void)
 {
@@ -1828,7 +1842,6 @@ static int jz4750_fb_probe(struct platform_device *dev)
 {
 	struct lcd_cfb_info *cfb;
 	int err = 0;
-	struct proc_dir_entry *res;
 
 	cfb = jz4750fb_alloc_fb_info();
 	if (!cfb)
@@ -1867,14 +1880,9 @@ static int jz4750_fb_probe(struct platform_device *dev)
 	}
 
 	ctrl_enable();
-#if 0
-	//maddrone add
-	res = create_proc_entry("jz/tvout", 0, NULL);
-	if(res) {
-		res->read_proc = proc_tvout_read_proc;
-		res->write_proc = proc_tvout_write_proc;
-	}
-#endif
+
+	proc_create("jz/tvout", 0644, 0, &tvout_fops);
+
 	return 0;
 
 failed:
