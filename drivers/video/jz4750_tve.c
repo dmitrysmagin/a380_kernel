@@ -129,7 +129,7 @@ void jz4750tve_init( int tve_mode )
 //	jz4750tve_enable_tve();
 }
 
-void jz4750tve_deinit()
+void jz4750tve_deinit(void)
 {
 
 
