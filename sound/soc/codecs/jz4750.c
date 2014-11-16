@@ -541,11 +541,6 @@ static void jz4750_codec_shutdown(struct snd_pcm_substream *substream,
 	int playback = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK);
 
 	DEBUG_MSG("enter jz4750_codec_shutdown, playback = %d\n", playback);
-
-	/* deactivate */
-	if (!codec->active) {
-		udelay(50);
-	}
 }
 
 static int jz4750_codec_mute(struct snd_soc_dai *dai, int mute)
