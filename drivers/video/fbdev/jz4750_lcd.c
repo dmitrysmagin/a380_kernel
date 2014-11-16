@@ -44,7 +44,6 @@
 #include <asm/pgtable.h>
 #include <asm/uaccess.h>
 #include <asm/processor.h>
-#include "console/fbcon.h"
 
 #include <asm/mach-jz4750d/jz4750d_lcdc.h>
 #include <asm/mach-jz4750d/jz4750d_tve.h>
