@@ -777,6 +777,17 @@ void page_endio(struct page *page, int rw, int err)
 	if (rw == READ) {
 		if (!err) {
 			SetPageUptodate(page);
+				/*
+				 * It seems that there is a IO coherent bug in generic_file_mmap(),
+				 * When __do_fault() calls vma->ops->falut(filemap_fault)->aops->readpage(),
+				 * the PG_dcache_dirty is not set, so the page should be flushed (often with EXEC flags)
+				 * will not be flushed in the update_mmu_cache().
+				 *
+				 * This causes some larger ELF files failing to execute with errors like illegal instruction...
+				 *
+				 * - River.
+				 */
+				flush_dcache_page(page);
 		} else {
 			ClearPageUptodate(page);
 			SetPageError(page);
