@@ -505,12 +505,12 @@ static void jz4750d_set_cpu_divider_index(struct cpufreq_policy *policy,
 	freqs.new = __cpm_get_pllout() / (1000 * divisor);
 	freqs.cpu = policy->cpu;
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+	cpufreq_freq_transition_begin(policy, &freqs);
 
 	if (old_divisor != divisor)
 		jz4750d_transition(&regs);
 
-	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
+	cpufreq_freq_transition_end(policy, &freqs, 0);
 }
 
 static int jz4750d_freq_target(struct cpufreq_policy *policy,
