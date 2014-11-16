@@ -223,6 +223,14 @@ config USB_GR_UDC
           Select this to support Aeroflex Gaisler GRUSBDC cores from the GRLIB
 	  VHDL IP core library.
 
+config USB_JZ4740
+	tristate "JZ4740 UDC"
+	depends on MACH_JZ4740 || MACH_JZ4750D
+	select USB_GADGET_DUALSPEED
+	help
+	   Select this to support the Ingenic JZ4740 processor
+	   high speed USB device controller.
+
 config USB_OMAP
 	tristate "OMAP USB Device Controller"
 	depends on ARCH_OMAP1
