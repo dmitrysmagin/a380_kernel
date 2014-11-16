@@ -85,14 +85,14 @@ stable:
 	/* oldstat: 1 -- eject, 0 -- inserted */
 	/* eject: 1 -- eject, 0 -- inserted */
 
-#ifdef CONFIG_PM
+#if 0 //def CONFIG_PM
 	if ( (0 == host->oldstat) && (0 == host->eject) && host->sleeping) {
 		mmc_resume_host(host->mmc);
 	}
 #endif
 
 	if ( (0== host->oldstat) && (1 == host->eject) ) {
-#ifdef CONFIG_PM
+#if 0 //def CONFIG_PM
 		if (host->sleeping) {
 			mmc_resume_host(host->mmc);
 		} else
