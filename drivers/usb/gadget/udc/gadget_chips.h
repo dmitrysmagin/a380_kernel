@@ -29,6 +29,7 @@
  */
 #define gadget_is_at91(g)		(!strcmp("at91_udc", (g)->name))
 #define gadget_is_goku(g)		(!strcmp("goku_udc", (g)->name))
+#define gadget_is_jz4740(g)		(!strcmp("jz4740-udc", (g)->name))
 #define gadget_is_musbhdrc(g)		(!strcmp("musb-hdrc", (g)->name))
 #define gadget_is_net2280(g)		(!strcmp("net2280", (g)->name))
 #define gadget_is_pxa(g)		(!strcmp("pxa25x_udc", (g)->name))
