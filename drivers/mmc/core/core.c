@@ -2494,7 +2494,11 @@ void mmc_start_host(struct mmc_host *host)
 	else
 		mmc_power_up(host, host->ocr_avail);
 	mmc_gpiod_request_cd_irq(host);
+#ifdef CONFIG_JZ_SYSTEM_AT_CARD
+	mmc_rescan(&host->detect.work);
+#else
 	_mmc_detect_change(host, 0, false);
+#endif
 }
 
 void mmc_stop_host(struct mmc_host *host)
