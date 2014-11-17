@@ -253,7 +253,7 @@ static struct platform_device a380_backlight_device = {
 };
 
 struct pwm_lookup a380_pwm_table[] = {
-	PWM_LOOKUP("jz4750-pwm", 2, "pwm-backlight", 0),
+	PWM_LOOKUP("jz4750-pwm", 2, "pwm-backlight", 0, 40000, PWM_POLARITY_NORMAL),
 };
 
 /* All */
