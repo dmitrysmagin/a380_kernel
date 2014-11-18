@@ -368,32 +368,33 @@ static const struct snd_kcontrol_new jz4750_codec_controls[] = {
 //	SOC_DOUBLE_R_TLV("Mic 2 Mixing", REG_CGR6, REG_CGR7, 0, 31, 1, in_tlv),
 	SOC_DOUBLE_R_TLV("Master Playback", REG_CGR9, REG_CGR8,
 			 0, 31, 1, in_tlv),
-	SOC_SINGLE("Master Playback Switch", REG_CR1, REG_CR1_HP_DIS, 1, 1),
+	SOC_SINGLE("Master Playback Switch", REG_CR1,
+			 4 /*REG_CR1_HP_DIS*/, 1, 1),
 //	SOC_DOUBLE_TLV("Line", REG_CGR10, 4, 0, 15, 0, line_tlv),
 };
 
 static const struct snd_kcontrol_new jz4750_codec_output_controls[] = {
 	SOC_DAPM_SINGLE("Bypass Switch", REG_CR1,
-			REG_CR1_BYPASS, 1, 0),
+			2 /*REG_CR1_BYPASS*/, 1, 0),
 	SOC_DAPM_SINGLE("DAC Switch", REG_CR1,
-			REG_CR1_DACSEL, 1, 1),
+			3 /*REG_CR1_DACSEL*/, 1, 1),
 };
 
 static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
 	//SND_SOC_DAPM_ADC("ADC", "Capture", REG_PMR1,
-	//		REG_PMR1_SB_ADC, 1),
+	//		4 /*REG_PMR1_SB_ADC*/, 1),
 	SND_SOC_DAPM_DAC("DAC", "Playback", REG_PMR1,
-			REG_PMR1_SB_DAC, 1),
+			7 /*REG_PMR1_SB_DAC*/, 1),
 
 	SND_SOC_DAPM_MIXER("Output Mixer", REG_PMR1,
-			REG_PMR1_SB_MIX, 1,
+			5 /*REG_PMR1_SB_MIX*/, 1,
 			jz4750_codec_output_controls,
 			ARRAY_SIZE(jz4750_codec_output_controls)),
 
 	//SND_SOC_DAPM_MIXER("Line Input", SND_SOC_NOPM, 0, 0, NULL, 0),
 
-	//SND_SOC_DAPM_OUTPUT("LHPOUT"),
-	//SND_SOC_DAPM_OUTPUT("RHPOUT"),
+	SND_SOC_DAPM_OUTPUT("LHPOUT"),
+	SND_SOC_DAPM_OUTPUT("RHPOUT"),
 
 	SND_SOC_DAPM_OUTPUT("LOUT"),
 	SND_SOC_DAPM_OUTPUT("ROUT"),
