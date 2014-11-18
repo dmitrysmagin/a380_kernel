@@ -13,13 +13,46 @@
 #include <linux/timer.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
+#include <linux/gpio.h>
+#include <linux/delay.h>
+
 #include <sound/core.h>
+#include <sound/jack.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
-#include <linux/gpio.h>
+#include <sound/soc-dapm.h>
 
-#define A380_SPK_GPIO JZ_GPIO_PORTE(9)
-#define A380_HPTV_GPIO JZ_GPIO_PORTE(5)
+#define A380_HP_DETECT_GPIO	JZ_GPIO_PORTC(23)
+#define A380_HP_GPIO		JZ_GPIO_PORTE(5)
+#define A380_SPK_GPIO		JZ_GPIO_PORTE(9)
+
+/* Headphone jzck: plug insert detection */
+
+static struct snd_soc_jack a380_hp_jack;
+
+static struct snd_soc_jack_pin a380_hp_jack_pins[] = {
+	{
+		.pin	= "Headphones",
+		.mask	= SND_JACK_HEADPHONE,
+	},
+	{
+		.pin	= "Speakers",
+		.mask	= SND_JACK_HEADPHONE,
+		.invert	= 1,
+	},
+};
+
+static struct snd_soc_jack_gpio a380_hp_jack_gpios[] = {
+	{
+		.name		= "Headphones Detect",
+		.report		= SND_JACK_HEADPHONE,
+		.gpio		= A380_HP_DETECT_GPIO,
+		.invert		= 1,
+		.debounce_time	= 200,
+	},
+};
+
+/* Headphones and speakers switches */
 
 static int a380_spk_event(struct snd_soc_dapm_widget *widget,
 	struct snd_kcontrol *ctrl, int event)
@@ -28,36 +61,35 @@ static int a380_spk_event(struct snd_soc_dapm_widget *widget,
 	return 0;
 }
 
-static int a380_hptv_event(
+static int a380_hp_event(
 			struct snd_soc_dapm_widget *widget,
 			struct snd_kcontrol *ctrl, int event)
 {
-	gpio_set_value(A380_HPTV_GPIO, SND_SOC_DAPM_EVENT_ON(event));
+	if (SND_SOC_DAPM_EVENT_ON(event))
+		msleep(50);
+
+	gpio_set_value(A380_HP_GPIO, !SND_SOC_DAPM_EVENT_ON(event));
 	return 0;
 }
 
 static const struct snd_kcontrol_new a380_controls[] = {
-	SOC_DAPM_PIN_SWITCH("Speaker"),
-	SOC_DAPM_PIN_SWITCH("Headphones + TV-out"),
+	SOC_DAPM_PIN_SWITCH("Speakers"),
+	SOC_DAPM_PIN_SWITCH("Headphones"),
 };
 
 static const struct snd_soc_dapm_widget a380_widgets[] = {
-	SND_SOC_DAPM_MIC("Mic", NULL),
-	SND_SOC_DAPM_SPK("Speaker", a380_spk_event),
-	SND_SOC_DAPM_LINE("Headphones + TV-out", a380_hptv_event),
+//	SND_SOC_DAPM_MIC("Mic", NULL),
+	SND_SOC_DAPM_SPK("Speakers", a380_spk_event),
+	SND_SOC_DAPM_HP("Headphones", a380_hp_event),
 };
 
 static const struct snd_soc_dapm_route a380_routes[] = {
-	{"Mic", NULL, "MIC"},
-	{"Speaker", NULL, "LOUT"},
-	{"Speaker", NULL, "ROUT"},
-	{"Headphones + TV-out", NULL, "LOUT"},
-	{"Headphones + TV-out", NULL, "ROUT"},
+//	{"Mic", NULL, "MIC"},
+	{"Speakers", NULL, "LOUT"},
+	{"Speakers", NULL, "ROUT"},
+	{"Headphones", NULL, "LHPOUT"},
+	{"Headphones", NULL, "RHPOUT"},
 };
-
-#define A380_DAIFMT (SND_SOC_DAIFMT_I2S | \
-		     SND_SOC_DAIFMT_NB_NF | \
-		     SND_SOC_DAIFMT_CBM_CFM)
 
 static int a380_codec_init(struct snd_soc_pcm_runtime *rtd)
 {
@@ -66,36 +98,53 @@ static int a380_codec_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 	int ret;
 
-	ret = snd_soc_dai_set_fmt(cpu_dai, A380_DAIFMT);
+	/* Set up Headphones plug detection */
+	snd_soc_jack_new(codec, "Headphones Jack",
+			 SND_JACK_HEADPHONE, &a380_hp_jack);
+
+	snd_soc_jack_add_pins(&a380_hp_jack,
+			      ARRAY_SIZE(a380_hp_jack_pins),
+			      a380_hp_jack_pins);
+
+	snd_soc_jack_add_gpios(&a380_hp_jack,
+			       ARRAY_SIZE(a380_hp_jack_gpios),
+			       a380_hp_jack_gpios);
+
+	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
+					   SND_SOC_DAIFMT_NB_NF | 
+					   SND_SOC_DAIFMT_CBM_CFM);
 	if (ret < 0) {
 		dev_err(codec->dev, "Failed to set cpu dai format: %d\n", ret);
 		return ret;
 	}
 
-	snd_soc_add_card_controls(rtd->card, a380_controls,
-				  ARRAY_SIZE(a380_controls));
-
-	snd_soc_dapm_new_controls(dapm, a380_widgets, ARRAY_SIZE(a380_widgets));
-	snd_soc_dapm_add_routes(dapm, a380_routes, ARRAY_SIZE(a380_routes));
-	snd_soc_dapm_sync(dapm);
-
 	return 0;
 }
 
 static struct snd_soc_dai_link a380_dai = {
-	.name = "jz4750",
-	.stream_name = "jz4750",
-	.cpu_dai_name = "jz4750-i2s",
-	.platform_name = "jz4750-pcm-audio",
-	.codec_dai_name = "jz4750-hifi",
-	.codec_name = "jz4750-codec",
-	.init = a380_codec_init,
+	.name		= "jz4750",
+	.stream_name	= "jz4750",
+	.cpu_dai_name	= "jz4750-i2s",
+	.platform_name	= "jz4750-pcm-audio",
+	.codec_dai_name	= "jz4750-hifi",
+	.codec_name	= "jz4750-codec",
+	.init		= a380_codec_init,
 };
 
 static struct snd_soc_card a380 = {
-	.name = "Dingoo A380",
-	.dai_link = &a380_dai,
-	.num_links = 1,
+	.name		= "Dingoo A380",
+	.owner		= THIS_MODULE,
+	.dai_link	= &a380_dai,
+	.num_links	= 1,
+
+	.controls	= a380_controls,
+	.num_controls	= ARRAY_SIZE(a380_controls),
+
+	.dapm_widgets		= a380_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(a380_widgets),
+
+	.dapm_routes		= a380_routes,
+	.num_dapm_routes	= ARRAY_SIZE(a380_routes),
 };
 
 static int a380_probe(struct platform_device *pdev)
@@ -110,15 +159,16 @@ static int a380_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = gpio_request(A380_HPTV_GPIO, "HPTV");
+	ret = gpio_request(A380_HP_GPIO, "HPTV");
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to request HPTV GPIO(%d): %d\n",
-			A380_HPTV_GPIO, ret);
+			A380_HP_GPIO, ret);
 		goto err_gpio_free_spk;
 	}
 
-	gpio_direction_output(A380_SPK_GPIO, 0);
-	gpio_direction_output(A380_HPTV_GPIO, 0);
+	jz_gpio_disable_pullup(A380_HP_DETECT_GPIO);
+	gpio_direction_output(A380_SPK_GPIO, 1);
+	gpio_direction_output(A380_HP_GPIO, 0);
 
 	card->dev = &pdev->dev;
 
@@ -132,7 +182,7 @@ static int a380_probe(struct platform_device *pdev)
 	return 0;
 
 err_gpio_free_hptv:
-	gpio_free(A380_HPTV_GPIO);
+	gpio_free(A380_HP_GPIO);
 err_gpio_free_spk:
 	gpio_free(A380_SPK_GPIO);
 
@@ -144,7 +194,7 @@ static int a380_remove(struct platform_device *pdev)
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 
 	snd_soc_unregister_card(card);
-	gpio_free(A380_HPTV_GPIO);
+	gpio_free(A380_HP_GPIO);
 	gpio_free(A380_SPK_GPIO);
 	return 0;
 }
