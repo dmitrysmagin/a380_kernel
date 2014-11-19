@@ -368,8 +368,10 @@ static const struct snd_kcontrol_new jz4750_codec_controls[] = {
 //	SOC_DOUBLE_R_TLV("Mic 2 Mixing", REG_CGR6, REG_CGR7, 0, 31, 1, in_tlv),
 	SOC_DOUBLE_R_TLV("Master Playback", REG_CGR9, REG_CGR8,
 			 0, 31, 1, in_tlv),
+#if 0
 	SOC_SINGLE("Master Playback Switch", REG_CR1,
 			 4 /*REG_CR1_HP_DIS*/, 1, 1),
+#endif
 //	SOC_DOUBLE_TLV("Line", REG_CGR10, 4, 0, 15, 0, line_tlv),
 };
 

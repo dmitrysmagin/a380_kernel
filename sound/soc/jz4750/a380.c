@@ -22,6 +22,8 @@
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 
+#include <asm/mach-jz4750d/jz4750d_gpio.h>
+
 #define A380_HP_DETECT_GPIO	JZ_GPIO_PORTC(23)
 #define A380_HP_GPIO		JZ_GPIO_PORTE(5)
 #define A380_SPK_GPIO		JZ_GPIO_PORTE(9)
@@ -38,7 +40,7 @@ static struct snd_soc_jack_pin a380_hp_jack_pins[] = {
 	{
 		.pin	= "Speakers",
 		.mask	= SND_JACK_HEADPHONE,
-		.invert	= 1,
+		//.invert	= 1,
 	},
 };
 
@@ -68,7 +70,11 @@ static int a380_hp_event(
 	if (SND_SOC_DAPM_EVENT_ON(event))
 		msleep(50);
 
-	gpio_set_value(A380_HP_GPIO, !SND_SOC_DAPM_EVENT_ON(event));
+	/*
+	 * A380:  0 - hp off; 1 - hp on
+	 * RZX50: 0 - hp on;  1 - hp off
+	 */
+	gpio_set_value(A380_HP_GPIO, SND_SOC_DAPM_EVENT_ON(event));
 	return 0;
 }
 
@@ -159,16 +165,28 @@ static int a380_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = gpio_request(A380_HP_GPIO, "HPTV");
+	ret = gpio_request(A380_HP_GPIO, "HP");
 	if (ret) {
-		dev_err(&pdev->dev, "Failed to request HPTV GPIO(%d): %d\n",
+		dev_err(&pdev->dev, "Failed to request HP GPIO(%d): %d\n",
 			A380_HP_GPIO, ret);
 		goto err_gpio_free_spk;
 	}
 
-	jz_gpio_disable_pullup(A380_HP_DETECT_GPIO);
-	gpio_direction_output(A380_SPK_GPIO, 1);
-	gpio_direction_output(A380_HP_GPIO, 0);
+	__gpio_as_output(A380_SPK_GPIO); //GPIO_AMPEN
+	__gpio_enable_pull(A380_SPK_GPIO);
+	__gpio_clear_pin(A380_SPK_GPIO);
+
+	__gpio_mask_irq(A380_HP_DETECT_GPIO); //GPIO_HP_DETE
+	__gpio_as_input(A380_HP_DETECT_GPIO);
+	__gpio_enable_pull(A380_HP_DETECT_GPIO);
+
+	__gpio_as_output(A380_HP_GPIO); //GPIO_HP_OFF
+	__gpio_enable_pull(A380_HP_GPIO);
+	__gpio_clear_pin(A380_HP_GPIO);
+
+	//jz_gpio_enable_pullup(A380_HP_DETECT_GPIO);
+	//gpio_direction_output(A380_SPK_GPIO, 0);
+	//gpio_direction_output(A380_HP_GPIO, 1);
 
 	card->dev = &pdev->dev;
 
