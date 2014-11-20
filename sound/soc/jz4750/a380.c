@@ -178,7 +178,7 @@ static int a380_probe(struct platform_device *pdev)
 	jz_gpio_enable_pullup(A380_SPK_GPIO);
 	jz_gpio_enable_pullup(A380_HP_GPIO);
 
-	gpio_direction_input(A380_HP_DETECT_GPIO);
+	//gpio_direction_input(A380_HP_DETECT_GPIO);
 	gpio_direction_output(A380_SPK_GPIO, 0);
 	gpio_direction_output(A380_HP_GPIO, 0);
 
