@@ -57,8 +57,11 @@
 
 #define REG_AICR_CONFIG1(A)	(((A) & 0x0f) << 0)
 
+#define REG_CR1_BYPASS_OFFSET	2
 #define REG_CR1_BYPASS		(1 << 2)
+#define REG_CR1_DACSEL_OFFSET	3
 #define REG_CR1_DACSEL		(1 << 3)
+#define REG_CR1_HP_DIS_OFFSET	4
 #define REG_CR1_HP_DIS		(1 << 4)
 #define REG_CR1_DAC_MUTE	(1 << 5)
 #define REG_CR1_MONO		(1 << 6)
@@ -84,9 +87,12 @@
 
 #define REG_PMR1_SB_IND		(1 << 0)
 #define REG_PMR1_SB_LIN		(1 << 3)
+#define REG_PMR1_SB_ADC_OFFSET	4
 #define REG_PMR1_SB_ADC		(1 << 4)
+#define REG_PMR1_SB_MIX_OFFSET	5
 #define REG_PMR1_SB_MIX		(1 << 5)
 #define REG_PMR1_SB_OUT		(1 << 6)
+#define REG_PMR1_SB_DAC_OFFSET	7
 #define REG_PMR1_SB_DAC		(1 << 7)
 
 #define REG_PMR2_SB_SLEEP	(1 << 0)
@@ -260,26 +266,26 @@ static const struct snd_kcontrol_new jz4750_codec_controls[] = {
 			 0, 31, 1, in_tlv),
 #if 0
 	SOC_SINGLE("Master Playback Switch", REG_CR1,
-			 4 /*REG_CR1_HP_DIS*/, 1, 1),
+			 REG_CR1_HP_DIS_OFFSET, 1, 1),
 #endif
 //	SOC_DOUBLE_TLV("Line", REG_CGR10, 4, 0, 15, 0, line_tlv),
 };
 
 static const struct snd_kcontrol_new jz4750_codec_output_controls[] = {
 	SOC_DAPM_SINGLE("Bypass Switch", REG_CR1,
-			2 /*REG_CR1_BYPASS*/, 1, 0),
+			REG_CR1_BYPASS_OFFSET, 1, 0),
 	SOC_DAPM_SINGLE("DAC Switch", REG_CR1,
-			3 /*REG_CR1_DACSEL*/, 1, 1),
+			REG_CR1_DACSEL_OFFSET, 1, 1),
 };
 
 static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
 	//SND_SOC_DAPM_ADC("ADC", "Capture", REG_PMR1,
-	//		4 /*REG_PMR1_SB_ADC*/, 1),
+	//		REG_PMR1_SB_ADC_OFFSET, 1),
 	SND_SOC_DAPM_DAC("DAC", "Playback", REG_PMR1,
-			7 /*REG_PMR1_SB_DAC*/, 1),
+			REG_PMR1_SB_DAC_OFFSET, 1),
 
 	SND_SOC_DAPM_MIXER("Output Mixer", REG_PMR1,
-			5 /*REG_PMR1_SB_MIX*/, 1,
+			REG_PMR1_SB_MIX_OFFSET, 1,
 			jz4750_codec_output_controls,
 			ARRAY_SIZE(jz4750_codec_output_controls)),
 
@@ -446,6 +452,8 @@ static int jz4750_codec_pcm_trigger(struct snd_pcm_substream *substream,
 			jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_ON);
 			mdelay(2);
 		}
+
+		dump_regs();
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
