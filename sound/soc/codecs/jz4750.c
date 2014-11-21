@@ -12,6 +12,10 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 
+/* For debugging */
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
+
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -97,7 +101,7 @@
 
 #define REG_PMR2_SB_SLEEP	(1 << 0)
 #define REG_PMR2_SB		(1 << 1)
-#define REG_PMR2_SB_MIC		(1 << 2)
+#define REG_PMR2_SB_MC		(1 << 2)
 #define REG_PMR2_GIM		(1 << 3)
 #define REG_PMR2_GOD(A)		(((A) & 3) << 4)
 #define REG_PMR2_GI(A)		(((A) & 3) << 5)
@@ -175,45 +179,113 @@ static inline void write_codec_file(int reg, int val)
 	mdelay(1);
 }
 
-static void dump_regs(void)
+static int codec_debug_show(struct seq_file *m, void *v)
 {
-	unsigned int cr1, cr2, cr3, pmr1, pmr2;
+	unsigned int cr1, cr2, cr3, pmr1, pmr2, icr, ifr;
 
 	cr1 = read_codec_file(REG_CR1);
 	cr2 = read_codec_file(REG_CR2);
 	cr3 = read_codec_file(REG_CR3);
 	pmr1 = read_codec_file(REG_PMR1);
 	pmr2 = read_codec_file(REG_PMR2);
+	icr = read_codec_file(REG_ICR);
+	ifr = read_codec_file(REG_IFR);
 
-	printk( "CR1_DAC_MUTE=%i\n"
+	seq_printf(m,
+		"CR1_SB_MICBIAS=%i\n"
+		"CR1_MONO=%i\n"
+		"CR1_DAC_MUTE=%i\n"
 		"CR1_HP_DIS=%i\n"
 		"CR1_DACSEL=%i\n"
-		"CR1_BYPASS=%i\n"
-		"CR2=0x%02x\n"
-		"CR3=0x%02x\n"
+		"CR1_BYPASS=%i\n",
+		!!(cr1 & REG_CR1_SB_MICBIAS),
+		!!(cr1 & REG_CR1_MONO),
+		!!(cr1 & REG_CR1_DAC_MUTE),
+		!!(cr1 & REG_CR1_HP_DIS),
+		!!(cr1 & REG_CR1_DACSEL),
+		!!(cr1 & REG_CR1_BYPASS)
+	);
+
+	seq_printf(m,
+		"CR2_DAC_DEEMP=%i\n"
+		"CR2_DAC_ADWL=%i\n"
+		"CR2_ADC_ADWL=%i\n"
+		"CR2_ADC_HPF=%i\n",
+		!!(cr2 & REG_CR2_DAC_DEEMP),
+		(cr2 >> 5) & 3,
+		(cr2 >> 3) & 3,
+		!!(cr2 & REG_CR2_ADC_HPF)
+	);
+
+	seq_printf(m,
+		"CR3_SB_MIC1=%i\n"
+		"CR3_SB_MIC2=%i\n"
+		"CR3_SIDETONE1=%i\n"
+		"CR3_SIDETONE2=%i\n"
+		"CR3_MICDIFF=%i\n"
+		"CR3_MICSTEREO=%i\n"
+		"CR3_INSEL=%i\n",
+		!!(cr3 & REG_CR3_SB_MIC1),
+		!!(cr3 & REG_CR3_SB_MIC2),
+		!!(cr3 & REG_CR3_SIDETONE1),
+		!!(cr3 & REG_CR3_SIDETONE2),
+		!!(cr3 & REG_CR3_MICDIFF),
+		!!(cr3 & REG_CR3_MICSTEREO),
+		cr3 & 3
+	);
+
+	seq_printf(m,
 		"PMR1_SB_DAC=%i\n"
 		"PMR1_SB_OUT=%i\n"
 		"PMR1_SB_MIX=%i\n"
 		"PMR1_SB_ADC=%i\n"
 		"PMR1_SB_LIN=%i\n"
-		"PMR1_SB_IND=%i\n"
-		"PMR2_SB=%i\n"
-		"PMR2_SB_SLEEP=%i\n",
-		!!(cr1 & REG_CR1_DAC_MUTE),
-		!!(cr1 & REG_CR1_HP_DIS),
-		!!(cr1 & REG_CR1_DACSEL),
-		!!(cr1 & REG_CR1_BYPASS),
-		cr2, cr3,
+		"PMR1_SB_IND=%i\n",
 		!!(pmr1 & REG_PMR1_SB_DAC),
 		!!(pmr1 & REG_PMR1_SB_OUT),
 		!!(pmr1 & REG_PMR1_SB_MIX),
 		!!(pmr1 & REG_PMR1_SB_ADC),
 		!!(pmr1 & REG_PMR1_SB_LIN),
-		!!(pmr1 & REG_PMR1_SB_IND),
+		!!(pmr1 & REG_PMR1_SB_IND)
+	);
+
+	seq_printf(m,
+		"PMR2_GI=%i\n"
+		"PMR2_GOD=%i\n"
+		"PMR2_GIM=%i\n"
+		"PMR2_SB_MC=%i\n"
+		"PMR2_SB=%i\n"
+		"PMR2_SB_SLEEP=%i\n",
+		(pmr2 >> 6) & 3,
+		(pmr2 >> 4) & 3,
+		!!(pmr2 & REG_PMR2_GIM),
+		!!(pmr2 & REG_PMR2_SB_MC),
 		!!(pmr2 & REG_PMR2_SB),
 		!!(pmr2 & REG_PMR2_SB_SLEEP)
-	      );
+	);
+
+	seq_printf(m,
+		"ICR=0x%02x\n"
+		"IFR=0x%02x, IFR_CCMC=%i\n",
+		icr, ifr,
+		!!(fr & REG_IFR_CCMC)
+	);
+
+	return 0;
 }
+
+static int codec_debug_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, codec_debug_show, NULL);
+}
+
+static const struct file_operations codec_debug_fops = {
+	.open		= codec_debug_open,
+	.read		= seq_read,
+	//.write		= seq_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
 
 static unsigned int jz4750_codec_read(struct snd_soc_codec *codec,
 	unsigned int reg)
@@ -322,7 +394,7 @@ static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
 static int jz4750_codec_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
-	struct snd_soc_codec *codec = dai->codec;
+	//struct snd_soc_codec *codec = dai->codec;
 
 	return 0;
 }
@@ -330,7 +402,7 @@ static int jz4750_codec_startup(struct snd_pcm_substream *substream,
 static void jz4750_codec_shutdown(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
-	struct snd_soc_codec *codec = dai->codec;
+	//struct snd_soc_codec *codec = dai->codec;
 
 	int playback = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK);
 
@@ -453,7 +525,6 @@ static int jz4750_codec_pcm_trigger(struct snd_pcm_substream *substream,
 			mdelay(2);
 		}
 
-		dump_regs();
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -543,8 +614,7 @@ static int jz4750_codec_set_bias_level(struct snd_soc_codec *codec,
 			REG_PMR2_SB, 0);
 		mdelay(300);
 
-
-		/* PMR2.SB_SLEEP =01 */
+		/* PMR2.SB_SLEEP = 0 */
 		snd_soc_update_bits(codec, REG_PMR2,
 			REG_PMR2_SB_SLEEP, 0);
 		mdelay(400);
@@ -625,14 +695,12 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, REG_CRR, 0x51); // reduce pop noise
 	mdelay(10);
 
-	snd_soc_update_bits(codec, REG_CGR2, 0xc0, 0xc0);
-	snd_soc_update_bits(codec, REG_CGR4, 0xc0, 0xc0);
-	snd_soc_update_bits(codec, REG_CGR6, 0xc0, 0xc0);
-	snd_soc_update_bits(codec, REG_CGR8, 0xc0, 0xc0);
+	snd_soc_update_bits(codec, REG_CGR2, 0xc0, 0);
+	snd_soc_update_bits(codec, REG_CGR4, 0xc0, 0);
+	snd_soc_update_bits(codec, REG_CGR6, 0xc0, 0);
+	snd_soc_update_bits(codec, REG_CGR8, 0xc0, 0);
 
 	jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-
-	dump_regs();
 
 	return 0;
 }
@@ -694,6 +762,8 @@ static int jz4750_codec_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to register codec.\n");
 		return ret;
 	}
+
+	proc_create("jz/codec", 0644, 0, &codec_debug_fops);
 
 	return 0;
 
