@@ -322,8 +322,8 @@ static int jz4750_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 static const DECLARE_TLV_DB_SCALE(dac_tlv, -2250, 150, 0);
 
 static const unsigned int in_tlv[] = {
-	TLV_DB_RANGE_HEAD(2),
-	31-31, 31-20, TLV_DB_SCALE_ITEM(-2250, 0, 0),
+	TLV_DB_RANGE_HEAD(1),
+	//31-31, 31-20, TLV_DB_SCALE_ITEM(-2250, 0, 0),
 	31-19, 31-00, TLV_DB_SCALE_ITEM(-2250, 150, 0),
 };
 
@@ -345,9 +345,9 @@ static const struct snd_kcontrol_new jz4750_codec_controls[] = {
 
 static const struct snd_kcontrol_new jz4750_codec_output_controls[] = {
 	SOC_DAPM_SINGLE("Bypass Switch", REG_CR1,
-			REG_CR1_BYPASS_OFFSET, 1, 0),
+			REG_CR1_BYPASS_OFFSET, 1, 1),
 	SOC_DAPM_SINGLE("DAC Switch", REG_CR1,
-			REG_CR1_DACSEL_OFFSET, 1, 1),
+			REG_CR1_DACSEL_OFFSET, 1, 0),
 };
 
 static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
@@ -356,8 +356,8 @@ static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
 	SND_SOC_DAPM_DAC("DAC", "Playback", REG_PMR1,
 			REG_PMR1_SB_DAC_OFFSET, 1),
 
-	SND_SOC_DAPM_MIXER("Output Mixer", REG_PMR1,
-			REG_PMR1_SB_MIX_OFFSET, 1,
+	SND_SOC_DAPM_MIXER("Output Mixer", SND_SOC_NOPM /*REG_PMR1*/,
+			0/*REG_PMR1_SB_MIX_OFFSET*/, 1,
 			jz4750_codec_output_controls,
 			ARRAY_SIZE(jz4750_codec_output_controls)),
 
@@ -389,6 +389,9 @@ static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
 
 	{"LOUT", NULL, "Output Mixer"},
 	{"ROUT", NULL, "Output Mixer"},
+
+	{"LHPOUT", NULL, "Output Mixer"},
+	{"RHPOUT", NULL, "Output Mixer"},
 };
 
 static int jz4750_codec_startup(struct snd_pcm_substream *substream,
@@ -646,9 +649,9 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 	/* magic value CCR1.CONFIG4 = 0 */
 	snd_soc_write(codec, REG_CCR1, 0);
 
-	/* Mask all interrupts */
+	/* Mask all interrupts except CCMC */
+	snd_soc_write(codec, REG_ICR, 0x2f);
 	snd_soc_write(codec, REG_IFR, 0xff);
-	snd_soc_write(codec, REG_ICR, 0x3f);
 	mdelay(10);
 
 	snd_soc_update_bits(codec, REG_CR1,
@@ -656,10 +659,9 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 			REG_CR1_DAC_MUTE |   // CR1.DACMUTE = 0
 			REG_CR1_HP_DIS |     // CR1.HP_DIS = 0
 			REG_CR1_DACSEL |     // CR1.DACSEL = 1
-			REG_CR1_BYPASS |     // CR1.BYPASS = 1
+			REG_CR1_BYPASS,      // CR1.BYPASS = 0
 			REG_CR1_SB_MICBIAS |
-			REG_CR1_DACSEL,
-			REG_CR1_BYPASS);
+			REG_CR1_DACSEL);
 	mdelay(10);
 
 	snd_soc_update_bits(codec, REG_CR2,
@@ -670,7 +672,7 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 			0);
 	mdelay(10);
 
-	snd_soc_write(codec, REG_CR3, 0xc2); // magic value for replay
+	snd_soc_write(codec, REG_CR3, 0xc0); // magic value for replay
 	mdelay(10);
 
 	/* later rework this */
@@ -700,7 +702,8 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec, REG_CGR2, 0xc0, 0);
 	snd_soc_update_bits(codec, REG_CGR4, 0xc0, 0);
 	snd_soc_update_bits(codec, REG_CGR6, 0xc0, 0);
-	snd_soc_update_bits(codec, REG_CGR8, 0xc0, 0);
+	snd_soc_write(codec, REG_CGR8, 12);
+	snd_soc_write(codec, REG_CGR9, 12);
 
 	jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
