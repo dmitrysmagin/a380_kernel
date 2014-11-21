@@ -38,7 +38,7 @@ static struct snd_soc_jack_pin a380_hp_jack_pins[] = {
 	{
 		.pin	= "Speakers",
 		.mask	= SND_JACK_HEADPHONE,
-		//.invert	= 1, // will be valid for RZX45
+		.invert	= 1,
 	},
 };
 
@@ -59,7 +59,7 @@ static int a380_spk_event(struct snd_soc_dapm_widget *widget,
 {
 	printk("a380_spk_event: %d\n", SND_SOC_DAPM_EVENT_ON(event));
 
-	gpio_set_value(A380_SPK_GPIO, SND_SOC_DAPM_EVENT_ON(event));
+	gpio_set_value(A380_SPK_GPIO, !!SND_SOC_DAPM_EVENT_ON(event));
 	return 0;
 }
 
@@ -76,7 +76,7 @@ static int a380_hp_event(
 	 * A380:  0 - hp off; 1 - hp on
 	 * RZX50: 0 - hp on;  1 - hp off
 	 */
-	gpio_set_value(A380_HP_GPIO, SND_SOC_DAPM_EVENT_ON(event));
+	gpio_set_value(A380_HP_GPIO, !!SND_SOC_DAPM_EVENT_ON(event));
 	return 0;
 }
 
