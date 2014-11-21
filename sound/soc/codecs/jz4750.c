@@ -268,7 +268,7 @@ static int codec_debug_show(struct seq_file *m, void *v)
 		"ICR=0x%02x\n"
 		"IFR=0x%02x, IFR_CCMC=%i\n",
 		icr, ifr,
-		!!(fr & REG_IFR_CCMC)
+		!!(ifr & REG_IFR_CCMC)
 	);
 
 	return 0;
@@ -656,9 +656,10 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 			REG_CR1_DAC_MUTE |   // CR1.DACMUTE = 0
 			REG_CR1_HP_DIS |     // CR1.HP_DIS = 0
 			REG_CR1_DACSEL |     // CR1.DACSEL = 1
-			REG_CR1_BYPASS,      // CR1.BYPASS = 0
+			REG_CR1_BYPASS |     // CR1.BYPASS = 1
 			REG_CR1_SB_MICBIAS |
-			REG_CR1_DACSEL);
+			REG_CR1_DACSEL,
+			REG_CR1_BYPASS);
 	mdelay(10);
 
 	snd_soc_update_bits(codec, REG_CR2,
@@ -669,26 +670,27 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 			0);
 	mdelay(10);
 
-	snd_soc_write(codec, REG_CR3, 0xc0); // magic value for replay
+	snd_soc_write(codec, REG_CR3, 0xc2); // magic value for replay
 	mdelay(10);
 
 	/* later rework this */
 	snd_soc_update_bits(codec, REG_PMR1,
-			REG_PMR1_SB_DAC |
-			REG_PMR1_SB_OUT |
-			REG_PMR1_SB_MIX |
-			REG_PMR1_SB_ADC |
-			REG_PMR1_SB_LIN |
-			REG_PMR1_SB_IND,
-			REG_PMR1_SB_ADC |
+			REG_PMR1_SB_DAC |    // PMR1.SB_DAC = 0
+			REG_PMR1_SB_OUT |    // PMR1.SB_OUT = 0
+			REG_PMR1_SB_MIX |    // PMR1.SB_MIX = 0
+			REG_PMR1_SB_ADC |    // PMR1.SB_ADC = 0
+			REG_PMR1_SB_LIN |    // PMR1.SB_LIN = 1
+			REG_PMR1_SB_IND,     // PMR1.SB_IND = 1
 			REG_PMR1_SB_LIN |
 			REG_PMR1_SB_IND);
 
 	mdelay(10);
 
 	snd_soc_update_bits(codec, REG_PMR2,
-			REG_PMR2_GI(3) |     // PMR2.GI = 0
-			REG_PMR2_GOD(3),     // PMR2.GOD = 0
+			REG_PMR2_GI(3) |     // PMR2.GI    = 0
+			REG_PMR2_GOD(3) |    // PMR2.GOD   = 0
+			REG_PMR2_GIM |       // PMR.GIM    = 0
+			REG_PMR2_SB_MC,      // PMR2.SB_MC = 0
 			0);
 	mdelay(10);
 
