@@ -23,10 +23,10 @@
 #include <sound/soc-dapm.h>
 
 #define A380_HP_DETECT_GPIO	JZ_GPIO_PORTC(23)
-#define A380_HP_GPIO		JZ_GPIO_PORTE(5)
-#define A380_SPK_GPIO		JZ_GPIO_PORTE(9)
+#define A380_HP_GPIO		JZ_GPIO_PORTE(9)
+#define A380_SPK_GPIO		JZ_GPIO_PORTE(5)
 
-/* Headphone jzck: plug insert detection */
+/* Headphone jack: plug insert detection */
 
 static struct snd_soc_jack a380_hp_jack;
 
@@ -79,11 +79,6 @@ static int a380_hp_event(
 	gpio_set_value(A380_HP_GPIO, !!SND_SOC_DAPM_EVENT_ON(event));
 	return 0;
 }
-
-static const struct snd_kcontrol_new a380_controls[] = {
-	SOC_DAPM_PIN_SWITCH("Speakers"),
-	SOC_DAPM_PIN_SWITCH("Headphones"),
-};
 
 static const struct snd_soc_dapm_widget a380_widgets[] = {
 //	SND_SOC_DAPM_MIC("Mic", NULL),
@@ -145,9 +140,6 @@ static struct snd_soc_card a380 = {
 	.dai_link	= &a380_dai,
 	.num_links	= 1,
 
-	.controls	= a380_controls,
-	.num_controls	= ARRAY_SIZE(a380_controls),
-
 	.dapm_widgets		= a380_widgets,
 	.num_dapm_widgets	= ARRAY_SIZE(a380_widgets),
 
@@ -178,7 +170,6 @@ static int a380_probe(struct platform_device *pdev)
 	jz_gpio_enable_pullup(A380_SPK_GPIO);
 	jz_gpio_enable_pullup(A380_HP_GPIO);
 
-	//gpio_direction_input(A380_HP_DETECT_GPIO);
 	gpio_direction_output(A380_SPK_GPIO, 0);
 	gpio_direction_output(A380_HP_GPIO, 0);
 

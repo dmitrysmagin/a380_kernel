@@ -535,7 +535,7 @@ static snd_pcm_uframes_t jz4750_pcm_pointer(struct snd_pcm_substream *substream)
 		count = get_dma_residue(channel);
 		count = aic_buf->size - count;
 		ptr = aic_buf->data + count;
-		res = ptr - prtd->dma_start;       
+		res = ptr - prtd->dma_start;
 	}
 
 	spin_unlock(&prtd->lock);
