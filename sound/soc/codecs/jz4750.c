@@ -271,6 +271,11 @@ static int codec_debug_show(struct seq_file *m, void *v)
 		!!(ifr & REG_IFR_CCMC)
 	);
 
+	seq_printf(m,
+		"CCR2=0x%02x\n",
+		read_codec_file(REG_CCR2)
+	);
+
 	return 0;
 }
 
@@ -304,6 +309,12 @@ static unsigned int jz4750_codec_read(struct snd_soc_codec *codec,
 static int jz4750_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 	unsigned int value)
 {
+	char *regnames[] = {
+		"AICR", "CR1", "CR2", "CCR1", "CCR2", "PMR1", "PMR2", "CRR",
+		"ICR", "IFR", "CGR1", "CGR2", "CGR3", "CGR4", "CGR5", "CGR6",
+		"CGR7", "CGR8", "CGR9", "CGR10", "CR3", "AGC1", "AGC2", "AGC3",
+		"AGC4", "AGC5"
+	};
 	//struct jz4750_codec *jz4750_codec = snd_soc_codec_get_drvdata(codec);
 	uint8_t *reg_cache = codec->reg_cache;
 
@@ -311,7 +322,7 @@ static int jz4750_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 		return -1;
 	}
 
-	DEBUG_MSG("write reg=0x%02x to val=0x%02x\n", reg, value);
+	printk("CODEC: %s = 0x%02x\n", regnames[reg], value);
 
 	reg_cache[reg] = (uint8_t)value;
 	write_codec_file(reg, (uint8_t)value);
