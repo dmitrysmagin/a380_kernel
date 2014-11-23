@@ -1,4 +1,9 @@
 /*
+ * Copyright (C) Ingenic Semiconductor Inc.
+ * Original driver by Richard, <cjfeng@ingenic.cn>
+ *
+ * Copyright (C) 2012, Maarten ter Huurne <maarten@treewalker.org>
+ * Updated to match ALSA changes and restructured to better fit driver model.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -646,8 +651,6 @@ static int jz4750_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 	buf->dev.dev = pcm->card->dev;
 	buf->private_data = NULL;
 
-	/*buf->area = dma_alloc_noncoherent(pcm->card->dev, size,
-					  &buf->addr, GFP_KERNEL);*/
 	buf->area = dma_alloc_noncoherent(pcm->card->dev, size,
 					  &buf->addr, GFP_KERNEL);
 	if (!buf->area)

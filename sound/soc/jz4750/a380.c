@@ -1,10 +1,16 @@
 /*
  * a380.c  --  SoC audio for Dingoo A380
  *
- *  This program is free software; you can redistribute  it and/or modify it
- *  under  the terms of  the GNU General  Public License as published by the
- *  Free Software Foundation;  either version 2 of the  License, or (at your
- *  option) any later version.
+ * Based on APUS JZ4750 board
+ * Copyright (C) Ingenic Semiconductor Inc.
+ *
+ * Dingoo A380 specific board support:
+ * Copyright (C) 2012, Maarten ter Huurne <maarten@treewalker.org>
+ * Copyright (C) 2014, Dmitry Smagin <dmitry.s.smagin@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  *
  */
 
@@ -213,7 +219,7 @@ static struct platform_driver a380_driver = {
 
 module_platform_driver(a380_driver);
 
-MODULE_AUTHOR("Richard, <cjfeng@ingenic.cn>");
+MODULE_AUTHOR("Maarten ter Huurne <maarten@treewalker.org>");
 MODULE_DESCRIPTION("ALSA SoC Dingoo A380 Audio support");
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:a380-audio");

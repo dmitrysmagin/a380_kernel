@@ -1,4 +1,10 @@
 /*
+ * Copyright (C) Ingenic Semiconductor Inc.
+ * Original driver by Richard, <cjfeng@ingenic.cn>
+ *
+ * Copyright (C) 2014, Dmitry Smagin <dmitry.s.smagin@gmail.com>
+ * Updated to match ALSA changes and restructured to better fit driver model.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.

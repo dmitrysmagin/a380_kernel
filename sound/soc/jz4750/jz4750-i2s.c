@@ -1,9 +1,13 @@
 /*
- *  This program is free software; you can redistribute  it and/or modify it
- *  under  the terms of  the GNU General  Public License as published by the
- *  Free Software Foundation;  either version 2 of the  License, or (at your
- *  option) any later version.
+ * Copyright (C) Ingenic Semiconductor Inc.
+ * Original driver by Richard, <cjfeng@ingenic.cn>
  *
+ * Copyright (C) 2012, Maarten ter Huurne <maarten@treewalker.org>
+ * Updated to match ALSA changes and restructured to better fit driver model.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  */
 
 #include <linux/init.h>
@@ -65,22 +69,29 @@ static struct jz4750_pcm_dma_params jz4750_i2s_pcm_stereo_in = {
 	.dma_size	= 2,
 };
 
+static int is_recording = 0;
+static int is_playing = 0;
+
 static void jz4750_snd_tx_ctrl(int on)
 {
 	I2S_DEBUG_MSG("enter %s, on = %d\n", __func__, on);
 	if (on) { 
-                /* enable replay */
+		is_playing = 1;
+
+		/* enable replay */
 	        __i2s_enable_transmit_dma();
 		__i2s_enable_replay();
 		__i2s_enable();
 
 	} else {
+		is_playing = 0;
+
 		/* disable replay & capture */
 		__i2s_disable_replay();
-		__i2s_disable_record();
-		__i2s_disable_receive_dma();
 		__i2s_disable_transmit_dma();
-		__i2s_disable();
+
+		if (!is_recording)
+			__i2s_disable();
 	}
 }
 
@@ -88,18 +99,22 @@ static void jz4750_snd_rx_ctrl(int on)
 {
 	I2S_DEBUG_MSG("enter %s, on = %d\n", __func__, on);
 	if (on) { 
+		is_recording = 1;
+
                 /* enable capture */
 		__i2s_enable_receive_dma();
 		__i2s_enable_record();
 		__i2s_enable();
 
 	} else { 
+		is_recording = 0;
+
                 /* disable replay & capture */
-		__i2s_disable_replay();
 		__i2s_disable_record();
 		__i2s_disable_receive_dma();
-		__i2s_disable_transmit_dma();
-		__i2s_disable();
+
+		if (!is_playing)
+			__i2s_disable();
 	}
 }
 
@@ -354,8 +369,8 @@ static struct snd_soc_dai_ops jz4750_i2s_dai_ops = {
 	.set_sysclk = jz4750_i2s_set_dai_sysclk,
 };
 
-#define JZ4750_I2S_FMTS (SNDRV_PCM_FMTBIT_S8 | \
-		SNDRV_PCM_FMTBIT_S16_LE)
+#define JZ4750_I2S_FMTS (SNDRV_PCM_FMTBIT_S8  | SNDRV_PCM_FMTBIT_U8 | \
+			SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_3LE)
 
 static struct snd_soc_dai_driver jz4750_i2s_dai = {
 	.probe = jz4750_i2s_dai_probe,
@@ -365,13 +380,13 @@ static struct snd_soc_dai_driver jz4750_i2s_dai = {
 	.playback = {
 		.channels_min = 1,
 		.channels_max = 2,
-		.rates = SNDRV_PCM_RATE_8000_48000,
+		.rates = SNDRV_PCM_RATE_8000_96000,
 		.formats = JZ4750_I2S_FMTS,
 	},
 	.capture = {
 		.channels_min = 1,
 		.channels_max = 2,
-		.rates = SNDRV_PCM_RATE_8000_48000,
+		.rates = SNDRV_PCM_RATE_8000_96000,
 		.formats = JZ4750_I2S_FMTS,
 	},
 	.ops = &jz4750_i2s_dai_ops,
