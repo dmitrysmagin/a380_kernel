@@ -35,7 +35,7 @@
 #define I2S_RFIFO_DEPTH 32
 #define I2S_TFIFO_DEPTH 64
 
-static int jz_i2s_debug = 1;
+static int jz_i2s_debug = 0;
 module_param(jz_i2s_debug, int, 0644);
 #define I2S_DEBUG_MSG(msg...)			\
 	do {					\

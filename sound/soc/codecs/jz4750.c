@@ -147,7 +147,7 @@ static const uint8_t jz4750_codec_regs[JZ4750_REGS_NUM] = {
 	0x07, 0x44, 0x1F, 0x00
 };
 
-static int jz_codec_debug = 1;
+static int jz_codec_debug = 0;
 module_param(jz_codec_debug, int, 0644);
 
 #define DEBUG_MSG(msg...)			\

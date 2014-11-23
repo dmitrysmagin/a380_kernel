@@ -36,7 +36,7 @@
 #define AIC_START_DMA           (1<<0)
 #define AIC_END_DMA             (1<<1)
 
-static int jz_pcm_debug = 1;
+static int jz_pcm_debug = 0;
 module_param(jz_pcm_debug, int, 0644);
 #define PCM_DEBUG_MSG(msg...)			\
 	do {					\
