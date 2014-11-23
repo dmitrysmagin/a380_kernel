@@ -39,8 +39,6 @@ module_param(jz_pcm_debug, int, 0644);
 			printk("PCM: " msg);	\
 	} while(0)
 
-static long sum_bytes = 0;
-static int printk_flag = 0;
 #ifdef CONFIG_SND_OSSEMUL
 static int hw_params_cnt = 0;
 #endif
@@ -85,7 +83,8 @@ static const struct snd_pcm_hardware jz4750_pcm_hardware = {
 				  SNDRV_PCM_INFO_MMAP_VALID |
 				  SNDRV_PCM_INFO_INTERLEAVED |
 				  SNDRV_PCM_INFO_BLOCK_TRANSFER,
-	.formats		= SNDRV_PCM_FMTBIT_S16_LE |
+	.formats		= SNDRV_PCM_FMTBIT_S24_3LE |
+				  SNDRV_PCM_FMTBIT_S16_LE |
 				  SNDRV_PCM_FMTBIT_U16_LE |
 				  SNDRV_PCM_FMTBIT_U8 |
 				  SNDRV_PCM_FMTBIT_S8,
@@ -112,7 +111,7 @@ static const struct snd_pcm_hardware jz4750_pcm_hardware = {
 */
 static int jz4750_dma_buf_enqueue(struct jz4750_runtime_data *prtd,
 	dma_addr_t data, int size)
-{   
+{
 	struct jz4750_dma_buf_aic *aic_buf;
 
 	// TODO(MtH): jz4770_pcm_enqueue() calls us and it can be called from
@@ -145,78 +144,53 @@ static int jz4750_dma_buf_enqueue(struct jz4750_runtime_data *prtd,
 	return 0;
 }
 
-static void audio_start_dma(struct jz4750_runtime_data *prtd, int mode)
+void jz_pcm_start_normal_dma(struct jz4750_runtime_data *prtd, int channel,
+			     unsigned long physaddr, int count, int mode)
 {
 	unsigned long flags;
+
+	flags = claim_dma_lock();
+	disable_dma(channel);
+	jz_set_alsa_dma(channel, mode, prtd->tran_bit);
+	set_dma_addr(channel, physaddr);
+	set_dma_count(channel, count);
+	enable_dma(channel);
+	release_dma_lock(flags);
+}
+
+static void audio_start_dma(struct jz4750_runtime_data *prtd, int mode)
+{
 	struct jz4750_dma_buf_aic *aic_buf;
 	int channel;
 
-	switch (mode) {
-	case DMA_MODE_WRITE:
-		/* free cur aic_buf */
-		if (prtd->first_transfer == 1) {
-			prtd->first_transfer = 0;
-		} else {
-			aic_buf = prtd->curr;
-			if (aic_buf != NULL) {
-				prtd->curr = aic_buf->next;
-				prtd->next = aic_buf->next;
-				aic_buf->next  = NULL;
-				kfree(aic_buf);
-				aic_buf = NULL;
-			}
+	/* free cur aic_buf */
+	if (prtd->first_transfer == 1) {
+		prtd->first_transfer = 0;
+	} else {
+		aic_buf = prtd->curr;
+		if (aic_buf != NULL) {
+			prtd->curr = aic_buf->next;
+			prtd->next = aic_buf->next;
+			aic_buf->next  = NULL;
+			kfree(aic_buf);
+			aic_buf = NULL;
 		}
+	}
 
-		aic_buf = prtd->next;
-		channel = prtd->params->channel;
-		if (aic_buf) {
-			flags = claim_dma_lock();
-			disable_dma(channel);
-			jz_set_alsa_dma(channel, mode, prtd->tran_bit);
-			set_dma_addr(channel, aic_buf->data);
-			set_dma_count(channel, aic_buf->size);
-			enable_dma(channel);
-			release_dma_lock(flags);
-			prtd->aic_dma_flag |= AIC_START_DMA;
-		} else {
-			printk("next buffer is NULL for playback\n");
-			prtd->aic_dma_flag &= ~AIC_START_DMA;
-			return;
-		}
-		break;
-	case DMA_MODE_READ:
-                /* free cur aic_buf */
-		if (prtd->first_transfer == 1) {
-			prtd->first_transfer = 0;
-		} else {
-			aic_buf = prtd->curr;
-			if (aic_buf != NULL) {
-				prtd->curr = aic_buf->next;
-				prtd->next = aic_buf->next;
-				aic_buf->next  = NULL;
-				kfree(aic_buf);
-				aic_buf = NULL;
-			}
-		}
+	aic_buf = prtd->next;
+	channel = prtd->params->channel;
 
-		aic_buf = prtd->next;
-		channel = prtd->params->channel;
-
-		if (aic_buf) {
-			flags = claim_dma_lock();
-			disable_dma(channel);
-			jz_set_alsa_dma(channel, mode, prtd->tran_bit);
-			set_dma_addr(channel, aic_buf->data);
-			set_dma_count(channel, aic_buf->size);
-			enable_dma(channel);
-			release_dma_lock(flags);
-			prtd->aic_dma_flag |= AIC_START_DMA; 
-		} else {
-			printk("next buffer is NULL for capture\n");
-			prtd->aic_dma_flag &= ~AIC_START_DMA;
-			return;
-		}
-		break;
+	if (aic_buf) {
+		dma_cache_wback_inv(CKSEG1ADDR((unsigned long)aic_buf->data),
+					       (unsigned long)aic_buf->size);
+		jz_pcm_start_normal_dma(prtd, channel, aic_buf->data,
+					aic_buf->size, mode);
+		prtd->aic_dma_flag |= AIC_START_DMA;
+	} else {
+		printk("next buffer is NULL for %s\n",
+			mode == DMA_MODE_WRITE ? "playback" : "capture");
+		prtd->aic_dma_flag &= ~AIC_START_DMA;
+		return;
 	}
 }
 
@@ -392,9 +366,7 @@ static int jz4750_pcm_hw_params(struct snd_pcm_substream *substream,
 	prtd->curr = NULL;
 	prtd->next = NULL;
 	prtd->end = NULL;
-	sum_bytes = 0;
 	prtd->first_transfer = 1;
-	printk_flag = 0;
 
 	__dmac_disable_descriptor(prtd->params->channel);
 	__dmac_channel_disable_irq(prtd->params->channel);
