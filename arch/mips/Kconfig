@@ -255,8 +255,6 @@ config MACH_JZ4750D
 	select CPU_SUPPORTS_CPUFREQ
 	select MIPS_EXTERNAL_TIMER
 	select SYS_SUPPORTS_ZBOOT
-	# this is needed for fixing 3.11 compile
-	select IRQ_DOMAIN
 
 config LANTIQ
 	bool "Lantiq based platforms"
