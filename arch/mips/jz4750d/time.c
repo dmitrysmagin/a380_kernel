@@ -59,28 +59,21 @@ static struct irqaction jz_irqaction = {
 static unsigned int current_cycle_high = 0;
 union clycle_type
 {
-  cycle_t cycle64;
-  unsigned int cycle32[2];
+	cycle_t cycle64;
+	unsigned int cycle32[2];
 };
 
 cycle_t jz_get_cycles(struct clocksource *cs)
 {
 	/* convert jiffes to jz timer cycles */
-	unsigned int ostcount;
 	unsigned long cpuflags;
-	unsigned int current_cycle;
-	unsigned int flag;
 	union clycle_type old_cycle;
-	local_irq_save(cpuflags);
-	current_cycle = current_cycle_high;
-	ostcount = REG_TCU_OSTCNT;
-	flag = (REG_TCU_TFR & TCU_TFCR_OSTFCL) ? 1: 0;
-	if(flag)
-		ostcount = REG_TCU_OSTCNT;	  
-	local_irq_restore(cpuflags);
 
-	old_cycle.cycle32[0] = ostcount;
-	old_cycle.cycle32[1] = current_cycle + flag;
+	local_irq_save(cpuflags);
+	old_cycle.cycle32[0] = REG_TCU_OSTCNT;
+	old_cycle.cycle32[1] = current_cycle_high +
+				(REG_TCU_TFR & TCU_TFCR_OSTFCL ? 1 : 0);
+	local_irq_restore(cpuflags);
 
 	return (old_cycle.cycle64);
 }
@@ -96,13 +89,12 @@ static struct clocksource clocksource_jz = {
 	.flags		= CLOCK_SOURCE_WATCHDOG,
 };
 
-
-
 static irqreturn_t jzclock_handler(int irq, void *dev_id)
 {
-  REG_TCU_TFCR = TCU_TFCR_OSTFCL; /* ACK timer */
-  current_cycle_high++;
-  return IRQ_HANDLED;
+	REG_TCU_TFCR = TCU_TFCR_OSTFCL; /* ACK timer */
+	current_cycle_high++;
+
+	return IRQ_HANDLED;
 }
 
 static struct irqaction jz_clockaction = {
@@ -117,10 +109,11 @@ static int __init jz_clocksource_init(void)
 	/* Init timer */
 	latch = (JZ_TIMER_CLOCK + (HZ>>1)) / HZ;
 
-	clocksource_jz.mult = clocksource_hz2mult(JZ_TIMER_CLOCK, clocksource_jz.shift);
+	clocksource_jz.mult = clocksource_hz2mult(JZ_TIMER_CLOCK,
+						  clocksource_jz.shift);
 	clocksource_register(&clocksource_jz);
+
 	//---------------------init sys clock -----------------
-	
 	REG_TCU_OSTCSR = TCU_OSTCSR_PRESCALE16 | TCU_OSTCSR_EXT_EN;
 
 	REG_TCU_OSTCNT = 0;
@@ -161,7 +154,6 @@ static void jz_set_mode(enum clock_event_mode mode,
 static struct clock_event_device jz_clockevent_device = {
 	.name		= "jz-clockenvent",
 	.features	= CLOCK_EVT_FEAT_PERIODIC,
-//	.features	= CLOCK_EVT_FEAT_ONESHOT, /* Jz4740 not support dynamic clock now */
 
 	/* .mult, .shift, .max_delta_ns and .min_delta_ns left uninitialized */
 	.mult           = 1,
