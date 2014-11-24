@@ -487,6 +487,13 @@ static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
 
 	SND_SOC_DAPM_INPUT("LIN"),
 	SND_SOC_DAPM_INPUT("RIN"),
+
+	/*
+	 * SYSCLK output from the codec to the AIC is required to keep the
+	 * DMA transfer going during playback when all audible outputs have
+	 * been disabled.
+	 */
+	SND_SOC_DAPM_OUTPUT("SYSCLK"),
 };
 
 static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
@@ -505,6 +512,7 @@ static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
 	/* output mixer */
 	{"Output Mixer", "Bypass Switch", "Line Input"},
 	{"Output Mixer", "DAC Switch", "DAC"},
+	{ "SYSCLK", NULL, "DAC" },
 
 	/* outputs */
 	{"LOUT", NULL, "Output Mixer"},
@@ -516,7 +524,10 @@ static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
 static int jz4750_codec_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
-	//struct snd_soc_codec *codec = dai->codec;
+	struct snd_soc_codec *codec = dai->codec;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		snd_soc_dapm_force_enable_pin(&codec->dapm, "SYSCLK");
 
 	return 0;
 }
@@ -524,11 +535,10 @@ static int jz4750_codec_startup(struct snd_pcm_substream *substream,
 static void jz4750_codec_shutdown(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
-	//struct snd_soc_codec *codec = dai->codec;
+	struct snd_soc_codec *codec = dai->codec;
 
-	int playback = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK);
-
-	DEBUG_MSG("enter jz4750_codec_shutdown, playback = %d\n", playback);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		snd_soc_dapm_disable_pin(&codec->dapm, "SYSCLK");
 }
 
 static int jz4750_codec_hw_params(struct snd_pcm_substream *substream,
