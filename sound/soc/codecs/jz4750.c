@@ -88,6 +88,7 @@
 #define REG_CR3_SIDETONE2	(1 << 4)
 #define REG_CR3_SIDETONE1	(1 << 5)
 #define REG_CR3_SB_MIC2		(1 << 6)
+#define REG_CR3_SB_MIC1_OFFSET  7
 #define REG_CR3_SB_MIC1		(1 << 7)
 
 #define REG_CCR1_CONFIG4(A)	(((A) & 0x0f) << 0)
@@ -96,6 +97,7 @@
 #define REG_CCR2_DFREQ(A)	(((A) & 0x0f) << 4)
 
 #define REG_PMR1_SB_IND		(1 << 0)
+#define REG_PMR1_SB_LIN_OFFSET	3
 #define REG_PMR1_SB_LIN		(1 << 3)
 #define REG_PMR1_SB_ADC_OFFSET	4
 #define REG_PMR1_SB_ADC		(1 << 4)
@@ -336,77 +338,177 @@ static int jz4750_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 	return 0;
 }
 
+static int sb_out_event(struct snd_soc_dapm_widget *w,
+			struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+
+	mdelay(1);
+
+	switch (event) {
+	case SND_SOC_DAPM_POST_PMU: /* after widget power up */
+		snd_soc_update_bits(codec, REG_PMR1,
+				REG_PMR1_SB_OUT, 0);
+		snd_soc_update_bits(codec, REG_PMR2,
+				REG_PMR2_SB_MC, 0);
+		snd_soc_update_bits(codec, REG_CR1,
+				REG_CR1_HP_DIS, 0);
+		break;
+
+	case SND_SOC_DAPM_POST_PMD: /* after widget power down */
+		snd_soc_update_bits(codec, REG_PMR1,
+				REG_PMR1_SB_OUT, REG_PMR1_SB_OUT);
+		snd_soc_update_bits(codec, REG_PMR2,
+				REG_PMR2_SB_MC, REG_PMR2_SB_MC);
+		snd_soc_update_bits(codec, REG_CR1,
+				REG_CR1_HP_DIS, REG_CR1_HP_DIS);
+		break;
+	}
+
+	return 0;
+}
+
+static int line_in_event(struct snd_soc_dapm_widget *w,
+			struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+
+	mdelay(1);
+
+	switch (event) {
+	case SND_SOC_DAPM_POST_PMU: /* after widget power up */
+		snd_soc_update_bits(codec, REG_CR3,
+				REG_CR3_INSEL(3),
+				REG_CR3_INSEL(2));
+		break;
+
+	case SND_SOC_DAPM_POST_PMD: /* after widget power down */
+		break;
+	}
+
+	return 0;
+}
+
+static int mic_in_event(struct snd_soc_dapm_widget *w,
+			struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+
+	mdelay(1);
+
+	switch (event) {
+	case SND_SOC_DAPM_POST_PMU: /* after widget power up */
+		snd_soc_update_bits(codec, REG_CR1,
+				REG_CR1_SB_MICBIAS,
+				REG_CR1_SB_MICBIAS);
+		snd_soc_update_bits(codec, REG_CR3,
+				REG_CR3_SIDETONE1 |
+				REG_CR3_MICDIFF |
+				REG_CR3_MICSTEREO |
+				REG_CR3_INSEL(3),
+				REG_CR3_SIDETONE1);
+		break;
+
+	case SND_SOC_DAPM_POST_PMD: /* after widget power down */
+		snd_soc_update_bits(codec, REG_CR3,
+				REG_CR3_SIDETONE1, 0);
+		snd_soc_update_bits(codec, REG_CR1,
+				REG_CR1_SB_MICBIAS, 0);
+		break;
+	}
+
+	return 0;
+}
+
 static const DECLARE_TLV_DB_SCALE(dac_tlv, -2250, 150, 0);
 
 static const unsigned int in_tlv[] = {
-	TLV_DB_RANGE_HEAD(1),
-	//31-31, 31-20, TLV_DB_SCALE_ITEM(-2250, 0, 0),
+	TLV_DB_RANGE_HEAD(2),
+	31-31, 31-20, TLV_DB_SCALE_ITEM(-2250, 0, 0),
 	31-19, 31-00, TLV_DB_SCALE_ITEM(-2250, 150, 0),
 };
 
 static const DECLARE_TLV_DB_SCALE(line_tlv, 0, 150, 0);
 
 static const struct snd_kcontrol_new jz4750_codec_controls[] = {
-	SOC_DOUBLE_TLV("DAC Mixing", REG_CGR1, 4, 0, 15, 1, dac_tlv),
-//	SOC_DOUBLE_R_TLV("Line 1 Mixing", REG_CGR2, REG_CGR3, 0, 31, 1, in_tlv),
-//	SOC_DOUBLE_R_TLV("Mic 1 Mixing", REG_CGR4, REG_CGR5, 0, 31, 1, in_tlv),
-//	SOC_DOUBLE_R_TLV("Mic 2 Mixing", REG_CGR6, REG_CGR7, 0, 31, 1, in_tlv),
-	SOC_DOUBLE_R_TLV("Master Playback", REG_CGR9, REG_CGR8,
+	SOC_DOUBLE_TLV("DAC", REG_CGR1, 4, 0, 15, 1, dac_tlv),
+	SOC_DOUBLE_R_TLV("Line In", REG_CGR3, REG_CGR2, 0, 31, 1, in_tlv),
+	SOC_DOUBLE_R_TLV("Mic", REG_CGR5, REG_CGR4, 0, 31, 1, in_tlv),
+	//SOC_DOUBLE_R_TLV("Mic 2", REG_CGR7, REG_CGR6, 0, 31, 1, in_tlv),
+	SOC_DOUBLE_R_TLV("PCM", REG_CGR9, REG_CGR8,
 			 0, 31, 1, in_tlv),
-#if 0
-	SOC_SINGLE("Master Playback Switch", REG_CR1,
-			 REG_CR1_HP_DIS_OFFSET, 1, 1),
-#endif
-//	SOC_DOUBLE_TLV("Line", REG_CGR10, 4, 0, 15, 0, line_tlv),
+	SOC_DOUBLE_TLV("ADC", REG_CGR10, 4, 0, 15, 0, line_tlv),
 };
 
 static const struct snd_kcontrol_new jz4750_codec_output_controls[] = {
-	SOC_DAPM_SINGLE("Bypass Switch", REG_CR1,
-			REG_CR1_BYPASS_OFFSET, 1, 1),
 	SOC_DAPM_SINGLE("DAC Switch", REG_CR1,
 			REG_CR1_DACSEL_OFFSET, 1, 0),
+	SOC_DAPM_SINGLE("Bypass Switch", REG_CR1,
+			REG_CR1_BYPASS_OFFSET, 1, 0),
+};
+
+static const struct snd_kcontrol_new jz4750_codec_input_controls[] = {
 };
 
 static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
-	//SND_SOC_DAPM_ADC("ADC", "Capture", REG_PMR1,
-	//		REG_PMR1_SB_ADC_OFFSET, 1),
+	SND_SOC_DAPM_ADC("ADC", "Capture", REG_PMR1,
+			REG_PMR1_SB_ADC_OFFSET, 1),
+
 	SND_SOC_DAPM_DAC("DAC", "Playback", REG_PMR1,
 			REG_PMR1_SB_DAC_OFFSET, 1),
 
-	SND_SOC_DAPM_MIXER("Output Mixer", SND_SOC_NOPM /*REG_PMR1*/,
-			0/*REG_PMR1_SB_MIX_OFFSET*/, 1,
+	SND_SOC_DAPM_MIXER_E("Output Mixer", REG_PMR1,
+			REG_PMR1_SB_MIX_OFFSET, 1,
 			jz4750_codec_output_controls,
-			ARRAY_SIZE(jz4750_codec_output_controls)),
+			ARRAY_SIZE(jz4750_codec_output_controls),
+			sb_out_event,
+			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
-	//SND_SOC_DAPM_MIXER("Line Input", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER("Input Mixer", SND_SOC_NOPM, 0, 0,
+			NULL/*jz4750_codec_input_controls*/,
+			0/*ARRAY_SIZE(jz4750_codec_input_controls)*/),
+
+	SND_SOC_DAPM_PGA_E("Line Input", REG_PMR1,
+			REG_PMR1_SB_LIN_OFFSET, 1, NULL, 0,
+			line_in_event,
+			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_PGA_E("Mic Input", REG_CR3,
+			REG_CR3_SB_MIC1_OFFSET, 1, NULL, 0,
+			mic_in_event,
+			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_OUTPUT("LHPOUT"),
 	SND_SOC_DAPM_OUTPUT("RHPOUT"),
-
 	SND_SOC_DAPM_OUTPUT("LOUT"),
 	SND_SOC_DAPM_OUTPUT("ROUT"),
 
-	//SND_SOC_DAPM_INPUT("MIC"),
+	SND_SOC_DAPM_INPUT("MIC"),
 
-	//SND_SOC_DAPM_INPUT("LIN"),
-	//SND_SOC_DAPM_INPUT("RIN"),
+	SND_SOC_DAPM_INPUT("LIN"),
+	SND_SOC_DAPM_INPUT("RIN"),
 };
 
 static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
-	/*{"Line Input", NULL, "LIN"},
+	/* dst widget <=== dst widget control name <=== src widget */
+
+	/* inputs */
+	{"Line Input", NULL, "LIN"},
 	{"Line Input", NULL, "RIN"},
+	{"Mic Input", NULL, "MIC"},
 
-	{"Input Mixer", "Line Capture Switch", "Line Input"},
-	{"Input Mixer", "Mic Capture Switch", "MIC"},
-
+	/* input mixer */
+	{"Input Mixer", NULL, "Line Input"},
+	{"Input Mixer", NULL, "Mic Input"},
 	{"ADC", NULL, "Input Mixer"},
 
-	{"Output Mixer", "Bypass Switch", "Input Mixer"},*/
+	/* output mixer */
+	{"Output Mixer", "Bypass Switch", "Line Input"},
 	{"Output Mixer", "DAC Switch", "DAC"},
 
+	/* outputs */
 	{"LOUT", NULL, "Output Mixer"},
 	{"ROUT", NULL, "Output Mixer"},
-
 	{"LHPOUT", NULL, "Output Mixer"},
 	{"RHPOUT", NULL, "Output Mixer"},
 };

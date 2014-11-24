@@ -108,13 +108,16 @@ static int a380_hp_event(
 }
 
 static const struct snd_soc_dapm_widget a380_widgets[] = {
-//	SND_SOC_DAPM_MIC("Mic", NULL),
+	SND_SOC_DAPM_MIC("Built-in Mic", NULL),
+	SND_SOC_DAPM_LINE("FM Radio", NULL),
 	SND_SOC_DAPM_SPK("Speakers", a380_spk_event),
 	SND_SOC_DAPM_HP("Headphones", a380_hp_event),
 };
 
 static const struct snd_soc_dapm_route a380_routes[] = {
-//	{"Mic", NULL, "MIC"},
+	{"MIC", NULL, "Built-in Mic"},
+	{"LIN", NULL, "FM Radio" },
+	{"RIN", NULL, "FM Radio" },
 	{"Speakers", NULL, "LOUT"},
 	{"Speakers", NULL, "ROUT"},
 	{"Headphones", NULL, "LHPOUT"},
