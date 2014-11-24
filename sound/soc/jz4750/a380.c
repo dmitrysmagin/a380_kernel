@@ -1,5 +1,5 @@
 /*
- * a380.c  --  SoC audio for Dingoo A380
+ * a380.c  --  SoC audio for Dingoo A320E, Dingoo A380 and Ritmix RZX-50
  *
  * Based on APUS JZ4750 board
  * Copyright (C) Ingenic Semiconductor Inc.
@@ -28,9 +28,24 @@
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 
-#define A380_HP_DETECT_GPIO	JZ_GPIO_PORTC(23)
-#define A380_HP_GPIO		JZ_GPIO_PORTE(9)
-#define A380_SPK_GPIO		JZ_GPIO_PORTE(5)
+/* FIXME: Move it to platform data? */
+#if defined(CONFIG_JZ4750D_A380)
+  #define A380_HP_DETECT_GPIO	JZ_GPIO_PORTC(23)
+  #define A380_HP_GPIO		JZ_GPIO_PORTE(9)
+  #define A380_SPK_GPIO		JZ_GPIO_PORTE(5)
+#elif defined(CONFIG_JZ4750D_RZX50)
+  #define A380_HP_DETECT_GPIO	JZ_GPIO_PORTE(9)
+  #define A380_HP_GPIO		JZ_GPIO_PORTE(2)
+  #define A380_SPK_GPIO		JZ_GPIO_PORTE(5)
+#elif defined(CONFIG_JZ4750D_A320E)
+  /*
+   * Note: Dingoo A320E doesn't seem to have hp off or hp detect gpio pins,
+   * perhaps headphones are permanently powered on.
+   */
+  #define A380_HP_DETECT_GPIO	(-1)
+  #define A380_HP_GPIO		(-1)
+  #define A380_SPK_GPIO		JZ_GPIO_PORTE(23)
+#endif
 
 /* Headphone jack: plug insert detection */
 
@@ -82,7 +97,13 @@ static int a380_hp_event(
 	 * A380:  0 - hp off; 1 - hp on
 	 * RZX50: 0 - hp on;  1 - hp off
 	 */
+#if defined(CONFIG_JZ4750D_A380)
 	gpio_set_value(A380_HP_GPIO, !!SND_SOC_DAPM_EVENT_ON(event));
+#elif defined(CONFIG_JZ4750D_RZX50)
+	gpio_set_value(A380_HP_GPIO, !SND_SOC_DAPM_EVENT_ON(event));
+#elif defined(CONFIG_JZ4750D_A320E)
+	/* Dingoo A320E doesn't seem to have this pin */
+#endif
 	return 0;
 }
 
@@ -108,6 +129,7 @@ static int a380_codec_init(struct snd_soc_pcm_runtime *rtd)
 	int ret;
 
 	/* Set up Headphones plug detection */
+#if !defined(CONFIG_JZ4750D_A320E)
 	snd_soc_jack_new(codec, "Headphones Jack",
 			 SND_JACK_HEADPHONE, &a380_hp_jack);
 
@@ -118,6 +140,7 @@ static int a380_codec_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_jack_add_gpios(&a380_hp_jack,
 			       ARRAY_SIZE(a380_hp_jack_gpios),
 			       a380_hp_jack_gpios);
+#endif
 
 	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
 					   SND_SOC_DAIFMT_NB_NF | 
@@ -165,19 +188,25 @@ static int a380_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+#if !defined(CONFIG_JZ4750D_A320E)
 	ret = gpio_request(A380_HP_GPIO, "HP");
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to request HP GPIO(%d): %d\n",
 			A380_HP_GPIO, ret);
 		goto err_gpio_free_spk;
 	}
+#endif
 
-	jz_gpio_enable_pullup(A380_HP_DETECT_GPIO);
 	jz_gpio_enable_pullup(A380_SPK_GPIO);
+#if !defined(CONFIG_JZ4750D_A320E)
 	jz_gpio_enable_pullup(A380_HP_GPIO);
+	jz_gpio_enable_pullup(A380_HP_DETECT_GPIO);
+#endif
 
 	gpio_direction_output(A380_SPK_GPIO, 0);
+#if !defined(CONFIG_JZ4750D_A320E)
 	gpio_direction_output(A380_HP_GPIO, 0);
+#endif
 
 	card->dev = &pdev->dev;
 
