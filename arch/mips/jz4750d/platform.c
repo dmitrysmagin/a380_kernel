@@ -24,8 +24,6 @@
 #include <linux/serial_core.h>
 #include <linux/serial_8250.h>
 
-#include <asm/mach-jz4750d/jz4750d_intc.h>
-
 #include <asm/mach-jz4750d/platform.h>
 #include <asm/mach-jz4750d/base.h>
 #include <asm/mach-jz4750d/dma.h>

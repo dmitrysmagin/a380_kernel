@@ -19,6 +19,7 @@
 #include <asm/io.h>			/* need byte IO */
 #include <linux/spinlock.h>		/* And spinlocks */
 #include <linux/delay.h>
+#include <asm/mach-jz4750d/jz4750d_intc.h>
 
 /*
  * Descriptor structure for JZ4750D DMA engine
