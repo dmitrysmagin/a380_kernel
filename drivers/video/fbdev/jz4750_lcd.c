@@ -50,7 +50,7 @@
 #include <asm/mach-jz4750d/jz4750d_cpm.h>
 #include <asm/mach-jz4750d/jz4750d_gpio.h>
 #include <asm/mach-jz4750d/jz4750d_tcu.h>
-#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/irq.h>
 
 #include "jz4750_lcd.h"
 #include "jz4750_tve.h"
@@ -1871,9 +1871,9 @@ static int jz4750_fb_probe(struct platform_device *dev)
 	printk("fb%d: %s frame buffer device, using %dK of video memory\n",
 		cfb->fb.node, cfb->fb.fix.id, cfb->fb.fix.smem_len>>10);
 
-	if (request_irq(IRQ_LCD, jz4750fb_interrupt_handler, IRQF_DISABLED,
-			"lcd", 0)) {
-		D("Failed to request LCD IRQ.\n");
+	if (request_irq(JZ4750D_IRQ_LCD, jz4750fb_interrupt_handler,
+			IRQF_DISABLED, "lcd", 0)) {
+		printk("Failed to request LCD IRQ.\n");
 		err = -EBUSY;
 		goto failed;
 	}
