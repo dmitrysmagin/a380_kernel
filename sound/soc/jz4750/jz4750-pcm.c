@@ -149,17 +149,119 @@ static int jz4750_dma_buf_enqueue(struct jz4750_runtime_data *prtd,
 	return 0;
 }
 
-void jz_pcm_start_normal_dma(struct jz4750_runtime_data *prtd, int channel,
-			     unsigned long physaddr, int count, int mode)
+/* Replacement for get_dma_residue(chan) */
+static unsigned int get_dma_curr_count(int chan)
+{
+	unsigned int count, ds;
+	int dma_ds[] = {4, 1, 2, 16, 32};
+
+	ds = (REG_DMAC_DCMD(chan) & DMAC_DCMD_DS_MASK) >> DMAC_DCMD_DS_BIT;
+	count = REG_DMAC_DTCR(chan);
+	count = count * dma_ds[ds];
+
+	return count;
+}
+
+void jz_pcm_start_normal_dma(struct jz4750_runtime_data *prtd, int chan,
+			     unsigned long phyaddr, int count, int mode)
 {
 	unsigned long flags;
+	unsigned long start_time;
+	u32 dma_cmd = 0;
+	u32 src_addr = 0;
+	u32 dst_addr = 0;
+	u32 req_src = 0;
+	int ds;
+
+	if ((DMA_MODE_WRITE == mode) && ((count % 32) == 0))
+		ds = 32;      /* 32 byte */
+	else if ((count % 16) == 0)
+		ds = 16;      /* 16 byte */
+	else
+		ds = 4;	      /* default to 4 byte */
+
+	start_time = jiffies;
+	while (REG_DMAC_DMACR(chan / HALF_DMA_NUM)
+			& (DMAC_DMACR_HLT | DMAC_DMACR_AR)) {
+		if (jiffies - start_time > 10) { /* 100ms */
+			printk("DMAC unavailable! "
+			       "REG_DMAC_DMACR(%d) = 0x%08x\n",
+			       chan / HALF_DMA_NUM,
+			       REG_DMAC_DMACR(chan / HALF_DMA_NUM));
+			jz_stop_dma(chan);
+			break;
+		}
+	}
+
+	start_time = jiffies;
+	while (REG_DMAC_DCCSR(chan)
+			& (DMAC_DCCSR_HLT | DMAC_DCCSR_TT | DMAC_DCCSR_AR)) {
+		if (jiffies - start_time > 10) { /* 100ms */
+			printk("DMA channel %d unavailable! "
+			       "REG_DMAC_DCCSR(%d) = 0x%08x\n",
+			       chan, chan, REG_DMAC_DCCSR(chan));
+			jz_stop_dma(chan);
+			break;
+		}
+	}
 
 	flags = claim_dma_lock();
-	disable_dma(channel);
-	jz_set_alsa_dma(channel, mode, prtd->tran_bit);
-	set_dma_addr(channel, physaddr);
-	set_dma_count(channel, count);
-	enable_dma(channel);
+	disable_dma(chan);
+
+	switch (prtd->tran_bit) {
+	case 8:
+		dma_cmd = DMAC_DCMD_SWDH_8 | DMAC_DCMD_DWDH_8;
+		break;
+	case 16:
+		dma_cmd = DMAC_DCMD_SWDH_16 | DMAC_DCMD_DWDH_16;
+		break;
+	case 17 ... 32:
+	default:
+		dma_cmd = DMAC_DCMD_SWDH_32 | DMAC_DCMD_DWDH_32;
+		break;
+	}
+
+	dma_cmd |= DMAC_DCMD_RDIL_IGN | DMAC_DCMD_TIE;
+
+	switch (ds) {
+	case 32:
+		dma_cmd |= DMAC_DCMD_DS_32BYTE;
+		break;
+
+	case 16:
+		dma_cmd |= DMAC_DCMD_DS_16BYTE;
+		break;
+
+	case 4:
+		dma_cmd |= DMAC_DCMD_DS_32BIT;
+		break;
+
+	default:
+		;
+	}
+
+	if (DMA_MODE_WRITE == mode) {
+		dma_cmd |= DMAC_DCMD_SAI;
+		src_addr = (unsigned int)phyaddr;      /* DMA source address */
+		dst_addr = CPHYSADDR(AIC_DR);
+		req_src = DMAC_DRSR_RS_AICOUT;
+	} else {
+		dma_cmd |= DMAC_DCMD_DAI;
+		src_addr = CPHYSADDR(AIC_DR);
+		dst_addr = (unsigned int)phyaddr;
+		req_src = DMAC_DRSR_RS_AICIN;
+	}
+
+	REG_DMAC_DCCSR(chan) |= DMAC_DCCSR_NDES; /* No-descriptor transfer */
+	REG_DMAC_DSAR(chan) = src_addr;
+	REG_DMAC_DTAR(chan) = dst_addr;
+	REG_DMAC_DTCR(chan) = (count + ds - 1) / ds;
+	REG_DMAC_DCMD(chan) = dma_cmd;
+	REG_DMAC_DRSR(chan) = req_src;
+
+	REG_DMAC_DMACR(chan / HALF_DMA_NUM) |= DMAC_DMACR_DMAE;
+	REG_DMAC_DCCSR(chan) |= DMAC_DCCSR_EN;
+
 	release_dma_lock(flags);
 }
 
@@ -504,12 +606,12 @@ static snd_pcm_uframes_t jz4750_pcm_pointer(struct snd_pcm_substream *substream)
 	spin_lock(&prtd->lock);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		count = get_dma_residue(channel);
+		count = get_dma_curr_count(channel);
 		count = aic_buf->size - count;
 		ptr = aic_buf->data + count;
 		res = ptr - prtd->dma_start;
 	} else {
-		count = get_dma_residue(channel);
+		count = get_dma_curr_count(channel);
 		count = aic_buf->size - count;
 		ptr = aic_buf->data + count;
 		res = ptr - prtd->dma_start;
