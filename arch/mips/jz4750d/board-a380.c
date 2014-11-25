@@ -281,15 +281,14 @@ static int __init a380_init_platform_devices(void)
 
 	pwm_add_table(a380_pwm_table, ARRAY_SIZE(a380_pwm_table));
 
-	return platform_add_devices(jz_platform_devices, ARRAY_SIZE(jz_platform_devices));
+	return platform_add_devices(jz_platform_devices,
+			ARRAY_SIZE(jz_platform_devices));
 }
 
 static void __init board_gpio_setup(void)
 {
 	int i;
 
-	__gpio_as_output(GPIO_AMPEN);
-	__gpio_clear_pin(GPIO_AMPEN);
 #ifdef GPIO_CHARGE
 	__gpio_as_output(GPIO_CHARGE);
 	__gpio_set_pin(GPIO_CHARGE);

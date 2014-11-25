@@ -17,6 +17,7 @@
 #include <linux/mmc/host.h>
 #include <linux/input.h>
 #include <linux/gpio_keys.h>
+#include <linux/pwm.h>
 #include <linux/pwm_backlight.h>
 #include <linux/input/matrix_keypad.h>
 
@@ -220,9 +221,14 @@ static struct platform_device rzx50_matrix_keypad_device = {
 	},
 };
 
+/* Audio */
+static struct platform_device rzx50_audio_device = {
+	.name = "a380-audio",
+	.id = -1,
+};
+
 /* LCD backlight */
 static struct platform_pwm_backlight_data rzx50_backlight_pdata = {
-	.pwm_id = 2,
 	.max_brightness = 255,
 	.dft_brightness = 145,
 	.pwm_period_ns = 40000, /* 25 kHz: outside human hearing range */
@@ -236,6 +242,10 @@ static struct platform_device rzx50_backlight_device = {
 	},
 };
 
+struct pwm_lookup rzx50_pwm_table[] = {
+	PWM_LOOKUP("jz4750-pwm", 2, "pwm-backlight", 0),
+};
+
 /* All */
 static struct platform_device *jz_platform_devices[] __initdata = {
 	&jz_lcd_device,
@@ -243,9 +253,13 @@ static struct platform_device *jz_platform_devices[] __initdata = {
 	//&jz_i2c_device,
 	&jz_msc0_device,
 	&jz_msc1_device,
+	&jz_pcm_device,
+	&jz_i2s_device,
+	&jz_codec_device,
 	&rzx50_gpio_keys_device,
 	&rzx50_matrix_keypad_device,
 	&rzx50_backlight_device,
+	&rzx50_audio_device,
 };
 
 static int __init rzx50_init_platform_devices(void)
@@ -255,15 +269,16 @@ static int __init rzx50_init_platform_devices(void)
 
 	jz4750d_serial_device_register();
 
-	return platform_add_devices(jz_platform_devices, ARRAY_SIZE(jz_platform_devices));
+	pwm_add_table(rzx50_pwm_table, ARRAY_SIZE(rzx50_pwm_table));
+
+	return platform_add_devices(jz_platform_devices,
+			ARRAY_SIZE(jz_platform_devices));
 }
 
 static void __init board_gpio_setup(void)
 {
 	int i;
 
-	__gpio_as_output(GPIO_AMPEN);
-	__gpio_clear_pin(GPIO_AMPEN);
 #ifdef GPIO_CHARGE
 	__gpio_as_output(GPIO_CHARGE);
 	__gpio_set_pin(GPIO_CHARGE);
