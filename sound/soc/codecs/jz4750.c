@@ -464,9 +464,8 @@ static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
 			sb_out_event,
 			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
-	SND_SOC_DAPM_MIXER("Input Mixer", SND_SOC_NOPM, 0, 0,
-			NULL/*jz4750_codec_input_controls*/,
-			0/*ARRAY_SIZE(jz4750_codec_input_controls)*/),
+	SND_SOC_DAPM_MUX("Input Mixer", SND_SOC_NOPM, 0, 0,
+			NULL),
 
 	SND_SOC_DAPM_PGA_E("Line Input", REG_PMR1,
 			REG_PMR1_SB_LIN_OFFSET, 1, NULL, 0,
