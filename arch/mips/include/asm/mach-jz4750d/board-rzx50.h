@@ -43,10 +43,6 @@
 #define GPIO_CHARG_STAT_N	(32*4+10)	/* GPD15 */
 //#define GPIO_CHARGE		(32*3+19)	/* GPD14 */
 
-#define GPIO_AMPEN		(32*4+5)	/* GPE5 */
-#define GPIO_HP_DETE		(32*4+9)	/* GPE9 */
-#define GPIO_HP_OFF		(32*4+2)	/* GPE9 */
-
 #define GPIO_DC_DETE_N		GPIO_USB_DETE
 #define GPIO_UDC_HOTPLUG	GPIO_USB_DETE
 
