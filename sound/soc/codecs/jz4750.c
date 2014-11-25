@@ -30,7 +30,6 @@
 #include <sound/tlv.h>
 
 #include <asm/mach-jz4750d/jz4750d_aic.h>
-#include <asm/mach-jz4750d/jz4750d_intc.h>
 
 /* JZ4750 codec register space */
 #define REG_AICR    0x00
