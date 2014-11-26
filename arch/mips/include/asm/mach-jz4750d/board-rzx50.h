@@ -58,11 +58,9 @@
 
 #define MSC0_WP_PIN		GPIO_SD0_WP
 #define MSC0_HOTPLUG_PIN	GPIO_SD0_CD_N
-#define MSC0_HOTPLUG_IRQ	(IRQ_GPIO_0 + GPIO_SD0_CD_N)
 
 #define MSC1_WP_PIN		GPIO_SD1_WP
 #define MSC1_HOTPLUG_PIN	GPIO_SD1_CD_N
-#define MSC1_HOTPLUG_IRQ	(IRQ_GPIO_0 + GPIO_SD1_CD_N)
 
 #define __msc0_init_io()			\
 do {						\

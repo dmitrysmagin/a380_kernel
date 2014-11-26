@@ -21,8 +21,8 @@
 
 #include <asm/mach-jz4750d/board-a320e.h>
 #include <asm/mach-jz4750d/jz4750d_gpio.h>
-#include <asm/mach-jz4750d/jz4750d_intc.h>
 
+#include <asm/mach-jz4750d/irq.h>
 #include <asm/mach-jz4750d/jz4750d_mmc.h>
 #include <asm/mach-jz4750d/gpio.h>
 #include <asm/mach-jz4750d/platform.h>
@@ -117,7 +117,7 @@ static void a320e_tf_plug_change(int state)
 struct jz_mmc_platform_data a320e_tf_data = {
 	.support_sdio   = 1,
 	.ocr_mask	= MMC_VDD_32_33 | MMC_VDD_33_34,
-	.status_irq	= MSC1_HOTPLUG_IRQ,
+	.status_irq	= JZ4750D_IRQ_GPIO(GPIO_SD1_CD_N),
 	.detect_pin     = GPIO_SD1_CD_N,
 	.init           = a320e_tf_gpio_init,
 	.power_on       = a320e_tf_power_on,
