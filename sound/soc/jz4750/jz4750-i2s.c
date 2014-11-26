@@ -1,9 +1,13 @@
 /*
- *  This program is free software; you can redistribute  it and/or modify it
- *  under  the terms of  the GNU General  Public License as published by the
- *  Free Software Foundation;  either version 2 of the  License, or (at your
- *  option) any later version.
+ * Copyright (C) Ingenic Semiconductor Inc.
+ * Original driver by Richard, <cjfeng@ingenic.cn>
  *
+ * Copyright (C) 2012, Maarten ter Huurne <maarten@treewalker.org>
+ * Updated to match ALSA changes and restructured to better fit driver model.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  */
 
 #include <linux/init.h>
@@ -28,7 +32,10 @@
 /* I2S clock */
 #define JZ4750_I2S_SYSCLK		0
 
-static int jz_i2s_debug = 1;
+#define I2S_RFIFO_DEPTH 32
+#define I2S_TFIFO_DEPTH 64
+
+static int jz_i2s_debug = 0;
 module_param(jz_i2s_debug, int, 0644);
 #define I2S_DEBUG_MSG(msg...)			\
 	do {					\
@@ -62,22 +69,29 @@ static struct jz4750_pcm_dma_params jz4750_i2s_pcm_stereo_in = {
 	.dma_size	= 2,
 };
 
+static int is_recording = 0;
+static int is_playing = 0;
+
 static void jz4750_snd_tx_ctrl(int on)
 {
 	I2S_DEBUG_MSG("enter %s, on = %d\n", __func__, on);
 	if (on) { 
-                /* enable replay */
+		is_playing = 1;
+
+		/* enable replay */
 	        __i2s_enable_transmit_dma();
 		__i2s_enable_replay();
 		__i2s_enable();
 
 	} else {
+		is_playing = 0;
+
 		/* disable replay & capture */
 		__i2s_disable_replay();
-		__i2s_disable_record();
-		__i2s_disable_receive_dma();
 		__i2s_disable_transmit_dma();
-		__i2s_disable();
+
+		if (!is_recording)
+			__i2s_disable();
 	}
 }
 
@@ -85,18 +99,22 @@ static void jz4750_snd_rx_ctrl(int on)
 {
 	I2S_DEBUG_MSG("enter %s, on = %d\n", __func__, on);
 	if (on) { 
+		is_recording = 1;
+
                 /* enable capture */
 		__i2s_enable_receive_dma();
 		__i2s_enable_record();
 		__i2s_enable();
 
 	} else { 
+		is_recording = 0;
+
                 /* disable replay & capture */
-		__i2s_disable_replay();
 		__i2s_disable_record();
 		__i2s_disable_receive_dma();
-		__i2s_disable_transmit_dma();
-		__i2s_disable();
+
+		if (!is_playing)
+			__i2s_disable();
 	}
 }
 
@@ -169,8 +187,15 @@ static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	I2S_DEBUG_MSG("enter %s, substream = %s\n",
 		      __func__,
-		      (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture");
+		      (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ?
+		      "playback" : "capture");
 
+	/* NOTE: when use internal codec, nothing to do with sample rate here.
+	 *	 if use external codec and bit clock is provided by I2S
+	 *	 controller, set clock rate here!!!
+	 */
+
+	/* set channel params */
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		snd_soc_dai_set_dma_data(dai, substream,
 					&jz4750_i2s_pcm_stereo_out);
@@ -183,21 +208,42 @@ static int jz4750_i2s_hw_params(struct snd_pcm_substream *substream,
 		snd_soc_dai_set_dma_data(dai, substream,
 					&jz4750_i2s_pcm_stereo_in);
 
-	switch (params_format(params)) {
-	case SNDRV_PCM_FORMAT_S8:
-		__i2s_set_transmit_trigger(4);
-		__i2s_set_receive_trigger(3);
-		__i2s_set_oss_sample_size(8);
-		__i2s_set_iss_sample_size(8);
-		break;
-	case SNDRV_PCM_FORMAT_S16_LE:
-		/* playback sample:16 bits, burst:16 bytes */
-		__i2s_set_transmit_trigger(4);
-		/* capture sample:16 bits, burst:16 bytes */
-		__i2s_set_receive_trigger(3);
-		__i2s_set_oss_sample_size(16);
-		__i2s_set_iss_sample_size(16);
-		break;
+	/* set format */
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		switch (params_format(params)) {
+		case SNDRV_PCM_FORMAT_U8:
+		case SNDRV_PCM_FORMAT_S8:
+			__i2s_set_oss_sample_size(8);
+			break;
+		case SNDRV_PCM_FORMAT_S16_LE:
+			__i2s_set_oss_sample_size(16);
+			break;
+		case SNDRV_PCM_FORMAT_S24_3LE:
+			__i2s_set_oss_sample_size(24);
+			break;
+		}
+
+		//__i2s_set_transmit_trigger(4);
+	} else {
+		int sound_data_width = 0;
+		switch (params_format(params)) {
+		case SNDRV_PCM_FORMAT_S8:
+			__i2s_set_iss_sample_size(8);
+			sound_data_width = 8;
+			break;
+		case SNDRV_PCM_FORMAT_S16_LE:
+			__i2s_set_iss_sample_size(16);
+			sound_data_width = 16;
+			break;
+		case SNDRV_PCM_FORMAT_S24_3LE:
+		default:
+			__i2s_set_iss_sample_size(24);
+			sound_data_width = 24;
+			break;
+		}
+		/* use 2 sample as trigger */
+		__i2s_set_receive_trigger((sound_data_width / 8 * channels) *
+					  2 / 2 - 1);
 	}
 
 	return 0;
@@ -249,8 +295,8 @@ static int jz4750_i2s_dai_probe(struct snd_soc_dai *dai)
 
 	//jz4750_i2c_init_pcm_config(i2s);
 
-	__cpm_select_i2sclk_exclk();
 	__cpm_start_aic();
+	__cpm_select_i2sclk_exclk();
 	__i2s_enable_sysclk();
 
 	__i2s_disable();
@@ -265,8 +311,8 @@ static int jz4750_i2s_dai_probe(struct snd_soc_dai *dai)
 	__i2s_select_i2s();
 	__aic_select_i2s();
         __aic_play_lastsample();
-	__i2s_set_transmit_trigger(7);
-	__i2s_set_receive_trigger(7);
+	__i2s_set_transmit_trigger(I2S_TFIFO_DEPTH / 4);
+	__i2s_set_receive_trigger(I2S_RFIFO_DEPTH / 4);
 
 	__aic_write_tfifo(0x0);
 	__aic_write_tfifo(0x0);
@@ -323,8 +369,8 @@ static struct snd_soc_dai_ops jz4750_i2s_dai_ops = {
 	.set_sysclk = jz4750_i2s_set_dai_sysclk,
 };
 
-#define JZ4750_I2S_FMTS (SNDRV_PCM_FMTBIT_S8 | \
-		SNDRV_PCM_FMTBIT_S16_LE)
+#define JZ4750_I2S_FMTS (SNDRV_PCM_FMTBIT_S8  | SNDRV_PCM_FMTBIT_U8 | \
+			SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_3LE)
 
 static struct snd_soc_dai_driver jz4750_i2s_dai = {
 	.probe = jz4750_i2s_dai_probe,
@@ -334,13 +380,13 @@ static struct snd_soc_dai_driver jz4750_i2s_dai = {
 	.playback = {
 		.channels_min = 1,
 		.channels_max = 2,
-		.rates = SNDRV_PCM_RATE_8000_48000,
+		.rates = SNDRV_PCM_RATE_8000_96000,
 		.formats = JZ4750_I2S_FMTS,
 	},
 	.capture = {
 		.channels_min = 1,
 		.channels_max = 2,
-		.rates = SNDRV_PCM_RATE_8000_48000,
+		.rates = SNDRV_PCM_RATE_8000_96000,
 		.formats = JZ4750_I2S_FMTS,
 	},
 	.ops = &jz4750_i2s_dai_ops,

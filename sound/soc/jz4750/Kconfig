@@ -7,10 +7,11 @@ config SND_JZ4750_SOC
 	  to select the audio interfaces to support below.
 
 config SND_JZ4750_SOC_A380
-	tristate "SoC Audio support for Dingoo A380"
+	tristate "SoC Audio support for Dingoo A320E/A380 and Ritmix RZX-50"
 	depends on SND_JZ4750_SOC
 	help
-	  Say Y if you want to add support for SoC audio of internal codec on Dingoo A380.
+	  Say Y if you want to add support for SoC audio of internal codec
+	  on Dingoo A320E/A380 or Ritmix RZX-50.
 
 config SND_JZ4750_SOC_I2S
 	depends on SND_JZ4750_SOC && SND_JZ4750_SOC_A380
