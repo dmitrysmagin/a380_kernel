@@ -36,7 +36,7 @@
 #include <asm/keyboard.h>
 #endif
 
-#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/jz4750d_dmac.h>
 #include <asm/mach-jz4750d/jz4750d_cpm.h>
 
 #include "reset.h"

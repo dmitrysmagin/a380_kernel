@@ -29,12 +29,12 @@
 
 #include <asm/mach-jz4750d/jz4750d_tcu.h>
 #include <asm/mach-jz4750d/jz4750d_cpm.h>
-#include <asm/mach-jz4750d/jz4750d_intc.h>
+#include <asm/mach-jz4750d/irq.h>
 
 /* This is for machines which generate the exact clock. */
 
 #define JZ_TIMER_TCU_CH  5
-#define JZ_TIMER_IRQ  IRQ_TCU1
+#define JZ_TIMER_IRQ  JZ4750D_IRQ_TCU1
 #define JZ_TIMER_CLOCK (JZ_EXTAL>>4) /* Jz timer clock frequency */
 
 static struct clocksource clocksource_jz; /* Jz clock source */
@@ -121,7 +121,7 @@ static int __init jz_clocksource_init(void)
 	
 	jz_clockaction.dev_id = &clocksource_jz;
 
-	setup_irq(IRQ_TCU0, &jz_clockaction);
+	setup_irq(JZ4750D_IRQ_TCU0, &jz_clockaction);
 	REG_TCU_TMCR = TCU_TMCR_OSTMCL; /* unmask match irq */
 	REG_TCU_TSCR = TCU_TSCR_OSTSC;  /* enable timer clock */
 	REG_TCU_TESR = TCU_TESR_OSTST;  /* start counting up */

@@ -33,10 +33,10 @@
 #include <asm/mach-jz4750d/jz4750d_uart.h>
 #include <asm/mach-jz4750d/jz4750d_ssi.h>
 #include <asm/mach-jz4750d/jz4750d_msc.h>
-#include <asm/mach-jz4750d/jz4750d_intc.h>
 #include <asm/mach-jz4750d/jz4750d_aic.h>
 #include <asm/mach-jz4750d/jz4750d_pcm.h>
 #include <asm/mach-jz4750d/dma.h>
+#include <asm/mach-jz4750d/irq.h>
 
 /*
  * A note on resource allocation:
@@ -199,7 +199,7 @@ int jz_request_dma(int dev_id, const char *dev_str,
 	chan = &jz_dma_table[i];
 
 	if (irqhandler) {
-		chan->irq = IRQ_DMA_0 + i;	// allocate irq number
+		chan->irq = JZ4750D_IRQ_DMA(i);	// allocate irq number
 		chan->irq_dev = irq_dev_id;
 		if ((ret = request_irq(chan->irq, irqhandler, irqflags,
 				       dev_str, chan->irq_dev))) {

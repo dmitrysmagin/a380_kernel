@@ -37,6 +37,7 @@
 #include <asm/mach-jz4750d/jz4750d_cpm.h>
 #include <asm/mach-jz4750d/jz4750d_rtc.h>
 #include <asm/mach-jz4750d/jz4750d_emc.h>
+#include <asm/mach-jz4750d/jz4750d_sadc.h>
 
 #undef DEBUG
 //#define DEBUG
