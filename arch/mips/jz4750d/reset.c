@@ -42,7 +42,7 @@ static void jz_power_off(void)
 	static unsigned int call_times = 0;
 
 	printk("Put CPU into hibernate mode.\n");
-	if(call_times > 0) return 0;
+	if(call_times > 0) return;
 	call_times++;
 
 	/* Mask all interrupts */
@@ -77,7 +77,7 @@ static void jz_power_off(void)
 	while(1);
 
 	/* We can't get here */
-	return 0;
+	return;
 }
 
 static void jz_restart(char *command)
