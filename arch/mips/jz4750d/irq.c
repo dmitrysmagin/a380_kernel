@@ -211,12 +211,19 @@ void __init arch_init_irq(void)
 	clear_c0_status(0xff04); /* clear ERL */
 	set_c0_status(0x0400);   /* set IP2 */
 
+	/* Mask all interrupts */
+	REG_INTC_IMSR = 0xffffffff;
+
+	/* Mask gpio interrupts, move to gpio.c later */
+	for (i = 0; i < 6; i++)
+		REG_GPIO_PXIMS(i) = 0xffffffff;
+
 	/* Set up INTC irq */
 	for (i = 0; i < NUM_INTC; i++) {
 		disable_intc_irq(&irq_desc[i].irq_data);
 		irq_set_chip_and_handler(i, &intc_irq_type, handle_level_irq);
 	}
-	
+
 	/* Set up DMAC irq */
 	for (i = IRQ_DMA_0; i < IRQ_DMA_0 + NUM_DMA; i++) {
 		disable_dma_irq(&irq_desc[i].irq_data);
