@@ -285,6 +285,11 @@ static int __init a380_init_platform_devices(void)
 			ARRAY_SIZE(jz_platform_devices));
 }
 
+/*
+ * Note: resetting gpios explicitly is needed when using kexec to start new
+ * kernel from legacy dingux, since lame chinese drivers do not unitialize
+ * properly.
+ */
 static void __init board_gpio_setup(void)
 {
 	int i;
@@ -293,6 +298,13 @@ static void __init board_gpio_setup(void)
 	__gpio_as_output(GPIO_CHARGE);
 	__gpio_set_pin(GPIO_CHARGE);
 #endif
+
+	/* turn off wireless module em198850 */
+	#define PIN_POWER_ELAN (32*3+13)
+	__gpio_as_func0(PIN_POWER_ELAN);
+	__gpio_enable_pull(PIN_POWER_ELAN);
+	__gpio_as_output(PIN_POWER_ELAN);
+	__gpio_set_pin(PIN_POWER_ELAN);
 
 	/* Set up gpios for keys */
 	for (i = 0; i < ARRAY_SIZE(a380_buttons); i++) {

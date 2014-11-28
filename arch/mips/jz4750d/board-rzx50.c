@@ -275,6 +275,11 @@ static int __init rzx50_init_platform_devices(void)
 			ARRAY_SIZE(jz_platform_devices));
 }
 
+/*
+ * Note: resetting gpios explicitly is needed when using kexec to start new
+ * kernel from legacy dingux, since lame chinese drivers do not unitialize
+ * properly.
+ */
 static void __init board_gpio_setup(void)
 {
 	int i;
