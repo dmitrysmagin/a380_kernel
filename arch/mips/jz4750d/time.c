@@ -32,7 +32,6 @@
 #include <asm/mach-jz4750d/irq.h>
 
 /* This is for machines which generate the exact clock. */
-
 #define JZ_TIMER_TCU_CH  5
 #define JZ_TIMER_IRQ  JZ4750D_IRQ_TCU1
 #define JZ_TIMER_CLOCK (JZ_EXTAL>>4) /* Jz timer clock frequency */
@@ -43,6 +42,7 @@ static struct clock_event_device jz_clockevent_device; /* Jz clock event */
 static irqreturn_t jz_timer_interrupt(int irq, void *dev_id)
 {
 	struct clock_event_device *cd = dev_id;
+
 	__tcu_clear_full_match_flag(JZ_TIMER_TCU_CH);
 
 	cd->event_handler(cd);
@@ -56,26 +56,9 @@ static struct irqaction jz_irqaction = {
 	.name		= "jz-timerirq",
 };
 
-static unsigned int current_cycle_high = 0;
-union clycle_type
-{
-	cycle_t cycle64;
-	unsigned int cycle32[2];
-};
-
 cycle_t jz_get_cycles(struct clocksource *cs)
 {
-	/* convert jiffes to jz timer cycles */
-	unsigned long cpuflags;
-	union clycle_type old_cycle;
-
-	local_irq_save(cpuflags);
-	old_cycle.cycle32[0] = REG_TCU_OSTCNT;
-	old_cycle.cycle32[1] = current_cycle_high +
-				(REG_TCU_TFR & TCU_TFCR_OSTFCL ? 1 : 0);
-	local_irq_restore(cpuflags);
-
-	return (old_cycle.cycle64);
+	return (cycle_t)REG_TCU_OSTCNT;
 }
 
 
@@ -89,19 +72,6 @@ static struct clocksource clocksource_jz = {
 	.flags		= CLOCK_SOURCE_WATCHDOG,
 };
 
-static irqreturn_t jzclock_handler(int irq, void *dev_id)
-{
-	REG_TCU_TFCR = TCU_TFCR_OSTFCL; /* ACK timer */
-	current_cycle_high++;
-
-	return IRQ_HANDLED;
-}
-
-static struct irqaction jz_clockaction = {
-	.handler	= jzclock_handler,
-	.flags		= IRQF_DISABLED  | IRQF_TIMER,
-	.name		= "jz-clockcycle",
-};
 static int __init jz_clocksource_init(void)
 {
 	unsigned int latch;
@@ -113,20 +83,15 @@ static int __init jz_clocksource_init(void)
 						  clocksource_jz.shift);
 	clocksource_register(&clocksource_jz);
 
-	//---------------------init sys clock -----------------
 	REG_TCU_OSTCSR = TCU_OSTCSR_PRESCALE16 | TCU_OSTCSR_EXT_EN;
 
 	REG_TCU_OSTCNT = 0;
 	REG_TCU_OSTDR = 0xffffffff;
 	
-	jz_clockaction.dev_id = &clocksource_jz;
-
-	setup_irq(JZ4750D_IRQ_TCU0, &jz_clockaction);
 	REG_TCU_TMCR = TCU_TMCR_OSTMCL; /* unmask match irq */
 	REG_TCU_TSCR = TCU_TSCR_OSTSC;  /* enable timer clock */
 	REG_TCU_TESR = TCU_TESR_OSTST;  /* start counting up */
 
-	//---------------------endif init sys clock -----------------
 	return 0;
 }
 
@@ -167,23 +132,24 @@ static void __init jz_clockevent_init(void)
 {
 	struct clock_event_device *cd = &jz_clockevent_device;
 	unsigned int cpu = smp_processor_id();
+
 	cd->cpumask = cpumask_of(cpu);
 	clockevents_register_device(cd);
 }
 
 static void __init jz_timer_setup(void)
 {
-  	unsigned int latch;
+	unsigned int latch;
 	
 	jz_clocksource_init();	/* init jz clock source */
 	jz_clockevent_init();	/* init jz clock event */
-	//---------------------init sys tick -----------------
+
 	/* Init timer */
 	__tcu_stop_counter(JZ_TIMER_TCU_CH);
 	__cpm_start_tcu();
 	latch = (JZ_TIMER_CLOCK + (HZ>>1)) / HZ;
 	
-	REG_TCU_TMSR = ((1 << JZ_TIMER_TCU_CH) | (1 << (JZ_TIMER_TCU_CH + 16))); 
+	REG_TCU_TMSR = ((1 << JZ_TIMER_TCU_CH) | (1 << (JZ_TIMER_TCU_CH + 16)));
 
 	REG_TCU_TCSR(JZ_TIMER_TCU_CH) = TCU_TCSR_PRESCALE16 | TCU_TCSR_EXT_EN;
 	REG_TCU_TDFR(JZ_TIMER_TCU_CH) = latch - 1;
@@ -198,7 +164,6 @@ static void __init jz_timer_setup(void)
 	__tcu_unmask_full_match_irq(JZ_TIMER_TCU_CH);
 	__tcu_start_counter(JZ_TIMER_TCU_CH);
 }
-
 
 void __init plat_time_init(void)
 {
