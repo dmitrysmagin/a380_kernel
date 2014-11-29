@@ -162,9 +162,6 @@ struct jz4750_codec {
 	struct resource *mem;
 };
 
-static int bypass_to_hp = 0;
-static int bypass_to_lineout = 0;
-
 static int jz4750_codec_set_bias_level(struct snd_soc_codec *codec,
 	enum snd_soc_bias_level level);
 
@@ -338,6 +335,19 @@ static int jz4750_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 	return 0;
 }
 
+static inline void jz4750_codec_wait(struct snd_soc_codec *codec, int val)
+{
+	/* wait for ramp/gain up/down complete */
+	while (!(jz4750_codec_read(codec, REG_IFR) & val))
+		mdelay(10);
+
+	mdelay(1);
+
+	/* clear flag */
+	snd_soc_update_bits(codec, REG_IFR,
+		val, val);
+}
+
 static int sb_out_event(struct snd_soc_dapm_widget *w,
 			struct snd_kcontrol *kcontrol, int event)
 {
@@ -347,17 +357,27 @@ static int sb_out_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU: /* after widget power up */
-		snd_soc_update_bits(codec, REG_PMR1,
-				REG_PMR1_SB_OUT, 0);
-		snd_soc_update_bits(codec, REG_PMR2,
-				REG_PMR2_SB_MC, 0);
 		snd_soc_update_bits(codec, REG_CR1,
 				REG_CR1_HP_DIS, 0);
+		snd_soc_update_bits(codec, REG_PMR1,
+				REG_PMR1_SB_OUT, 0);
+		jz4750_codec_wait(codec, REG_IFR_RUD);
+#if 0
+		snd_soc_update_bits(codec, REG_CR1,
+			REG_CR1_DAC_MUTE, 0);
+		jz4750_codec_wait(codec, REG_IFR_GUD);
+#endif
 		break;
 
-	case SND_SOC_DAPM_POST_PMD: /* after widget power down */
+	case SND_SOC_DAPM_PRE_PMD: /* before widget power down */
+#if 0
+		snd_soc_update_bits(codec, REG_CR1,
+			REG_CR1_DAC_MUTE, REG_CR1_DAC_MUTE);
+		jz4750_codec_wait(codec, REG_IFR_GDD);
+#endif
 		snd_soc_update_bits(codec, REG_PMR1,
 				REG_PMR1_SB_OUT, REG_PMR1_SB_OUT);
+		jz4750_codec_wait(codec, REG_IFR_RDD);
 		snd_soc_update_bits(codec, REG_PMR2,
 				REG_PMR2_SB_MC, REG_PMR2_SB_MC);
 		snd_soc_update_bits(codec, REG_CR1,
@@ -462,7 +482,7 @@ static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
 			jz4750_codec_output_controls,
 			ARRAY_SIZE(jz4750_codec_output_controls),
 			sb_out_event,
-			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
 
 	SND_SOC_DAPM_MIXER("Input Mixer", SND_SOC_NOPM, 0, 0,
 			NULL/*jz4750_codec_input_controls*/,
@@ -512,7 +532,7 @@ static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
 	/* output mixer */
 	{"Output Mixer", "Bypass Switch", "Line Input"},
 	{"Output Mixer", "DAC Switch", "DAC"},
-	{ "SYSCLK", NULL, "DAC" },
+	{"SYSCLK", NULL, "DAC"},
 
 	/* outputs */
 	{"LOUT", NULL, "Output Mixer"},
@@ -640,12 +660,10 @@ static int jz4750_codec_pcm_trigger(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = dai->codec;
 	int ret = 0;
 
-	DEBUG_MSG("enter %s:%d substream = %s bypass_to_hp = %d "
-		  "bypassto_lineout = %d cmd = %d\n",
+	DEBUG_MSG("enter %s:%d substream = %s cmd = %d\n",
 		  __func__, __LINE__,
 		  (substream->stream == SNDRV_PCM_STREAM_PLAYBACK ?
 		  "playback" : "capture"),
-		  bypass_to_hp, bypass_to_lineout,
 		  cmd);
 
 	switch (cmd) {
@@ -675,7 +693,6 @@ static int jz4750_codec_pcm_trigger(struct snd_pcm_substream *substream,
 static int jz4750_codec_mute(struct snd_soc_dai *dai, int mute)
 {
 	struct snd_soc_codec *codec = dai->codec;
-	unsigned int gain_bit = mute ? 0 /* GDO */ : 1 /* GUP */;
 	int change;
 
 	change = snd_soc_update_bits(codec, REG_CR1,
@@ -683,16 +700,8 @@ static int jz4750_codec_mute(struct snd_soc_dai *dai, int mute)
 
 	if (change == 1 &&
 	    !(jz4750_codec_read(codec, REG_PMR1) & REG_PMR1_SB_DAC)) {
-		/* wait for gain up/down complete (GUP/GDO) */
-		while (!(jz4750_codec_read(codec, REG_IFR) & (1 << gain_bit)))
-			mdelay(10);
 
-		mdelay(1);
-
-		/* clear GUP_GDO flag */
-		snd_soc_update_bits(codec, REG_IFR,
-			1 << gain_bit, 1 << gain_bit);
-
+		jz4750_codec_wait(codec, mute ? REG_ICR_GDD : REG_IFR_GUD);
 		return 0;
 	} else {
 		return change;
@@ -778,18 +787,20 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 	/* magic value CCR1.CONFIG4 = 0 */
 	snd_soc_write(codec, REG_CCR1, 0);
 
-	/* Mask all interrupts except CCMC */
-	snd_soc_write(codec, REG_ICR, 0x2f);
+	/* Mask all interrupts */
+	snd_soc_write(codec, REG_ICR, 0x3f);
 	snd_soc_write(codec, REG_IFR, 0xff);
 	mdelay(10);
 
 	snd_soc_update_bits(codec, REG_CR1,
 			REG_CR1_SB_MICBIAS | // CR1.MICBIAS = 1
-			REG_CR1_DAC_MUTE |   // CR1.DACMUTE = 0
-			REG_CR1_HP_DIS |     // CR1.HP_DIS = 0
+			REG_CR1_DAC_MUTE |   // CR1.DACMUTE = 1
+			REG_CR1_HP_DIS |     // CR1.HP_DIS = 1
 			REG_CR1_DACSEL |     // CR1.DACSEL = 1
 			REG_CR1_BYPASS,      // CR1.BYPASS = 0
 			REG_CR1_SB_MICBIAS |
+			REG_CR1_DAC_MUTE |
+			REG_CR1_HP_DIS |
 			REG_CR1_DACSEL);
 	mdelay(10);
 
@@ -806,12 +817,16 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 
 	/* later rework this */
 	snd_soc_update_bits(codec, REG_PMR1,
-			REG_PMR1_SB_DAC |    // PMR1.SB_DAC = 0
-			REG_PMR1_SB_OUT |    // PMR1.SB_OUT = 0
-			REG_PMR1_SB_MIX |    // PMR1.SB_MIX = 0
-			REG_PMR1_SB_ADC |    // PMR1.SB_ADC = 0
+			REG_PMR1_SB_DAC |    // PMR1.SB_DAC = 1
+			REG_PMR1_SB_OUT |    // PMR1.SB_OUT = 1
+			REG_PMR1_SB_MIX |    // PMR1.SB_MIX = 1
+			REG_PMR1_SB_ADC |    // PMR1.SB_ADC = 1
 			REG_PMR1_SB_LIN |    // PMR1.SB_LIN = 1
 			REG_PMR1_SB_IND,     // PMR1.SB_IND = 1
+			REG_PMR1_SB_DAC |
+			REG_PMR1_SB_OUT |
+			REG_PMR1_SB_MIX |
+			REG_PMR1_SB_ADC |
 			REG_PMR1_SB_LIN |
 			REG_PMR1_SB_IND);
 
@@ -820,7 +835,7 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec, REG_PMR2,
 			REG_PMR2_GI(3) |     // PMR2.GI    = 0
 			REG_PMR2_GOD(3) |    // PMR2.GOD   = 0
-			REG_PMR2_GIM |       // PMR.GIM    = 0
+			REG_PMR2_GIM |       // PMR2.GIM   = 0
 			REG_PMR2_SB_MC,      // PMR2.SB_MC = 0
 			0);
 	mdelay(10);
