@@ -223,7 +223,7 @@ static struct platform_device rzx50_matrix_keypad_device = {
 
 /* Audio */
 static struct platform_device rzx50_audio_device = {
-	.name = "a380-audio",
+	.name = "rzx50-audio",
 	.id = -1,
 };
 
