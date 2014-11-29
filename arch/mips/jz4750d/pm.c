@@ -33,10 +33,12 @@
 #include <asm/cacheops.h>
 
 #include <asm/mach-jz4750d/jz4750d_intc.h>
-#include <asm/mach-jz4750d/jz4750d_gpio.h>
 #include <asm/mach-jz4750d/jz4750d_cpm.h>
+#include <asm/mach-jz4750d/jz4750d_wdt.h>
 #include <asm/mach-jz4750d/jz4750d_rtc.h>
+#include <asm/mach-jz4750d/jz4750d_tcu.h>
 #include <asm/mach-jz4750d/jz4750d_emc.h>
+#include <asm/mach-jz4750d/jz4750d_sadc.h>
 
 #undef DEBUG
 //#define DEBUG
@@ -46,179 +48,27 @@
 #define dprintk(x...)
 #endif
 
-#define GPIO_PORT_NUM   6
-
-/*
- * __gpio_as_sleep set all pins to pull-disable, and set all pins as input
- * except sdram and the pins which can be used as CS1_N to CS4_N for chip select.
- */
-#define __gpio_as_sleep()	              \
-do {	                                      \
-	REG_GPIO_PXFUNC(1) = ~0x03ff7fff;     \
-	REG_GPIO_PXSELC(1) = ~0x03ff7fff;     \
-	REG_GPIO_PXDIRC(1) = ~0x03ff7fff;     \
-	REG_GPIO_PXPES(1)  =  0xffffffff;     \
-	REG_GPIO_PXFUNC(2) = ~0x01e00000;     \
-	REG_GPIO_PXSELC(2) = ~0x01e00000;     \
-	REG_GPIO_PXDIRC(2) = ~0x01e00000;     \
-	REG_GPIO_PXPES(2)  =  0xffffffff;     \
-	REG_GPIO_PXFUNC(3) =  0xffffffff;     \
-	REG_GPIO_PXSELC(3) =  0xffffffff;     \
-	REG_GPIO_PXDIRC(3) =  0xffffffff;     \
-	REG_GPIO_PXPES(3)  =  0xffffffff;     \
-	REG_GPIO_PXFUNC(4) =  0xffffffff;     \
-	REG_GPIO_PXSELC(4) =  0xffffffff;     \
-	REG_GPIO_PXDIRC(4) =  0xffffffff;     \
-	REG_GPIO_PXPES(4)  =  0xffffffff;     \
-	REG_GPIO_PXFUNC(5) =  0xffffffff;     \
-	REG_GPIO_PXSELC(5) =  0xffffffff;     \
-	REG_GPIO_PXDIRC(5) =  0xffffffff;     \
-	REG_GPIO_PXPES(5)  =  0xffffffff;     \
-} while (0)
-
-static int jz_pm_do_hibernate(void)
+/* Put CPU to SLEEP mode */
+static int jz_pm_enter(suspend_state_t state)
 {
-	static unsigned int call_times = 0;
-
-	printk("Put CPU into hibernate mode.\n");
-	if(call_times > 0) return 0;
-	call_times++;
-
-	/* Mask all interrupts */
-	REG_INTC_IMSR = 0xffffffff;
-
-	/*
-	 * RTC Wakeup or 1Hz interrupt can be enabled or disabled
-	 * through  RTC driver's ioctl (linux/driver/char/rtc_jz.c).
-	 */
-
-	/* Set minimum wakeup_n pin low-level assertion time for wakeup: 100ms */
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_HWFCR = (100 << RTC_HWFCR_BIT);
-
-	/* Set reset pin low-level assertion time after wakeup: must  > 60ms */
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_HRCR = (60 << RTC_HRCR_BIT); /* 60 ms */
-
-	/* Scratch pad register to be reserved */
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_HSPR = 0x12345678;
-
-        /* clear wakeup status register */
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_HWRSR = 0x0;
-
-	/* Put CPU to power down mode */
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	REG_RTC_HCR = RTC_HCR_PD;
-
-	while (!(REG_RTC_RCR & RTC_RCR_WRDY));
-	while(1);
-
-	/* We can't get here */
-	return 0;
-}
-
-/* NOTES:
- * 1: Pins that are floated (NC) should be set as input and pull-enable.
- * 2: Pins that are pull-up or pull-down by outside should be set as input
- *    and pull-disable.
- * 3: Pins that are connected to a chip except sdram and nand flash
- *    should be set as input and pull-disable, too.
- */
-static void jz_board_do_sleep(unsigned long *ptr)
-{
-	unsigned char i;
-
-	/* Print messages of GPIO registers for debug */
-	for(i=0;i<GPIO_PORT_NUM;i++) {
-		dprintk("run dat:%x pin:%x fun:%x sel:%x dir:%x pull:%x msk:%x trg:%x\n",        \
-			REG_GPIO_PXDAT(i),REG_GPIO_PXPIN(i),REG_GPIO_PXFUN(i),REG_GPIO_PXSEL(i), \
-			REG_GPIO_PXDIR(i),REG_GPIO_PXPE(i),REG_GPIO_PXIM(i),REG_GPIO_PXTRG(i));
-	}
-
-	/* Save GPIO registers */
-	for(i = 1; i < GPIO_PORT_NUM; i++) {
-		*ptr++ = REG_GPIO_PXFUN(i);
-		*ptr++ = REG_GPIO_PXSEL(i);
-		*ptr++ = REG_GPIO_PXDIR(i);
-		*ptr++ = REG_GPIO_PXPE(i);
-		*ptr++ = REG_GPIO_PXIM(i);
-		*ptr++ = REG_GPIO_PXDAT(i);
-		*ptr++ = REG_GPIO_PXTRG(i);
-	}
-
-	/*
-	 * Set all pins to pull-disable, and set all pins as input except
-	 * sdram and the pins which can be used as CS1_N to CS4_N for chip select.
-	 */
-        __gpio_as_sleep();
-
-}
-
-static void jz_board_do_resume(unsigned long *ptr)
-{
-	unsigned char i;
-
-	/* Restore GPIO registers */
-	for(i = 1; i < GPIO_PORT_NUM; i++) {
-		REG_GPIO_PXFUNS(i) = *ptr;
-		REG_GPIO_PXFUNC(i) = ~(*ptr++);
-
-		REG_GPIO_PXSELS(i) = *ptr;
-		REG_GPIO_PXSELC(i) = ~(*ptr++);
-
-		REG_GPIO_PXDIRS(i) = *ptr;
-		REG_GPIO_PXDIRC(i) = ~(*ptr++);
-
-		REG_GPIO_PXPES(i) = *ptr;
-		REG_GPIO_PXPEC(i) = ~(*ptr++);
-
-		REG_GPIO_PXIMS(i)=*ptr;
-		REG_GPIO_PXIMC(i)=~(*ptr++);
-
-		REG_GPIO_PXDATS(i)=*ptr;
-		REG_GPIO_PXDATC(i)=~(*ptr++);
-
-		REG_GPIO_PXTRGS(i)=*ptr;
-		REG_GPIO_PXTRGC(i)=~(*ptr++);
-	}
-
-	/* Print messages of GPIO registers for debug */
-	for(i=0;i<GPIO_PORT_NUM;i++) {
-		dprintk("resume dat:%x pin:%x fun:%x sel:%x dir:%x pull:%x msk:%x trg:%x\n",     \
-			REG_GPIO_PXDAT(i),REG_GPIO_PXPIN(i),REG_GPIO_PXFUN(i),REG_GPIO_PXSEL(i), \
-			REG_GPIO_PXDIR(i),REG_GPIO_PXPE(i),REG_GPIO_PXIM(i),REG_GPIO_PXTRG(i));
-	}
-}
-static int jz_pm_do_sleep(void)
-{
-	//unsigned long delta;
 	unsigned long nfcsr = REG_EMC_NFCSR;
 	unsigned long opcr = REG_CPM_OPCR;
 	unsigned long imr = REG_INTC_IMR;
 	unsigned long sadc = REG_SADC_ENA;
-	unsigned long sleep_gpio_save[7*(GPIO_PORT_NUM-1)];
 
 	printk("Put CPU into sleep mode.\n");
 
-	/* Preserve current time */
-	//delta = xtime.tv_sec - REG_RTC_RTCSR;
-
-        /* Disable nand flash */
+	/* Disable nand flash */
 	REG_EMC_NFCSR = ~0xff;
 
-        /* stop sadc */
+	/* stop sadc */
 	REG_SADC_ENA &= ~0x7;
 	while((REG_SADC_ENA & 0x7) != 0);
  	udelay(100);
 
-        /*stop udc and usb*/
+	/*stop udc and usb*/
 	__cpm_suspend_uhcphy();
 	__cpm_suspend_udcphy();
-
-	/* Sleep on-board modules */
-	jz_board_do_sleep(sleep_gpio_save);
 
 	/* Mask all interrupts */
 	REG_INTC_IMSR = 0xffffffff;
@@ -256,53 +106,16 @@ static int jz_pm_do_sleep(void)
 	/* Restore sadc */
 	REG_SADC_ENA = sadc;
 
-	/* Resume on-board modules */
-	jz_board_do_resume(sleep_gpio_save);
-
 	/* Restore Oscillator and Power Control Register */
 	REG_CPM_OPCR = opcr;
 
-	/* Restore current time */
-	//xtime.tv_sec = REG_RTC_RSR + delta;
 	dprintk("%s %d after sleep\n",__FILE__,__LINE__);
 
 	return 0;
 }
 
-/* Put CPU to HIBERNATE mode */
-int jz_pm_hibernate(void)
-{
-	return jz_pm_do_hibernate();
-}
-
-/* Put CPU to SLEEP mode */
-int jz_pm_sleep(void)
-{
-	int retval;
-
-	retval = jz_pm_do_sleep();
-
-	return retval;
-}
-
-/*
- * valid states, only support mem(sleep)
- */
-static int jz_pm_valid(suspend_state_t state)
-{
-	return state == PM_SUSPEND_MEM;
-}
-
-/*
- * Jz CPU enter save power mode
- */
-static int jz_pm_enter(suspend_state_t state)
-{
-	return jz_pm_sleep();
-}
-
 static struct platform_suspend_ops jz_pm_ops = {
-	.valid		= jz_pm_valid,
+	.valid		= suspend_valid_only_mem,
 	.enter		= jz_pm_enter,
 };
 

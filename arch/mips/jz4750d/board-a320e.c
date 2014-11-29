@@ -280,10 +280,7 @@ static void __init board_gpio_setup(void)
 	/* Set up gpios for keys */
 	for (i = 0; i < ARRAY_SIZE(a320e_buttons); i++) {
 		__gpio_as_input(a320e_buttons[i].gpio);
-		if (a320e_buttons[i].gpio == JZ_GPIO_PORTC(31))
-			__gpio_disable_pull(a320e_buttons[i].gpio);
-		else
-			__gpio_enable_pull(a320e_buttons[i].gpio);
+		__gpio_enable_pull(a320e_buttons[i].gpio);
 	}
 }
 

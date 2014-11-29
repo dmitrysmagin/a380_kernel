@@ -77,64 +77,6 @@ static struct irq_chip intc_irq_type = {
 };
 
 /*
- * GPIO irq type
- */
-
-static void enable_gpio_irq(struct irq_data *data)
-{
-	unsigned int irq = data->irq;
-	unsigned int intc_irq;
-
-	if (irq < (IRQ_GPIO_0 + 32)) {
-		intc_irq = IRQ_GPIO0;
-	} else if (irq < (IRQ_GPIO_0 + 64)) {
-		intc_irq = IRQ_GPIO1;
-	} else if (irq < (IRQ_GPIO_0 + 96)) {
-		intc_irq = IRQ_GPIO2;
-	} else if (irq < (IRQ_GPIO_0 + 128)) {
-		intc_irq = IRQ_GPIO3;
-	} else if (irq < (IRQ_GPIO_0 + 160)) {
-		intc_irq = IRQ_GPIO4;
-	} else {
-		intc_irq = IRQ_GPIO5;
-	}
-
-	enable_intc_irq(&irq_desc[intc_irq].irq_data);
-	__gpio_unmask_irq(irq - IRQ_GPIO_0);
-}
-
-static void disable_gpio_irq(struct irq_data *data)
-{
-	__gpio_mask_irq(data->irq - IRQ_GPIO_0);
-}
-
-static void mask_and_ack_gpio_irq(struct irq_data *data)
-{
-	__gpio_mask_irq(data->irq - IRQ_GPIO_0);
-	__gpio_ack_irq(data->irq - IRQ_GPIO_0);
-}
-
-static unsigned int startup_gpio_irq(struct irq_data *data)
-{
-	enable_gpio_irq(data);
-	return 0;
-}
-
-static void shutdown_gpio_irq(struct irq_data *data)
-{
-	disable_gpio_irq(data);
-}
-
-static struct irq_chip gpio_irq_type = {
-	.name = "GPIO",
-	.irq_startup = startup_gpio_irq,
-	.irq_shutdown = shutdown_gpio_irq,
-	.irq_unmask = enable_gpio_irq,
-	.irq_mask = disable_gpio_irq,
-	.irq_ack = mask_and_ack_gpio_irq,
-};
-
-/*
  * DMA irq type
  */
 
@@ -211,47 +153,39 @@ void __init arch_init_irq(void)
 	clear_c0_status(0xff04); /* clear ERL */
 	set_c0_status(0x0400);   /* set IP2 */
 
+	/* Mask all interrupts */
+	REG_INTC_IMSR = 0xffffffff;
+
+	/* Mask gpio interrupts, move to gpio.c later */
+	for (i = 0; i < 6; i++)
+		REG_GPIO_PXIMS(i) = 0xffffffff;
+
 	/* Set up INTC irq */
 	for (i = 0; i < NUM_INTC; i++) {
 		disable_intc_irq(&irq_desc[i].irq_data);
 		irq_set_chip_and_handler(i, &intc_irq_type, handle_level_irq);
 	}
-	
+
 	/* Set up DMAC irq */
 	for (i = IRQ_DMA_0; i < IRQ_DMA_0 + NUM_DMA; i++) {
 		disable_dma_irq(&irq_desc[i].irq_data);
 		irq_set_chip_and_handler(i, &dma_irq_type, handle_level_irq);
 	}
-
-	/* Set up GPIO irq */
-	for (i = IRQ_GPIO_0; i < IRQ_GPIO_0 + NUM_GPIO; i++) {
-		disable_gpio_irq(&irq_desc[i].irq_data);
-		irq_set_chip_and_handler(i, &gpio_irq_type, handle_level_irq);
-	}
 }
 
 static int plat_real_irq(int irq)
 {
-	if ((irq >= IRQ_GPIO5) && (irq <= IRQ_GPIO0)) {
-		int group = IRQ_GPIO0 - irq;
-		irq = __gpio_group_irq(group);
-		if (irq >= 0)
-			irq += IRQ_GPIO_0 + 32 * group;
-	} else {
-		switch (irq) {
-		case IRQ_DMAC0:
-		case IRQ_DMAC1:
-			irq = __dmac_get_irq();
-			if (irq < 0) {
-				printk("REG_DMAC_DMAIPR(0) = 0x%08x\n",
-					REG_DMAC_DMAIPR(0));
-				printk("REG_DMAC_DMAIPR(1) = 0x%08x\n",
-					REG_DMAC_DMAIPR(1));
-				return irq;
-			}
-			irq += IRQ_DMA_0;
-			break;
+	if ((irq == IRQ_DMAC0) || (irq == IRQ_DMAC1)) {
+		irq = __dmac_get_irq();
+		if (irq < 0) {
+			printk("REG_DMAC_DMAIPR(0) = 0x%08x\n",
+				REG_DMAC_DMAIPR(0));
+			printk("REG_DMAC_DMAIPR(1) = 0x%08x\n",
+				REG_DMAC_DMAIPR(1));
+			return irq;
 		}
+
+		irq += IRQ_DMA_0;
 	}
 
 	return irq;
@@ -264,11 +198,9 @@ asmlinkage void plat_irq_dispatch(void)
 
 	if (intc_ipr) {
 		irq = ffs(intc_ipr) - 1;
+		irq = plat_real_irq(irq);
+		do_IRQ(irq);
 	} else {
 		spurious_interrupt();
-		return;
 	}
-
-	irq = plat_real_irq(irq);
-	do_IRQ(irq);
 }
