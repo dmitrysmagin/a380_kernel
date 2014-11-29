@@ -1,5 +1,5 @@
 /*
- * a380.c  --  SoC audio for Dingoo A380
+ * rzx50.c  --  SoC audio for Ritmix RZX-50
  *
  * Based on APUS JZ4750 board
  * Copyright (C) Ingenic Semiconductor Inc.
@@ -29,15 +29,15 @@
 #include <sound/soc-dapm.h>
 
 /* FIXME: Move it to platform data? */
-#define A380_HP_DETECT_GPIO	JZ_GPIO_PORTC(23)
-#define A380_HP_GPIO		JZ_GPIO_PORTE(9)
-#define A380_SPK_GPIO		JZ_GPIO_PORTE(5)
+#define RZX50_HP_DETECT_GPIO	JZ_GPIO_PORTE(9)
+#define RZX50_HP_GPIO		JZ_GPIO_PORTE(2)
+#define RZX50_SPK_GPIO		JZ_GPIO_PORTE(5)
 
 /* Headphone jack: plug insert detection */
 
-static struct snd_soc_jack a380_hp_jack;
+static struct snd_soc_jack rzx50_hp_jack;
 
-static struct snd_soc_jack_pin a380_hp_jack_pins[] = {
+static struct snd_soc_jack_pin rzx50_hp_jack_pins[] = {
 	{
 		.pin	= "Headphones",
 		.mask	= SND_JACK_HEADPHONE,
@@ -49,11 +49,11 @@ static struct snd_soc_jack_pin a380_hp_jack_pins[] = {
 	},
 };
 
-static struct snd_soc_jack_gpio a380_hp_jack_gpios[] = {
+static struct snd_soc_jack_gpio rzx50_hp_jack_gpios[] = {
 	{
 		.name		= "Headphones Detect",
 		.report		= SND_JACK_HEADPHONE,
-		.gpio		= A380_HP_DETECT_GPIO,
+		.gpio		= RZX50_HP_DETECT_GPIO,
 		.invert		= 1,
 		.debounce_time	= 200,
 	},
@@ -61,32 +61,32 @@ static struct snd_soc_jack_gpio a380_hp_jack_gpios[] = {
 
 /* Headphones and speakers switches */
 
-static int a380_spk_event(struct snd_soc_dapm_widget *widget,
+static int rzx50_spk_event(struct snd_soc_dapm_widget *widget,
 	struct snd_kcontrol *ctrl, int event)
 {
-	gpio_set_value(A380_SPK_GPIO, !!SND_SOC_DAPM_EVENT_ON(event));
+	gpio_set_value(RZX50_SPK_GPIO, !!SND_SOC_DAPM_EVENT_ON(event));
 	return 0;
 }
 
-static int a380_hp_event(
+static int rzx50_hp_event(
 			struct snd_soc_dapm_widget *widget,
 			struct snd_kcontrol *ctrl, int event)
 {
 	if (SND_SOC_DAPM_EVENT_ON(event))
 		msleep(50);
 
-	gpio_set_value(A380_HP_GPIO, !!SND_SOC_DAPM_EVENT_ON(event));
+	gpio_set_value(RZX50_HP_GPIO, !SND_SOC_DAPM_EVENT_ON(event));
 	return 0;
 }
 
-static const struct snd_soc_dapm_widget a380_widgets[] = {
+static const struct snd_soc_dapm_widget rzx50_widgets[] = {
 	SND_SOC_DAPM_MIC("Built-in Mic", NULL),
 	SND_SOC_DAPM_LINE("FM Radio", NULL),
-	SND_SOC_DAPM_SPK("Speakers", a380_spk_event),
-	SND_SOC_DAPM_HP("Headphones", a380_hp_event),
+	SND_SOC_DAPM_SPK("Speakers", rzx50_spk_event),
+	SND_SOC_DAPM_HP("Headphones", rzx50_hp_event),
 };
 
-static const struct snd_soc_dapm_route a380_routes[] = {
+static const struct snd_soc_dapm_route rzx50_routes[] = {
 	{"MIC", NULL, "Built-in Mic"},
 	{"LIN", NULL, "FM Radio" },
 	{"RIN", NULL, "FM Radio" },
@@ -96,7 +96,7 @@ static const struct snd_soc_dapm_route a380_routes[] = {
 	{"Headphones", NULL, "RHPOUT"},
 };
 
-static int a380_codec_init(struct snd_soc_pcm_runtime *rtd)
+static int rzx50_codec_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
@@ -105,15 +105,15 @@ static int a380_codec_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* Set up Headphones plug detection */
 	snd_soc_jack_new(codec, "Headphones Jack",
-			 SND_JACK_HEADPHONE, &a380_hp_jack);
+			 SND_JACK_HEADPHONE, &rzx50_hp_jack);
 
-	snd_soc_jack_add_pins(&a380_hp_jack,
-			      ARRAY_SIZE(a380_hp_jack_pins),
-			      a380_hp_jack_pins);
+	snd_soc_jack_add_pins(&rzx50_hp_jack,
+			      ARRAY_SIZE(rzx50_hp_jack_pins),
+			      rzx50_hp_jack_pins);
 
-	snd_soc_jack_add_gpios(&a380_hp_jack,
-			       ARRAY_SIZE(a380_hp_jack_gpios),
-			       a380_hp_jack_gpios);
+	snd_soc_jack_add_gpios(&rzx50_hp_jack,
+			       ARRAY_SIZE(rzx50_hp_jack_gpios),
+			       rzx50_hp_jack_gpios);
 
 	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
 					   SND_SOC_DAIFMT_NB_NF | 
@@ -126,54 +126,54 @@ static int a380_codec_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-static struct snd_soc_dai_link a380_dai = {
+static struct snd_soc_dai_link rzx50_dai = {
 	.name		= "jz4750",
 	.stream_name	= "jz4750",
 	.cpu_dai_name	= "jz4750-i2s",
 	.platform_name	= "jz4750-pcm-audio",
 	.codec_dai_name	= "jz4750-hifi",
 	.codec_name	= "jz4750-codec",
-	.init		= a380_codec_init,
+	.init		= rzx50_codec_init,
 };
 
 static struct snd_soc_card a380 = {
-	.name		= "Dingoo A380",
+	.name		= "Ritmix RZX-50",
 	.owner		= THIS_MODULE,
-	.dai_link	= &a380_dai,
+	.dai_link	= &rzx50_dai,
 	.num_links	= 1,
 
-	.dapm_widgets		= a380_widgets,
-	.num_dapm_widgets	= ARRAY_SIZE(a380_widgets),
+	.dapm_widgets		= rzx50_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(rzx50_widgets),
 
-	.dapm_routes		= a380_routes,
-	.num_dapm_routes	= ARRAY_SIZE(a380_routes),
+	.dapm_routes		= rzx50_routes,
+	.num_dapm_routes	= ARRAY_SIZE(rzx50_routes),
 };
 
-static int a380_probe(struct platform_device *pdev)
+static int rzx50_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &a380;
 	int ret;
 
-	ret = gpio_request(A380_SPK_GPIO, "SPK");
+	ret = gpio_request(RZX50_SPK_GPIO, "SPK");
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to request SPK GPIO(%d): %d\n",
-			A380_SPK_GPIO, ret);
+			RZX50_SPK_GPIO, ret);
 		return ret;
 	}
 
-	ret = gpio_request(A380_HP_GPIO, "HP");
+	ret = gpio_request(RZX50_HP_GPIO, "HP");
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to request HP GPIO(%d): %d\n",
-			A380_HP_GPIO, ret);
+			RZX50_HP_GPIO, ret);
 		goto err_gpio_free_spk;
 	}
 
-	jz_gpio_enable_pullup(A380_SPK_GPIO);
-	jz_gpio_enable_pullup(A380_HP_GPIO);
-	jz_gpio_enable_pullup(A380_HP_DETECT_GPIO);
+	jz_gpio_enable_pullup(RZX50_SPK_GPIO);
+	jz_gpio_enable_pullup(RZX50_HP_GPIO);
+	jz_gpio_enable_pullup(RZX50_HP_DETECT_GPIO);
 
-	gpio_direction_output(A380_SPK_GPIO, 0);
-	gpio_direction_output(A380_HP_GPIO, 0);
+	gpio_direction_output(RZX50_SPK_GPIO, 0);
+	gpio_direction_output(RZX50_HP_GPIO, 0);
 
 	card->dev = &pdev->dev;
 
@@ -187,35 +187,35 @@ static int a380_probe(struct platform_device *pdev)
 	return 0;
 
 err_gpio_free_hptv:
-	gpio_free(A380_HP_GPIO);
+	gpio_free(RZX50_HP_GPIO);
 err_gpio_free_spk:
-	gpio_free(A380_SPK_GPIO);
+	gpio_free(RZX50_SPK_GPIO);
 
 	return ret;
 }
 
-static int a380_remove(struct platform_device *pdev)
+static int rzx50_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 
 	snd_soc_unregister_card(card);
-	gpio_free(A380_HP_GPIO);
-	gpio_free(A380_SPK_GPIO);
+	gpio_free(RZX50_HP_GPIO);
+	gpio_free(RZX50_SPK_GPIO);
 	return 0;
 }
 
-static struct platform_driver a380_driver = {
+static struct platform_driver rzx50_driver = {
 	.driver		= {
-		.name	= "a380-audio",
+		.name	= "rzx50-audio",
 		.owner	= THIS_MODULE,
 	},
-	.probe		= a380_probe,
-	.remove		= a380_remove,
+	.probe		= rzx50_probe,
+	.remove		= rzx50_remove,
 };
 
-module_platform_driver(a380_driver);
+module_platform_driver(rzx50_driver);
 
 MODULE_AUTHOR("Maarten ter Huurne <maarten@treewalker.org>");
-MODULE_DESCRIPTION("ALSA SoC Dingoo A380 Audio support");
+MODULE_DESCRIPTION("ALSA SoC Ritmix RZX-50 Audio support");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:a380-audio");

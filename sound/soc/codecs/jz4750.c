@@ -322,6 +322,7 @@ static int jz4750_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 		"CGR7", "CGR8", "CGR9", "CGR10", "CR3", "AGC1", "AGC2", "AGC3",
 		"AGC4", "AGC5"
 	};
+
 	//struct jz4750_codec *jz4750_codec = snd_soc_codec_get_drvdata(codec);
 	uint8_t *reg_cache = codec->reg_cache;
 
@@ -329,7 +330,7 @@ static int jz4750_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 		return -1;
 	}
 
-	printk("CODEC: %s = 0x%02x\n", regnames[reg], value);
+	DEBUG_MSG("CODEC: %s = 0x%02x\n", regnames[reg], value);
 
 	reg_cache[reg] = (uint8_t)value;
 	write_codec_file(reg, (uint8_t)value);
