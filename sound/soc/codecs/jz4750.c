@@ -19,7 +19,7 @@
 #include <linux/slab.h>
 
 /* For debugging */
-#include <linux/proc_fs.h>
+#include <linux/debugfs.h>
 #include <linux/seq_file.h>
 
 #include <sound/core.h>
@@ -182,119 +182,6 @@ static inline void write_codec_file(int reg, int val)
 	__icdc_set_rgwr();
 	mdelay(1);
 }
-
-static int codec_debug_show(struct seq_file *m, void *v)
-{
-	unsigned int cr1, cr2, cr3, pmr1, pmr2, icr, ifr;
-
-	cr1 = read_codec_file(REG_CR1);
-	cr2 = read_codec_file(REG_CR2);
-	cr3 = read_codec_file(REG_CR3);
-	pmr1 = read_codec_file(REG_PMR1);
-	pmr2 = read_codec_file(REG_PMR2);
-	icr = read_codec_file(REG_ICR);
-	ifr = read_codec_file(REG_IFR);
-
-	seq_printf(m,
-		"CR1_SB_MICBIAS=%i\n"
-		"CR1_MONO=%i\n"
-		"CR1_DAC_MUTE=%i\n"
-		"CR1_HP_DIS=%i\n"
-		"CR1_DACSEL=%i\n"
-		"CR1_BYPASS=%i\n",
-		!!(cr1 & REG_CR1_SB_MICBIAS),
-		!!(cr1 & REG_CR1_MONO),
-		!!(cr1 & REG_CR1_DAC_MUTE),
-		!!(cr1 & REG_CR1_HP_DIS),
-		!!(cr1 & REG_CR1_DACSEL),
-		!!(cr1 & REG_CR1_BYPASS)
-	);
-
-	seq_printf(m,
-		"CR2_DAC_DEEMP=%i\n"
-		"CR2_DAC_ADWL=%i\n"
-		"CR2_ADC_ADWL=%i\n"
-		"CR2_ADC_HPF=%i\n",
-		!!(cr2 & REG_CR2_DAC_DEEMP),
-		(cr2 >> 5) & 3,
-		(cr2 >> 3) & 3,
-		!!(cr2 & REG_CR2_ADC_HPF)
-	);
-
-	seq_printf(m,
-		"CR3_SB_MIC1=%i\n"
-		"CR3_SB_MIC2=%i\n"
-		"CR3_SIDETONE1=%i\n"
-		"CR3_SIDETONE2=%i\n"
-		"CR3_MICDIFF=%i\n"
-		"CR3_MICSTEREO=%i\n"
-		"CR3_INSEL=%i\n",
-		!!(cr3 & REG_CR3_SB_MIC1),
-		!!(cr3 & REG_CR3_SB_MIC2),
-		!!(cr3 & REG_CR3_SIDETONE1),
-		!!(cr3 & REG_CR3_SIDETONE2),
-		!!(cr3 & REG_CR3_MICDIFF),
-		!!(cr3 & REG_CR3_MICSTEREO),
-		cr3 & 3
-	);
-
-	seq_printf(m,
-		"PMR1_SB_DAC=%i\n"
-		"PMR1_SB_OUT=%i\n"
-		"PMR1_SB_MIX=%i\n"
-		"PMR1_SB_ADC=%i\n"
-		"PMR1_SB_LIN=%i\n"
-		"PMR1_SB_IND=%i\n",
-		!!(pmr1 & REG_PMR1_SB_DAC),
-		!!(pmr1 & REG_PMR1_SB_OUT),
-		!!(pmr1 & REG_PMR1_SB_MIX),
-		!!(pmr1 & REG_PMR1_SB_ADC),
-		!!(pmr1 & REG_PMR1_SB_LIN),
-		!!(pmr1 & REG_PMR1_SB_IND)
-	);
-
-	seq_printf(m,
-		"PMR2_GI=%i\n"
-		"PMR2_GOD=%i\n"
-		"PMR2_GIM=%i\n"
-		"PMR2_SB_MC=%i\n"
-		"PMR2_SB=%i\n"
-		"PMR2_SB_SLEEP=%i\n",
-		(pmr2 >> 6) & 3,
-		(pmr2 >> 4) & 3,
-		!!(pmr2 & REG_PMR2_GIM),
-		!!(pmr2 & REG_PMR2_SB_MC),
-		!!(pmr2 & REG_PMR2_SB),
-		!!(pmr2 & REG_PMR2_SB_SLEEP)
-	);
-
-	seq_printf(m,
-		"ICR=0x%02x\n"
-		"IFR=0x%02x, IFR_CCMC=%i\n",
-		icr, ifr,
-		!!(ifr & REG_IFR_CCMC)
-	);
-
-	seq_printf(m,
-		"CCR2=0x%02x\n",
-		read_codec_file(REG_CCR2)
-	);
-
-	return 0;
-}
-
-static int codec_debug_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, codec_debug_show, NULL);
-}
-
-static const struct file_operations codec_debug_fops = {
-	.open		= codec_debug_open,
-	.read		= seq_read,
-	//.write		= seq_write,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
 
 static unsigned int jz4750_codec_read(struct snd_soc_codec *codec,
 	unsigned int reg)
@@ -912,8 +799,6 @@ static int jz4750_codec_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	proc_create("jz/codec", 0644, 0, &codec_debug_fops);
-
 	return 0;
 
 err_free_codec:
@@ -948,3 +833,128 @@ MODULE_AUTHOR("Richard, <cjfeng@ingenic.cn>");
 MODULE_DESCRIPTION("JZ4750 SoC internal driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:jz4750-codec");
+
+#ifdef CONFIG_DEBUG_FS
+
+static int codec_debug_show(struct seq_file *m, void *v)
+{
+	unsigned int cr1, cr2, cr3, pmr1, pmr2, icr, ifr;
+
+	cr1 = read_codec_file(REG_CR1);
+	cr2 = read_codec_file(REG_CR2);
+	cr3 = read_codec_file(REG_CR3);
+	pmr1 = read_codec_file(REG_PMR1);
+	pmr2 = read_codec_file(REG_PMR2);
+	icr = read_codec_file(REG_ICR);
+	ifr = read_codec_file(REG_IFR);
+
+	seq_printf(m,
+		"CR1_SB_MICBIAS=%i\n"
+		"CR1_MONO=%i\n"
+		"CR1_DAC_MUTE=%i\n"
+		"CR1_HP_DIS=%i\n"
+		"CR1_DACSEL=%i\n"
+		"CR1_BYPASS=%i\n",
+		!!(cr1 & REG_CR1_SB_MICBIAS),
+		!!(cr1 & REG_CR1_MONO),
+		!!(cr1 & REG_CR1_DAC_MUTE),
+		!!(cr1 & REG_CR1_HP_DIS),
+		!!(cr1 & REG_CR1_DACSEL),
+		!!(cr1 & REG_CR1_BYPASS)
+	);
+
+	seq_printf(m,
+		"CR2_DAC_DEEMP=%i\n"
+		"CR2_DAC_ADWL=%i\n"
+		"CR2_ADC_ADWL=%i\n"
+		"CR2_ADC_HPF=%i\n",
+		!!(cr2 & REG_CR2_DAC_DEEMP),
+		(cr2 >> 5) & 3,
+		(cr2 >> 3) & 3,
+		!!(cr2 & REG_CR2_ADC_HPF)
+	);
+
+	seq_printf(m,
+		"CR3_SB_MIC1=%i\n"
+		"CR3_SB_MIC2=%i\n"
+		"CR3_SIDETONE1=%i\n"
+		"CR3_SIDETONE2=%i\n"
+		"CR3_MICDIFF=%i\n"
+		"CR3_MICSTEREO=%i\n"
+		"CR3_INSEL=%i\n",
+		!!(cr3 & REG_CR3_SB_MIC1),
+		!!(cr3 & REG_CR3_SB_MIC2),
+		!!(cr3 & REG_CR3_SIDETONE1),
+		!!(cr3 & REG_CR3_SIDETONE2),
+		!!(cr3 & REG_CR3_MICDIFF),
+		!!(cr3 & REG_CR3_MICSTEREO),
+		cr3 & 3
+	);
+
+	seq_printf(m,
+		"PMR1_SB_DAC=%i\n"
+		"PMR1_SB_OUT=%i\n"
+		"PMR1_SB_MIX=%i\n"
+		"PMR1_SB_ADC=%i\n"
+		"PMR1_SB_LIN=%i\n"
+		"PMR1_SB_IND=%i\n",
+		!!(pmr1 & REG_PMR1_SB_DAC),
+		!!(pmr1 & REG_PMR1_SB_OUT),
+		!!(pmr1 & REG_PMR1_SB_MIX),
+		!!(pmr1 & REG_PMR1_SB_ADC),
+		!!(pmr1 & REG_PMR1_SB_LIN),
+		!!(pmr1 & REG_PMR1_SB_IND)
+	);
+
+	seq_printf(m,
+		"PMR2_GI=%i\n"
+		"PMR2_GOD=%i\n"
+		"PMR2_GIM=%i\n"
+		"PMR2_SB_MC=%i\n"
+		"PMR2_SB=%i\n"
+		"PMR2_SB_SLEEP=%i\n",
+		(pmr2 >> 6) & 3,
+		(pmr2 >> 4) & 3,
+		!!(pmr2 & REG_PMR2_GIM),
+		!!(pmr2 & REG_PMR2_SB_MC),
+		!!(pmr2 & REG_PMR2_SB),
+		!!(pmr2 & REG_PMR2_SB_SLEEP)
+	);
+
+	seq_printf(m,
+		"ICR=0x%02x\n"
+		"IFR=0x%02x, IFR_CCMC=%i\n",
+		icr, ifr,
+		!!(ifr & REG_IFR_CCMC)
+	);
+
+	seq_printf(m,
+		"CCR2=0x%02x\n",
+		read_codec_file(REG_CCR2)
+	);
+
+	return 0;
+}
+
+static int codec_debug_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, codec_debug_show, NULL);
+}
+
+static const struct file_operations codec_debug_fops = {
+	.open		= codec_debug_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int __init codec_debugfs_init(void)
+{
+	(void) debugfs_create_file("codec", S_IFREG | S_IRUGO,
+				NULL, NULL, &codec_debug_fops);
+
+	return 0;
+}
+subsys_initcall(codec_debugfs_init);
+
+#endif
