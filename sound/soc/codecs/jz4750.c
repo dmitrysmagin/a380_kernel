@@ -87,6 +87,7 @@
 #define REG_CR3_MICSTEREO	(1 << 2)
 #define REG_CR3_MICDIFF		(1 << 3)
 #define REG_CR3_SIDETONE2	(1 << 4)
+#define REG_CR3_SIDETONE1_OFFSET 5
 #define REG_CR3_SIDETONE1	(1 << 5)
 #define REG_CR3_SB_MIC2		(1 << 6)
 #define REG_CR3_SB_MIC1_OFFSET  7
@@ -286,21 +287,13 @@ static int mic_in_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU: /* after widget power up */
-		snd_soc_update_bits(codec, REG_CR1,
-				REG_CR1_SB_MICBIAS,
-				REG_CR1_SB_MICBIAS);
 		snd_soc_update_bits(codec, REG_CR3,
-				REG_CR3_SIDETONE1 |
 				REG_CR3_MICDIFF |
 				REG_CR3_MICSTEREO,
-				REG_CR3_SIDETONE1);
+				0);
 		break;
 
 	case SND_SOC_DAPM_POST_PMD: /* after widget power down */
-		snd_soc_update_bits(codec, REG_CR3,
-				REG_CR3_SIDETONE1, 0);
-		snd_soc_update_bits(codec, REG_CR1,
-				REG_CR1_SB_MICBIAS, 0);
 		break;
 	}
 
@@ -336,6 +329,8 @@ static const struct snd_kcontrol_new jz4750_codec_output_controls[] = {
 			REG_CR1_DACSEL_OFFSET, 1, 0),
 	SOC_DAPM_SINGLE("Bypass Switch", REG_CR1,
 			REG_CR1_BYPASS_OFFSET, 1, 0),
+	SOC_DAPM_SINGLE("Sidetone Switch", REG_CR3,
+			REG_CR3_SIDETONE1_OFFSET, 1, 0),
 };
 
 static const struct snd_kcontrol_new jz4750_codec_input_controls[] = {
@@ -394,7 +389,8 @@ static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
 	/* inputs */
 	{"Line Input", NULL, "LIN"},
 	{"Line Input", NULL, "RIN"},
-	{"Mic Input", NULL, "MIC"},
+	{"Mic Bias", NULL, "MIC"},
+	{"Mic Input", NULL, "Mic Bias"},
 
 	/* input mux */
 	{"Input Mux", "Line In", "Line Input"},
@@ -403,6 +399,7 @@ static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
 
 	/* output mixer */
 	{"Output Mixer", "Bypass Switch", "Line Input"},
+	{"Output Mixer", "Sidetone Switch", "Mic Input"},
 	{"Output Mixer", "DAC Switch", "DAC"},
 	{"SYSCLK", NULL, "DAC"},
 
