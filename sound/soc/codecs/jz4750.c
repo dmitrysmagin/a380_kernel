@@ -74,6 +74,7 @@
 #define REG_CR1_HP_DIS		(1 << 4)
 #define REG_CR1_DAC_MUTE	(1 << 5)
 #define REG_CR1_MONO		(1 << 6)
+#define REG_CR1_SB_MICBIAS_OFFSET 7
 #define REG_CR1_SB_MICBIAS	(1 << 7)
 
 #define REG_CR2_ADC_HPF		(1 << 2)
@@ -81,6 +82,7 @@
 #define REG_CR2_DAC_ADWL(A)	(((A) & 3) << 5)
 #define REG_CR2_DAC_DEEMP	(1 << 7)
 
+#define REG_CR3_INSEL_OFFSET	0
 #define REG_CR3_INSEL(A)	(((A) & 3) << 0)
 #define REG_CR3_MICSTEREO	(1 << 2)
 #define REG_CR3_MICDIFF		(1 << 3)
@@ -275,27 +277,6 @@ static int sb_out_event(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
-static int line_in_event(struct snd_soc_dapm_widget *w,
-			struct snd_kcontrol *kcontrol, int event)
-{
-	struct snd_soc_codec *codec = w->codec;
-
-	mdelay(1);
-
-	switch (event) {
-	case SND_SOC_DAPM_POST_PMU: /* after widget power up */
-		snd_soc_update_bits(codec, REG_CR3,
-				REG_CR3_INSEL(3),
-				REG_CR3_INSEL(2));
-		break;
-
-	case SND_SOC_DAPM_POST_PMD: /* after widget power down */
-		break;
-	}
-
-	return 0;
-}
-
 static int mic_in_event(struct snd_soc_dapm_widget *w,
 			struct snd_kcontrol *kcontrol, int event)
 {
@@ -311,8 +292,7 @@ static int mic_in_event(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, REG_CR3,
 				REG_CR3_SIDETONE1 |
 				REG_CR3_MICDIFF |
-				REG_CR3_MICSTEREO |
-				REG_CR3_INSEL(3),
+				REG_CR3_MICSTEREO,
 				REG_CR3_SIDETONE1);
 		break;
 
@@ -327,15 +307,19 @@ static int mic_in_event(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+static const char *jz4750_input_select[] = {"Mic 1", "Mic 2", "Line In"};
+
+static SOC_ENUM_SINGLE_DECL(jz4750_insel_enum,
+	REG_CR3, REG_CR3_INSEL_OFFSET, jz4750_input_select);
+
 static const DECLARE_TLV_DB_SCALE(dac_tlv, -2250, 150, 0);
 
 static const unsigned int in_tlv[] = {
-	TLV_DB_RANGE_HEAD(2),
-	31-31, 31-20, TLV_DB_SCALE_ITEM(-2250, 0, 0),
+	TLV_DB_RANGE_HEAD(1),
 	31-19, 31-00, TLV_DB_SCALE_ITEM(-2250, 150, 0),
 };
 
-static const DECLARE_TLV_DB_SCALE(line_tlv, 0, 150, 0);
+static const DECLARE_TLV_DB_SCALE(adc_tlv, 0, 150, 0);
 
 static const struct snd_kcontrol_new jz4750_codec_controls[] = {
 	SOC_DOUBLE_TLV("DAC", REG_CGR1, 4, 0, 15, 1, dac_tlv),
@@ -344,7 +328,7 @@ static const struct snd_kcontrol_new jz4750_codec_controls[] = {
 	//SOC_DOUBLE_R_TLV("Mic 2", REG_CGR7, REG_CGR6, 0, 31, 1, in_tlv),
 	SOC_DOUBLE_R_TLV("PCM", REG_CGR9, REG_CGR8,
 			 0, 31, 1, in_tlv),
-	SOC_DOUBLE_TLV("ADC", REG_CGR10, 4, 0, 15, 0, line_tlv),
+	SOC_DOUBLE_TLV("ADC", REG_CGR10, 4, 0, 15, 1, adc_tlv),
 };
 
 static const struct snd_kcontrol_new jz4750_codec_output_controls[] = {
@@ -355,6 +339,7 @@ static const struct snd_kcontrol_new jz4750_codec_output_controls[] = {
 };
 
 static const struct snd_kcontrol_new jz4750_codec_input_controls[] = {
+	SOC_DAPM_ENUM("Input Select", jz4750_insel_enum),
 };
 
 static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
@@ -371,19 +356,19 @@ static const struct snd_soc_dapm_widget jz4750_codec_dapm_widgets[] = {
 			sb_out_event,
 			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
 
-	SND_SOC_DAPM_MIXER("Input Mixer", SND_SOC_NOPM, 0, 0,
-			NULL/*jz4750_codec_input_controls*/,
-			0/*ARRAY_SIZE(jz4750_codec_input_controls)*/),
+	SND_SOC_DAPM_MUX("Input Mux", SND_SOC_NOPM, 0, 0,
+			jz4750_codec_input_controls),
 
-	SND_SOC_DAPM_PGA_E("Line Input", REG_PMR1,
-			REG_PMR1_SB_LIN_OFFSET, 1, NULL, 0,
-			line_in_event,
-			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_PGA("Line Input", REG_PMR1,
+			REG_PMR1_SB_LIN_OFFSET, 1, NULL, 0),
 
 	SND_SOC_DAPM_PGA_E("Mic Input", REG_CR3,
 			REG_CR3_SB_MIC1_OFFSET, 1, NULL, 0,
 			mic_in_event,
 			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_MICBIAS("Mic Bias", REG_CR1_SB_MICBIAS,
+			REG_CR1_SB_MICBIAS_OFFSET, 1),
 
 	SND_SOC_DAPM_OUTPUT("LHPOUT"),
 	SND_SOC_DAPM_OUTPUT("RHPOUT"),
@@ -411,10 +396,10 @@ static const struct snd_soc_dapm_route jz4750_codec_dapm_routes[] = {
 	{"Line Input", NULL, "RIN"},
 	{"Mic Input", NULL, "MIC"},
 
-	/* input mixer */
-	{"Input Mixer", NULL, "Line Input"},
-	{"Input Mixer", NULL, "Mic Input"},
-	{"ADC", NULL, "Input Mixer"},
+	/* input mux */
+	{"Input Mux", "Line In", "Line Input"},
+	{"Input Mux", "Mic 1", "Mic Input"},
+	{"ADC", NULL, "Input Mux"},
 
 	/* output mixer */
 	{"Output Mixer", "Bypass Switch", "Line Input"},
@@ -730,11 +715,13 @@ static int jz4750_codec_dev_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, REG_CRR, 0x51); // reduce pop noise
 	mdelay(10);
 
+	snd_soc_write(codec, REG_CGR1, 0);
 	snd_soc_update_bits(codec, REG_CGR2, 0xc0, 0);
 	snd_soc_update_bits(codec, REG_CGR4, 0xc0, 0);
 	snd_soc_update_bits(codec, REG_CGR6, 0xc0, 0);
 	snd_soc_write(codec, REG_CGR8, 12);
 	snd_soc_write(codec, REG_CGR9, 12);
+	snd_soc_write(codec, REG_CGR10, 0);
 
 	jz4750_codec_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
