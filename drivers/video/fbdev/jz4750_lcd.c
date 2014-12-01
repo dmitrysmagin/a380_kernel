@@ -208,14 +208,14 @@ struct jz4750lcd_info jz4750_info_tve = {
 
 /* default output to lcd panel */
 struct jz4750lcd_info *jz4750_lcd_info = &jz4750_lcd_panel;
-static struct lcd_cfb_info *jz4750fb_info;
+static struct jzfb *jz4750fb_info;
 static struct jz4750_lcd_dma_desc *dma_desc_base;
 static struct jz4750_lcd_dma_desc *dma0_desc_palette, *dma0_desc0, *dma0_desc1, *dma1_desc0, *dma1_desc1;
 
 // 0 - lcd, 1 - tvout
 static unsigned long tvout_flag  = 0;
 
-struct lcd_cfb_info {
+struct jzfb {
 	struct fb_info	fb;
 	struct {
 		u16 red, green, blue;
@@ -278,7 +278,7 @@ static inline u_int chan_to_field(u_int chan, struct fb_bitfield *bf)
 static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 			  u_int transp, struct fb_info *info)
 {
-	struct lcd_cfb_info *cfb = (struct lcd_cfb_info *)info;
+	struct jzfb *cfb = (struct jzfb *)info;
 	unsigned short *ptr, ctmp;
 
 	if (regno >= NR_PALETTE)
@@ -508,7 +508,7 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 /* Use mmap /dev/fb can only get a non-cacheable Virtual Address. */
 static int jz4750fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 {
-	struct lcd_cfb_info *cfb = (struct lcd_cfb_info *)info;
+	struct jzfb *cfb = (struct jzfb *)info;
 	unsigned long start;
 	unsigned long off;
 	u32 len;
@@ -640,7 +640,7 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *info)
  */
 static int jz4750fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 {
-	struct lcd_cfb_info *cfb = (struct lcd_cfb_info *)info;
+	struct jzfb *cfb = (struct jzfb *)info;
 	/* HACK: var->yoffset should contain correct osd.fg0.h */
 	unsigned int dy = var->yoffset ? var->height : 0;
 
@@ -687,7 +687,7 @@ static struct fb_ops jz4750fb_ops = {
 static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 			struct fb_info *info)
 {
-	struct lcd_cfb_info *cfb = (struct lcd_cfb_info *)info;
+	struct jzfb *cfb = (struct jzfb *)info;
 	struct jz4750lcd_info *lcd_info = jz4750_lcd_info;
 	int chgvar = 0;
 
@@ -849,18 +849,18 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 	return 0;
 }
 
-static struct lcd_cfb_info * jz4750fb_alloc_fb_info(void)
+static struct jzfb *jz4750fb_alloc_fb_info(void)
 {
-	struct lcd_cfb_info *cfb;
+	struct jzfb *cfb;
 
-	cfb = kmalloc(sizeof(struct lcd_cfb_info) + sizeof(u32) * 16, GFP_KERNEL);
+	cfb = kmalloc(sizeof(struct jzfb) + sizeof(u32) * 16, GFP_KERNEL);
 
 	if (!cfb)
 		return NULL;
 
 	jz4750fb_info = cfb;
 
-	memset(cfb, 0, sizeof(struct lcd_cfb_info) );
+	memset(cfb, 0, sizeof(struct jzfb) );
 
 	strcpy(cfb->fb.fix.id, "jz-lcd");
 	cfb->fb.fix.type	= FB_TYPE_PACKED_PIXELS;
@@ -923,7 +923,7 @@ static inline int bpp_to_data_bpp(int bpp)
 /*
  * Map screen memory
  */
-static int jz4750fb_map_smem(struct lcd_cfb_info *cfb)
+static int jz4750fb_map_smem(struct jzfb *cfb)
 {
 	unsigned long page;
 	unsigned int page_shift, needroom, needroom1, bpp, w, h;
@@ -1015,7 +1015,7 @@ static int jz4750fb_map_smem(struct lcd_cfb_info *cfb)
 	return 0;
 }
 
-static void jz4750fb_free_fb_info(struct lcd_cfb_info *cfb)
+static void jz4750fb_free_fb_info(struct jzfb *cfb)
 {
 	if (cfb) {
 		fb_alloc_cmap(&cfb->fb.cmap, 0, 0);
@@ -1023,7 +1023,7 @@ static void jz4750fb_free_fb_info(struct lcd_cfb_info *cfb)
 	}
 }
 
-static void jz4750fb_unmap_smem(struct lcd_cfb_info *cfb)
+static void jz4750fb_unmap_smem(struct jzfb *cfb)
 {
 	struct page * map = NULL;
 	unsigned char *tmp;
@@ -1594,7 +1594,7 @@ static void jz4750fb_change_clock( struct jz4750lcd_info * lcd_info )
  */
 static void jz4750fb_set_mode( struct jz4750lcd_info * lcd_info )
 {
-	struct lcd_cfb_info *cfb = jz4750fb_info;
+	struct jzfb *cfb = jz4750fb_info;
 
 	jz4750fb_set_osd_mode(lcd_info);
 	jz4750fb_foreground_resize(lcd_info);
@@ -1839,7 +1839,7 @@ static void slcd_init(void)
 
 static int jz4750_fb_probe(struct platform_device *dev)
 {
-	struct lcd_cfb_info *cfb;
+	struct jzfb *cfb;
 	int err = 0;
 
 	cfb = jz4750fb_alloc_fb_info();
@@ -1893,7 +1893,7 @@ failed:
 
 static int jz4750_fb_remove(struct platform_device *pdev)
 {
-	struct lcd_cfb_info *cfb = jz4750fb_info;
+	struct jzfb *cfb = jz4750fb_info;
 
 	jz4750fb_unmap_smem(cfb);
 	jz4750fb_free_fb_info(cfb);
