@@ -216,10 +216,14 @@ static struct jz4750_lcd_dma_desc *dma0_desc_palette, *dma0_desc0, *dma0_desc1, 
 static unsigned long tvout_flag  = 0;
 
 struct jzfb {
-	struct fb_info	fb;
+	struct fb_info *fb;
+	struct platform_device *pdev;
+
 	struct {
 		u16 red, green, blue;
-	}		palette[NR_PALETTE];
+	} palette[NR_PALETTE];
+	uint32_t pseudo_palette[16];
+	unsigned int bpp;
 };
 
 #define DMA_DESC_NUM		6
@@ -234,8 +238,8 @@ static struct jz4750_lcd_dma_desc *dma0_desc_cmd0, *dma0_desc_cmd;
 static unsigned char *lcd_cmdbuf;
 #endif
 
-static void jz4750fb_set_mode( struct jz4750lcd_info * lcd_info );
-static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info );
+static void jz4750fb_set_mode(struct jz4750lcd_info * lcd_info);
+static void jz4750fb_deep_set_mode(struct jz4750lcd_info * lcd_info);
 
 static void ctrl_enable(void)
 {
@@ -253,7 +257,8 @@ static void ctrl_disable(void)
 {
 	if (jz4750_lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD ||
 			jz4750_lcd_info->panel.cfg & LCD_CFG_TVEN ) {
-		__lcd_clr_ena(); /* Smart lcd and TVE mode only support quick disable */
+		/* Smart lcd and TVE mode only support quick disable */
+		__lcd_clr_ena();
 	} else {
 		int cnt;
 		/* when CPU main freq is 336MHz,wait for 16ms */
@@ -263,7 +268,8 @@ static void ctrl_disable(void)
 			cnt--;
 		}
 		if (cnt == 0)
-			printk("LCD disable timeout! REG_LCD_STATE=0x%08xx\n",REG_LCD_STATE);
+			printk("LCD disable timeout! REG_LCD_STATE=0x%08xx\n",
+				REG_LCD_STATE);
 		REG_LCD_STATE &= ~LCD_STATE_LDD;
 	}
 }
@@ -276,18 +282,19 @@ static inline u_int chan_to_field(u_int chan, struct fb_bitfield *bf)
 }
 
 static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
-			  u_int transp, struct fb_info *info)
+			  u_int transp, struct fb_info *fb)
 {
-	struct jzfb *cfb = (struct jzfb *)info;
+	struct jzfb *jzfb = fb->par;
 	unsigned short *ptr, ctmp;
 
 	if (regno >= NR_PALETTE)
 		return 1;
 
-	cfb->palette[regno].red		= red ;
-	cfb->palette[regno].green	= green;
-	cfb->palette[regno].blue	= blue;
-	if (cfb->fb.var.bits_per_pixel <= 16) {
+	jzfb->palette[regno].red	= red ;
+	jzfb->palette[regno].green	= green;
+	jzfb->palette[regno].blue	= blue;
+
+	if (fb->var.bits_per_pixel <= 16) {
 		red	>>= 8;
 		green	>>= 8;
 		blue	>>= 8;
@@ -296,13 +303,16 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 		green	&= 0xff;
 		blue	&= 0xff;
 	}
-	switch (cfb->fb.var.bits_per_pixel) {
+
+	switch (fb->var.bits_per_pixel) {
 	case 1:
 	case 2:
 	case 4:
 	case 8:
-		if (((jz4750_lcd_info->panel.cfg & LCD_CFG_MODE_MASK) == LCD_CFG_MODE_SINGLE_MSTN ) ||
-		    ((jz4750_lcd_info->panel.cfg & LCD_CFG_MODE_MASK) == LCD_CFG_MODE_DUAL_MSTN )) {
+		if (((jz4750_lcd_info->panel.cfg & LCD_CFG_MODE_MASK) ==
+						LCD_CFG_MODE_SINGLE_MSTN ) ||
+		    ((jz4750_lcd_info->panel.cfg & LCD_CFG_MODE_MASK) ==
+						LCD_CFG_MODE_DUAL_MSTN )) {
 			ctmp = (77L * red + 150L * green + 29L * blue) >> 8;
 			ctmp = ((ctmp >> 3) << 11) | ((ctmp >> 2) << 5) |
 				(ctmp >> 3);
@@ -324,14 +334,14 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 
 	case 15:
 		if (regno < 16)
-			((u32 *)cfb->fb.pseudo_palette)[regno] =
+			((u32 *)fb->pseudo_palette)[regno] =
 				((red >> 3) << 10) |
 				((green >> 3) << 5) |
 				(blue >> 3);
 		break;
 	case 16:
 		if (regno < 16) {
-			((u32 *)cfb->fb.pseudo_palette)[regno] =
+			((u32 *)fb->pseudo_palette)[regno] =
 				((red >> 3) << 11) |
 				((green >> 2) << 5) |
 				(blue >> 3);
@@ -339,7 +349,7 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 		break;
 	case 17 ... 32:
 		if (regno < 16)
-			((u32 *)cfb->fb.pseudo_palette)[regno] =
+			((u32 *)fb->pseudo_palette)[regno] =
 				(red << 16) |
 				(green << 8) |
 				(blue << 0);
@@ -417,82 +427,10 @@ static void jz4750lcd_info_switch_to_TVE(int mode)
 	}
 }
 
-static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
+static int jz4750fb_ioctl(struct fb_info *fb, unsigned int cmd,
+			unsigned long arg)
 {
-	int ret = 0;
-
-	void __user *argp = (void __user *)arg;
-
 	switch (cmd) {
-	case FBIO_GET_MODE:
-		D("fbio get mode\n");
-
-		if (copy_to_user(argp, jz4750_lcd_info, sizeof(struct jz4750lcd_info)))
-			return -EFAULT;
-
-		break;
-
-	case FBIO_SET_MODE:
-		D("fbio set mode\n");
-
-		if (copy_from_user(jz4750_lcd_info, argp, sizeof(struct jz4750lcd_info)))
-			return -EFAULT;
-
-		/* set mode */
-		jz4750fb_set_mode(jz4750_lcd_info);
-
-		break;
-
-	case FBIO_DEEP_SET_MODE:
-		D("fbio deep set mode\n");
-
-		if (copy_from_user(jz4750_lcd_info, argp, sizeof(struct jz4750lcd_info)))
-			return -EFAULT;
-
-		jz4750fb_deep_set_mode(jz4750_lcd_info);
-
-		break;
-
-#ifdef CONFIG_FB_JZ4750_TVE
-	case FBIO_MODE_SWITCH:
-		D("FBIO_MODE_SWITCH");
-		switch (arg) {
-		case PANEL_MODE_TVE_PAL:	/* switch to TVE_PAL mode */
-		case PANEL_MODE_TVE_NTSC:	/* switch to TVE_NTSC mode */
-			jz4750lcd_info_switch_to_TVE(arg);
-			jz4750tve_init(arg); /* tve controller init */
-			udelay(100);
-			jz4750tve_enable_tve();
-			break;
-		case PANEL_MODE_LCD_PANEL:	/* switch to LCD mode */
-		default :
-			/* turn off TVE, turn off DACn... */
-			jz4750tve_disable_tve();
-			jz4750_lcd_info = &jz4750_lcd_panel;
-			break;
-		}
-
-		jz4750fb_deep_set_mode(jz4750_lcd_info);
-
-		break;
-
-	case FBIO_GET_TVE_MODE:
-		D("fbio get TVE mode\n");
-		if (copy_to_user(argp, jz4750_tve_info, sizeof(struct jz4750tve_info)))
-			return -EFAULT;
-
-		break;
-
-	case FBIO_SET_TVE_MODE:
-		D("fbio set TVE mode\n");
-		if (copy_from_user(jz4750_tve_info, argp, sizeof(struct jz4750tve_info)))
-			return -EFAULT;
-
-		/* set tve mode */
-		jz4750tve_set_tve_mode(jz4750_tve_info);
-
-		break;
-#endif
 	case FBIO_WAITFORVSYNC:
 		/* Implement later, just avoid log message below */
 		break;
@@ -502,13 +440,12 @@ static int jz4750fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 		break;
 	}
 
-	return ret;
+	return 0;
 }
 
 /* Use mmap /dev/fb can only get a non-cacheable Virtual Address. */
-static int jz4750fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
+static int jz4750fb_mmap(struct fb_info *fb, struct vm_area_struct *vma)
 {
-	struct jzfb *cfb = (struct jzfb *)info;
 	unsigned long start;
 	unsigned long off;
 	u32 len;
@@ -517,12 +454,13 @@ static int jz4750fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	//fb->fb_get_fix(&fix, PROC_CONSOLE(info), info);
 
 	/* frame buffer memory */
-	start = cfb->fb.fix.smem_start;
-	len = PAGE_ALIGN((start & ~PAGE_MASK) + cfb->fb.fix.smem_len);
+	start = fb->fix.smem_start;
+	len = PAGE_ALIGN((start & ~PAGE_MASK) + fb->fix.smem_len);
 	start &= PAGE_MASK;
 
 	if ((vma->vm_end - vma->vm_start + off) > len)
 		return -EINVAL;
+
 	off += start;
 
 	vma->vm_pgoff = off >> PAGE_SHIFT;
@@ -556,7 +494,7 @@ static struct fb_videomode video_modes[] = {
 
 /* checks var and eventually tweaks it to something supported,
  * DO NOT MODIFY PAR */
-static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
+static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *fb)
 {
 	struct fb_videomode *mode = &video_modes[0];
 
@@ -597,24 +535,22 @@ static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *inf
 	return 0;
 }
 
-
 /*
  * set the video mode according to info->var
  */
-static int jz4750fb_set_par(struct fb_info *info)
+static int jz4750fb_set_par(struct fb_info *fb)
 {
 	//printk("jz4750fb_set_par, not implemented\n");
 	return 0;
 }
 
-
 /*
  * (Un)Blank the display.
  * Fix me: should we use VESA value?
  */
-static int jz4750fb_blank(int blank_mode, struct fb_info *info)
+static int jz4750fb_blank(int blank_mode, struct fb_info *fb)
 {
-	D("jz4750 fb_blank %d %p", blank_mode, info);
+	D("jz4750 fb_blank %d %p", blank_mode, fb);
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
 	//case FB_BLANK_NORMAL:
@@ -638,36 +574,22 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *info)
 /*
  * pan display
  */
-static int jz4750fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
+static int jz4750fb_pan_display(struct fb_var_screeninfo *var,
+				struct fb_info *fb)
 {
-	struct jzfb *cfb = (struct jzfb *)info;
-	/* HACK: var->yoffset should contain correct osd.fg0.h */
-	unsigned int dy = var->yoffset ? var->height : 0;
-
-	if (!var || !cfb) {
-		return -EINVAL;
-	}
-
-	if (var->xoffset != cfb->fb.var.xoffset) {
+	if (var->xoffset != fb->var.xoffset) {
 		/* No support for X panning for now! */
 		return -EINVAL;
 	}
 
-	/*
-	 * TODO: yoffset is the height of requested mode which could be
-	 * smaller than panel height. Example: on 480x272 panel if a smaller
-	 * res is used (400x240), yoffset is either 0 or 240 (should be 272)
-	 * Possible fix: use osd.fg0.h instead ??
-	 */
 	D("var.yoffset: %d\n", var->yoffset);
 	dma0_desc0->databuf = (unsigned int)virt_to_phys((void *)lcd_frame0
-			+ (cfb->fb.fix.line_length * dy));
+			+ (fb->fix.line_length * var->yoffset));
 	dma_cache_wback((unsigned int)(dma0_desc0),
 			sizeof(struct jz4750_lcd_dma_desc));
 
 	return 0;
 }
-
 
 /* use default function cfb_fillrect, cfb_copyarea, cfb_imageblit */
 static struct fb_ops jz4750fb_ops = {
@@ -685,9 +607,8 @@ static struct fb_ops jz4750fb_ops = {
 };
 
 static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
-			struct fb_info *info)
+			    struct fb_info *fb)
 {
-	struct jzfb *cfb = (struct jzfb *)info;
 	struct jz4750lcd_info *lcd_info = jz4750_lcd_info;
 	int chgvar = 0;
 
@@ -696,7 +617,7 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 	var->bits_per_pixel         = lcd_info->osd.fg0.bpp;
 
 	var->vmode                  = FB_VMODE_NONINTERLACED;
-	var->activate               = cfb->fb.var.activate;
+	var->activate               = fb->var.activate;
 	var->xres                   = var->width;
 	var->yres                   = var->height;
 	var->xres_virtual           = var->width;
@@ -719,8 +640,8 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 	 */
 	if (var->vmode & FB_VMODE_CONUPDATE) {
 		var->vmode |= FB_VMODE_YWRAP;
-		var->xoffset = cfb->fb.var.xoffset;
-		var->yoffset = cfb->fb.var.yoffset;
+		var->xoffset = fb->var.xoffset;
+		var->yoffset = fb->var.yoffset;
 	}
 
 	if (var->activate & FB_ACTIVATE_TEST)
@@ -729,15 +650,15 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 	if ((var->activate & FB_ACTIVATE_MASK) != FB_ACTIVATE_NOW)
 		return -EINVAL;
 
-	if (cfb->fb.var.xres != var->xres)
+	if (fb->var.xres != var->xres)
 		chgvar = 1;
-	if (cfb->fb.var.yres != var->yres)
+	if (fb->var.yres != var->yres)
 		chgvar = 1;
-	if (cfb->fb.var.xres_virtual != var->xres_virtual)
+	if (fb->var.xres_virtual != var->xres_virtual)
 		chgvar = 1;
-	if (cfb->fb.var.yres_virtual != var->yres_virtual)
+	if (fb->var.yres_virtual != var->yres_virtual)
 		chgvar = 1;
-	if (cfb->fb.var.bits_per_pixel != var->bits_per_pixel)
+	if (fb->var.bits_per_pixel != var->bits_per_pixel)
 		chgvar = 1;
 
 	//display = fb_display + con;
@@ -748,8 +669,8 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 
 	switch(var->bits_per_pixel){
 	case 1:	/* Mono */
-		cfb->fb.fix.visual	= FB_VISUAL_MONO01;
-		cfb->fb.fix.line_length	= (var->xres * var->bits_per_pixel) / 8;
+		fb->fix.visual		= FB_VISUAL_MONO01;
+		fb->fix.line_length	= (var->xres * var->bits_per_pixel) / 8;
 		break;
 	case 2:	/* Mono */
 		var->red.offset		= 0;
@@ -759,8 +680,8 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 		var->blue.offset	= 0;
 		var->blue.length	= 2;
 
-		cfb->fb.fix.visual	= FB_VISUAL_PSEUDOCOLOR;
-		cfb->fb.fix.line_length	= (var->xres * var->bits_per_pixel) / 8;
+		fb->fix.visual		= FB_VISUAL_PSEUDOCOLOR;
+		fb->fix.line_length	= (var->xres * var->bits_per_pixel) / 8;
 		break;
 	case 4:	/* PSEUDOCOLOUR*/
 		var->red.offset		= 0;
@@ -770,8 +691,8 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 		var->blue.offset	= 0;
 		var->blue.length	= 4;
 
-		cfb->fb.fix.visual	= FB_VISUAL_PSEUDOCOLOR;
-		cfb->fb.fix.line_length	= var->xres / 2;
+		fb->fix.visual		= FB_VISUAL_PSEUDOCOLOR;
+		fb->fix.line_length	= var->xres / 2;
 		break;
 	case 8:	/* PSEUDOCOLOUR, 256 */
 		var->red.offset		= 0;
@@ -781,8 +702,8 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 		var->blue.offset	= 0;
 		var->blue.length	= 8;
 
-		cfb->fb.fix.visual	= FB_VISUAL_PSEUDOCOLOR;
-		cfb->fb.fix.line_length	= var->xres ;
+		fb->fix.visual		= FB_VISUAL_PSEUDOCOLOR;
+		fb->fix.line_length	= var->xres;
 		break;
 	case 15: /* DIRECTCOLOUR, 32k */
 		var->bits_per_pixel	= 15;
@@ -793,8 +714,8 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 		var->blue.offset	= 0;
 		var->blue.length	= 5;
 
-		cfb->fb.fix.visual	= FB_VISUAL_DIRECTCOLOR;
-		cfb->fb.fix.line_length	= var->xres_virtual * 2;
+		fb->fix.visual		= FB_VISUAL_DIRECTCOLOR;
+		fb->fix.line_length	= var->xres_virtual * 2;
 		break;
 	case 16: /* DIRECTCOLOUR, 64k */
 		var->bits_per_pixel	= 16;
@@ -805,8 +726,8 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 		var->blue.offset	= 0;
 		var->blue.length	= 5;
 
-		cfb->fb.fix.visual	= FB_VISUAL_TRUECOLOR;
-		cfb->fb.fix.line_length	= var->xres_virtual * 2;
+		fb->fix.visual		= FB_VISUAL_TRUECOLOR;
+		fb->fix.line_length	= var->xres_virtual * 2;
 		break;
 	case 17 ... 32:
 		/* DIRECTCOLOUR, 256 */
@@ -821,85 +742,83 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 		var->transp.offset	= 24;
 		var->transp.length	= 8;
 
-		cfb->fb.fix.visual	= FB_VISUAL_TRUECOLOR;
-		cfb->fb.fix.line_length	= var->xres_virtual * 4;
+		fb->fix.visual		= FB_VISUAL_TRUECOLOR;
+		fb->fix.line_length	= var->xres_virtual * 4;
 		break;
 
 	default: /* in theory this should never happen */
 		printk(KERN_WARNING "%s: don't support for %dbpp\n",
-		       cfb->fb.fix.id, var->bits_per_pixel);
+		       fb->fix.id, var->bits_per_pixel);
 		break;
 	}
 
-	cfb->fb.var = *var;
-	cfb->fb.var.activate &= ~FB_ACTIVATE_ALL;
+	fb->var = *var;
+	fb->var.activate &= ~FB_ACTIVATE_ALL;
 
-	/*
-	 * Update the old var.  The fbcon drivers still use this.
-	 * Once they are using cfb->fb.var, this can be dropped.
-	 *					--rmk
-	 */
-	//display->var = cfb->fb.var;
+	//display->var = fb->var;
+
 	/*
 	 * If we are setting all the virtual consoles, also set the
 	 * defaults used to create new consoles.
 	 */
-	fb_set_cmap(&cfb->fb.cmap, &cfb->fb);
+	fb_set_cmap(&fb->cmap, fb);
 
 	return 0;
 }
 
-static struct jzfb *jz4750fb_alloc_fb_info(void)
+static struct fb_info *jz4750fb_alloc_fb_info(struct platform_device *pdev)
 {
-	struct jzfb *cfb;
+	struct jzfb *jzfb;
+	struct fb_info *fb;
 
-	cfb = kmalloc(sizeof(struct jzfb) + sizeof(u32) * 16, GFP_KERNEL);
-
-	if (!cfb)
+	fb = framebuffer_alloc(sizeof(struct jzfb), &pdev->dev);
+	if (!fb) {
 		return NULL;
+	}
 
-	jz4750fb_info = cfb;
+	jz4750fb_info = jzfb = fb->par;
+	jzfb->pdev = pdev;
+	//jzfb->pdata = pdata;
+	//jzfb->bpp = 32;
 
-	memset(cfb, 0, sizeof(struct jzfb) );
+	strcpy(fb->fix.id, "jz-lcd");
+	fb->fix.type		= FB_TYPE_PACKED_PIXELS;
+	fb->fix.type_aux	= 0;
+	fb->fix.xpanstep	= 1;
+	fb->fix.ypanstep	= 1;
+	fb->fix.ywrapstep	= 0;
+	fb->fix.accel		= FB_ACCEL_NONE;
 
-	strcpy(cfb->fb.fix.id, "jz-lcd");
-	cfb->fb.fix.type	= FB_TYPE_PACKED_PIXELS;
-	cfb->fb.fix.type_aux	= 0;
-	cfb->fb.fix.xpanstep	= 1;
-	cfb->fb.fix.ypanstep	= 1;
-	cfb->fb.fix.ywrapstep	= 0;
-	cfb->fb.fix.accel	= FB_ACCEL_NONE;
+	fb->var.nonstd		= 0;
+	fb->var.activate	= FB_ACTIVATE_NOW;
+	fb->var.height		= -1;
+	fb->var.width		= -1;
+	fb->var.accel_flags	= FB_ACCELF_TEXT;
 
-	cfb->fb.var.nonstd	= 0;
-	cfb->fb.var.activate	= FB_ACTIVATE_NOW;
-	cfb->fb.var.height	= -1;
-	cfb->fb.var.width	= -1;
-	cfb->fb.var.accel_flags	= FB_ACCELF_TEXT;
+	fb->fbops		= &jz4750fb_ops;
+	fb->flags		= FBINFO_FLAG_DEFAULT;
 
-	cfb->fb.fbops		= &jz4750fb_ops;
-	cfb->fb.flags		= FBINFO_FLAG_DEFAULT;
-
-	cfb->fb.pseudo_palette	= (void *)(cfb + 1);
+	fb->pseudo_palette	= jzfb->pseudo_palette;
 
 	switch (jz4750_lcd_info->osd.fg0.bpp) {
 	case 1:
-		fb_alloc_cmap(&cfb->fb.cmap, 4, 0);
+		fb_alloc_cmap(&fb->cmap, 4, 0);
 		break;
 	case 2:
-		fb_alloc_cmap(&cfb->fb.cmap, 8, 0);
+		fb_alloc_cmap(&fb->cmap, 8, 0);
 		break;
 	case 4:
-		fb_alloc_cmap(&cfb->fb.cmap, 32, 0);
+		fb_alloc_cmap(&fb->cmap, 32, 0);
 		break;
 	case 8:
-
 	default:
-		fb_alloc_cmap(&cfb->fb.cmap, 256, 0);
+		fb_alloc_cmap(&fb->cmap, 256, 0);
 		break;
 	}
-	D("fb_alloc_cmap,fb.cmap.len:%d....\n", cfb->fb.cmap.len);
 
-	return cfb;
+	D("fb_alloc_cmap,fb.cmap.len:%d....\n", fb->cmap.len);
+
+	return fb;
 }
 
 static inline int bpp_to_data_bpp(int bpp)
@@ -923,7 +842,7 @@ static inline int bpp_to_data_bpp(int bpp)
 /*
  * Map screen memory
  */
-static int jz4750fb_map_smem(struct jzfb *cfb)
+static int jz4750fb_map_smem(struct fb_info *fb)
 {
 	unsigned long page;
 	unsigned int page_shift, needroom, needroom1, bpp, w, h;
@@ -1002,30 +921,31 @@ static int jz4750fb_map_smem(struct jzfb *cfb)
 		SetPageReserved(virt_to_page((void*)page));
 	}
 
-	cfb->fb.fix.smem_start = virt_to_phys((void *)lcd_frame0);
-	cfb->fb.fix.smem_len = (PAGE_SIZE << page_shift); /* page_shift/2 ??? */
-	cfb->fb.screen_base =
+	fb->fix.smem_start = virt_to_phys((void *)lcd_frame0);
+	fb->fix.smem_len = (PAGE_SIZE << page_shift); /* page_shift/2 ??? */
+	fb->screen_base =
 		(unsigned char *)(((unsigned int)lcd_frame0&0x1fffffff) | 0xa0000000);
 
-	if (!cfb->fb.screen_base) {
-		printk("jz4750fb, %s: unable to map screen memory\n", cfb->fb.fix.id);
+	if (!fb->screen_base) {
+		printk("jz4750fb, %s: unable to map screen memory\n", fb->fix.id);
 		return -ENOMEM;
 	}
 
 	return 0;
 }
 
-static void jz4750fb_free_fb_info(struct jzfb *cfb)
+static void jz4750fb_free_fb_info(struct fb_info *fb)
 {
-	if (cfb) {
-		fb_alloc_cmap(&cfb->fb.cmap, 0, 0);
-		kfree(cfb);
+	if (fb) {
+		//fb_dealloc_cmap(&fb->cmap);
+		fb_alloc_cmap(&fb->cmap, 0, 0);
+		framebuffer_release(fb);
 	}
 }
 
-static void jz4750fb_unmap_smem(struct jzfb *cfb)
+static void jz4750fb_unmap_smem(struct fb_info *fb)
 {
-	struct page * map = NULL;
+	struct page *map = NULL;
 	unsigned char *tmp;
 	unsigned int page_shift, needroom, bpp, w, h;
 
@@ -1052,11 +972,11 @@ static void jz4750fb_unmap_smem(struct jzfb *cfb)
 		if ((PAGE_SIZE << page_shift) >= needroom)
 			break;
 
-	if (cfb && cfb->fb.screen_base) {
-		iounmap(cfb->fb.screen_base);
-		cfb->fb.screen_base = NULL;
-		release_mem_region(cfb->fb.fix.smem_start,
-				   cfb->fb.fix.smem_len);
+	if (fb && fb->screen_base) {
+		iounmap(fb->screen_base);
+		fb->screen_base = NULL;
+		release_mem_region(fb->fix.smem_start,
+				   fb->fix.smem_len);
 	}
 
 	if (lcd_palette) {
@@ -1077,11 +997,11 @@ static void jz4750fb_unmap_smem(struct jzfb *cfb)
 }
 
 /* initial dma descriptors */
-static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
+static void jz4750fb_descriptor_init(struct jz4750lcd_info *lcd_info)
 {
 	unsigned int pal_size;
 
-	switch ( lcd_info->osd.fg0.bpp ) {
+	switch (lcd_info->osd.fg0.bpp) {
 	case 1:
 		pal_size = 4;
 		break;
@@ -1303,7 +1223,7 @@ static void jz4750fb_descriptor_init( struct jz4750lcd_info * lcd_info )
 #endif
 }
 
-static void jz4750fb_set_panel_mode( struct jz4750lcd_info * lcd_info )
+static void jz4750fb_set_panel_mode(struct jz4750lcd_info *lcd_info)
 {
 	struct jz4750lcd_panel_t *panel = &lcd_info->panel;
 #ifdef CONFIG_JZ4750D_VGA_DISPLAY
@@ -1497,7 +1417,7 @@ static void jz4750fb_foreground_resize( struct jz4750lcd_info * lcd_info )
 	}
 }
 
-static void jz4750fb_change_clock( struct jz4750lcd_info * lcd_info )
+static void jz4750fb_change_clock(struct jz4750lcd_info *lcd_info)
 {
 	unsigned int val = 0;
 	unsigned int pclk;
@@ -1592,20 +1512,20 @@ static void jz4750fb_change_clock( struct jz4750lcd_info * lcd_info )
  * jz4750fb_set_mode(), set osd configure, resize foreground
  *
  */
-static void jz4750fb_set_mode( struct jz4750lcd_info * lcd_info )
+static void jz4750fb_set_mode(struct jz4750lcd_info *lcd_info)
 {
-	struct jzfb *cfb = jz4750fb_info;
+	struct jzfb *jzfb = jz4750fb_info;
 
 	jz4750fb_set_osd_mode(lcd_info);
 	jz4750fb_foreground_resize(lcd_info);
-	jz4750fb_set_var(&cfb->fb.var, -1, &cfb->fb);
+	jz4750fb_set_var(&jzfb->fb->var, -1, jzfb->fb);
 }
 
 /*
  * jz4750fb_deep_set_mode,
  *
  */
-static void jz4750fb_deep_set_mode( struct jz4750lcd_info * lcd_info )
+static void jz4750fb_deep_set_mode(struct jz4750lcd_info * lcd_info)
 {
 	/* configurate sequence:
 	 * 1. disable lcdc.
@@ -1837,14 +1757,19 @@ static void slcd_init(void)
 #endif
 }
 
-static int jz4750_fb_probe(struct platform_device *dev)
+static int jz4750_fb_probe(struct platform_device *pdev)
 {
-	struct jzfb *cfb;
+	struct fb_info *fb;
 	int err = 0;
 
-	cfb = jz4750fb_alloc_fb_info();
-	if (!cfb)
-		goto failed;
+	fb = jz4750fb_alloc_fb_info(pdev);
+	if (!fb) {
+
+		dev_err(&pdev->dev, "Failed to allocate framebuffer device\n");
+		err = -ENOMEM;
+		goto fb_alloc_failed;
+	}
+
 
 	ctrl_disable();
 
@@ -1856,24 +1781,24 @@ static int jz4750_fb_probe(struct platform_device *dev)
 	/* init clk */
 	jz4750fb_change_clock(jz4750_lcd_info);
 
-	err = jz4750fb_map_smem(cfb);
+	err = jz4750fb_map_smem(fb);
 	if (err)
-		goto failed;
+		goto map_smem_failed;
 
 	jz4750fb_deep_set_mode(jz4750_lcd_info);
 
-	err = register_framebuffer(&cfb->fb);
+	err = register_framebuffer(fb);
 	if (err < 0) {
-		D("Failed to register framebuffer device.");
+		dev_err(&pdev->dev, "Failed to register framebuffer device\n");
 		goto failed;
 	}
 
 	printk("fb%d: %s frame buffer device, using %dK of video memory\n",
-		cfb->fb.node, cfb->fb.fix.id, cfb->fb.fix.smem_len>>10);
+		fb->node, fb->fix.id, fb->fix.smem_len>>10);
 
 	if (request_irq(JZ4750D_IRQ_LCD, jz4750fb_interrupt_handler,
 			IRQF_DISABLED, "lcd", 0)) {
-		printk("Failed to request LCD IRQ.\n");
+		dev_err(&pdev->dev, "Failed to request LCD IRQ\n");
 		err = -EBUSY;
 		goto failed;
 	}
@@ -1885,18 +1810,20 @@ static int jz4750_fb_probe(struct platform_device *dev)
 	return 0;
 
 failed:
-	jz4750fb_unmap_smem(cfb);
-	jz4750fb_free_fb_info(cfb);
+	jz4750fb_unmap_smem(fb);
+map_smem_failed:
+	jz4750fb_free_fb_info(fb);
+fb_alloc_failed:
 
 	return err;
 }
 
 static int jz4750_fb_remove(struct platform_device *pdev)
 {
-	struct jzfb *cfb = jz4750fb_info;
+	struct jzfb *jzfb = jz4750fb_info;
 
-	jz4750fb_unmap_smem(cfb);
-	jz4750fb_free_fb_info(cfb);
+	jz4750fb_unmap_smem(jzfb->fb);
+	jz4750fb_free_fb_info(jzfb->fb);
 
 	return 0;
 }
