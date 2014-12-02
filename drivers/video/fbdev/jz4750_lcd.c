@@ -1406,10 +1406,11 @@ static void jz4750fb_change_clock(struct jz4750lcd_info *lcd_info)
 static void jz4750fb_set_mode(struct jz4750lcd_info *lcd_info)
 {
 	struct jzfb *jzfb = jz4750fb_info;
+	struct fb_info *fb = jzfb->fb;
 
 	jz4750fb_set_osd_mode(lcd_info);
 	jz4750fb_foreground_resize(lcd_info);
-	jz4750fb_set_var(&jzfb->fb->var, -1, jzfb->fb);
+	jz4750fb_set_var(&fb->var, -1, fb);
 }
 
 /*
@@ -1625,6 +1626,7 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 	}
 
 	jz4750fb_info = jzfb = fb->par;
+	jzfb->fb = fb;
 	jzfb->pdev = pdev;
 	//jzfb->pdata = pdata;
 	jzfb->bpp = 16;
