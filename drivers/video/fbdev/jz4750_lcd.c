@@ -928,19 +928,6 @@ static int jz4750fb_map_smem(struct fb_info *fb)
 #endif
 	needroom1 = needroom = ((w * bpp + 7) >> 3) * h;
 
-#if defined(CONFIG_FB_JZ4750_LCD_USE_2LAYER_FRAMEBUFFER)
-	bpp = bpp_to_data_bpp(jz4750_lcd_info->osd.fg1.bpp);
-
-#ifndef CONFIG_FB_JZ4750_TVE
-	w = jz4750_lcd_info->osd.fg1.w;
-	h = jz4750_lcd_info->osd.fg1.h;
-#else
-	w = ( jz4750_lcd_info->osd.fg1.w > TVE_WIDTH_PAL )?jz4750_lcd_info->osd.fg1.w:TVE_WIDTH_PAL;
-	h = ( jz4750_lcd_info->osd.fg1.h > TVE_HEIGHT_PAL )?jz4750_lcd_info->osd.fg1.h:TVE_HEIGHT_PAL;
-#endif
-	needroom += ((w * bpp + 7) >> 3) * h;
-#endif // two layer
-
 	printk("FrameBuffer bpp = %d\n", bpp);
 
 	for (page_shift = 0; page_shift < 12; page_shift++)
@@ -1019,16 +1006,6 @@ static void jz4750fb_unmap_smem(struct fb_info *fb)
 	w = jz4750_lcd_info->osd.fg0.w;
 	h = jz4750_lcd_info->osd.fg0.h;
 	needroom = ((w * bpp + 7) >> 3) * h;
-#if defined(CONFIG_FB_JZ4750_LCD_USE_2LAYER_FRAMEBUFFER)
-	bpp = jz4750_lcd_info->osd.fg1.bpp;
-	if ( bpp == 18 || bpp == 24)
-		bpp = 32;
-	if ( bpp == 15 )
-		bpp = 16;
-	w = jz4750_lcd_info->osd.fg1.w;
-	h = jz4750_lcd_info->osd.fg1.h;
-	needroom += ((w * bpp + 7) >> 3) * h;
-#endif
 
 	for (page_shift = 0; page_shift < 12; page_shift++)
 		if ((PAGE_SIZE << page_shift) >= needroom)
@@ -1088,33 +1065,33 @@ static void jz4750fb_descriptor_init(struct jz4750lcd_info *lcd_info)
 	dma1_desc0		= dma_desc_base + 5;
 	dma1_desc1		= dma_desc_base + 6;
 
-	/*
-	 * Normal TFT panel's DMA Chan0:
-	 *	TO LCD Panel:
-	 *		no palette:	dma0_desc0 <<==>> dma0_desc0
-	 *		palette :	dma0_desc_palette <<==>> dma0_desc0
-	 *	TO TV Encoder:
-	 *		no palette:	dma0_desc0 <<==>> dma0_desc1
-	 *		palette:	dma0_desc_palette --> dma0_desc0
-	 *				--> dma0_desc1 --> dma0_desc_palette --> ...
-	 *
-	 * SMART LCD TFT panel(dma0_desc_cmd)'s DMA Chan0:
-	 *	TO LCD Panel:
-	 *		no palette:	dma0_desc_cmd <<==>> dma0_desc0
-	 *		palette :	dma0_desc_palette --> dma0_desc_cmd
-	 *				--> dma0_desc0 --> dma0_desc_palette --> ...
-	 *	TO TV Encoder:
-	 *		no palette:	dma0_desc_cmd --> dma0_desc0
-	 *				--> dma0_desc1 --> dma0_desc_cmd --> ...
-	 *		palette:	dma0_desc_palette --> dma0_desc_cmd
-	 *				--> dma0_desc0 --> dma0_desc1
-	 *				--> dma0_desc_palette --> ...
-	 * DMA Chan1:
-	 *	TO LCD Panel:
-	 *		dma1_desc0 <<==>> dma1_desc0
-	 *	TO TV Encoder:
-	 *		dma1_desc0 <<==>> dma1_desc1
-	 */
+/*
+ * Normal TFT panel's DMA Chan0:
+ *	TO LCD Panel:
+ *		no palette:	dma0_desc0 <<==>> dma0_desc0
+ *		palette :	dma0_desc_palette <<==>> dma0_desc0
+ *	TO TV Encoder:
+ *		no palette:	dma0_desc0 <<==>> dma0_desc1
+ *		palette:	dma0_desc_palette --> dma0_desc0
+ *				--> dma0_desc1 --> dma0_desc_palette --> ...
+ *
+ * SMART LCD TFT panel(dma0_desc_cmd)'s DMA Chan0:
+ *	TO LCD Panel:
+ *		no palette:	dma0_desc_cmd <<==>> dma0_desc0
+ *		palette :	dma0_desc_palette --> dma0_desc_cmd
+ *				--> dma0_desc0 --> dma0_desc_palette --> ...
+ *	TO TV Encoder:
+ *		no palette:	dma0_desc_cmd --> dma0_desc0
+ *				--> dma0_desc1 --> dma0_desc_cmd --> ...
+ *		palette:	dma0_desc_palette --> dma0_desc_cmd
+ *				--> dma0_desc0 --> dma0_desc1
+ *				--> dma0_desc_palette --> ...
+ * DMA Chan1:
+ *	TO LCD Panel:
+ *		dma1_desc0 <<==>> dma1_desc0
+ *	TO TV Encoder:
+ *		dma1_desc0 <<==>> dma1_desc1
+ */
 
 #if defined(CONFIG_FB_JZ4750_SLCD)
 	/* First CMD descriptors, use only once, cmd_num isn't 0 */
@@ -1201,88 +1178,6 @@ static void jz4750fb_descriptor_init(struct jz4750lcd_info *lcd_info)
 
 	REG_LCD_DA1 = virt_to_phys(dma1_desc0);	/* set Dma-chan1's Descripter Addrress */
 	dma_cache_wback_inv((unsigned int)(dma_desc_base), (DMA_DESC_NUM)*sizeof(struct jz4750_lcd_dma_desc));
-
-#if 0
-	/* Palette Descriptor */
-	if ( lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD )
-//		dma0_desc_palette->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd);
-		dma0_desc_palette->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd1);
-	else
-		dma0_desc_palette->next_desc = (unsigned int)virt_to_phys(dma0_desc0);
-	dma0_desc_palette->databuf = (unsigned int)virt_to_phys((void *)lcd_palette);
-	dma0_desc_palette->frame_id = (unsigned int)0xaaaaaaaa;
-	dma0_desc_palette->cmd	= LCD_CMD_PAL | pal_size; /* Palette Descriptor */
-
-	/* Dummy Command Descriptor, cmd_num is 0 */
-	dma0_desc_cmd->next_desc = (unsigned int)virt_to_phys(dma0_desc0);
-	dma0_desc_cmd->databuf	= (unsigned int)virt_to_phys((void *)lcd_cmdbuf);
-	dma0_desc_cmd->frame_id = (unsigned int)0x0da0cad0; /* dma0's cmd0 */
-	dma0_desc_cmd->cmd	= LCD_CMD_CMD | 3; /* dummy command */
-	dma0_desc_cmd->offsize	= 0; /* dummy command */
-	dma0_desc_cmd->page_width = 0; /* dummy command */
-	dma0_desc_cmd->cmd_num	= 3;
-
-//---------------------------------
-	dma0_desc_cmd1->next_desc = (unsigned int)virt_to_phys(dma0_desc0);
-	dma0_desc_cmd1->databuf	= 0;
-	dma0_desc_cmd1->frame_id = (unsigned int)0x0da0cad1; /* dma0's cmd0 */
-	dma0_desc_cmd1->cmd	= LCD_CMD_CMD | 0; /* dummy command */
-	dma0_desc_cmd1->cmd_num	= 0;
-	dma0_desc_cmd1->offsize	= 0; /* dummy command */
-	dma0_desc_cmd1->page_width = 0; /* dummy command */
-//-----------------------------------
-	/* DMA0 Descriptor0 */
-	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) /* TVE mode */
-		dma0_desc0->next_desc = (unsigned int)virt_to_phys(dma0_desc1);
-	else{			/* Normal TFT LCD */
-		if (lcd_info->osd.fg0.bpp <= 8) /* load palette only once at setup?? */
-//			dma0_desc0->next_desc = (unsigned int)virt_to_phys(dma0_desc_palette); //tft
-			dma0_desc0->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd); // smart lcd
-		else if ( lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD )
-			dma0_desc0->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd1);
-//			dma0_desc0->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd);
-		else
-			dma0_desc0->next_desc = (unsigned int)virt_to_phys(dma0_desc0);
-	}
-
-	dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
-	dma0_desc0->frame_id = (unsigned int)0x0000da00; /* DMA0'0 */
-
-	/* DMA0 Descriptor1 */
-	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) { /* TVE mode */
-		if (lcd_info->osd.fg0.bpp <= 8) /* load palette only once at setup?? */
-			dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc_palette);
-
-		else if ( lcd_info->panel.cfg & LCD_CFG_LCDPIN_SLCD )
-			dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd);
-		else
-			dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc0);
-		dma0_desc1->frame_id = (unsigned int)0x0000da01; /* DMA0'1 */
-	}
-
-	/* DMA1 Descriptor0 */
-	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) /* TVE mode */
-		dma1_desc0->next_desc = (unsigned int)virt_to_phys(dma1_desc1);
-	else			/* Normal TFT LCD */
-		dma1_desc0->next_desc = (unsigned int)virt_to_phys(dma1_desc0);
-
-	dma1_desc0->databuf = virt_to_phys((void *)lcd_frame1);
-	dma1_desc0->frame_id = (unsigned int)0x0000da10; /* DMA1'0 */
-
-	/* DMA1 Descriptor1 */
-	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) { /* TVE mode */
-		dma1_desc1->next_desc = (unsigned int)virt_to_phys(dma1_desc0);
-		dma1_desc1->frame_id = (unsigned int)0x0000da11; /* DMA1'1 */
-	}
-
-	if (lcd_info->osd.fg0.bpp <= 8) /* load palette only once at setup?? */
-		REG_LCD_DA0 = virt_to_phys(dma0_desc_palette);
-	else
-//		REG_LCD_DA0 = virt_to_phys(dma0_desc_cmd); //smart lcd
-		REG_LCD_DA0 = virt_to_phys(dma0_desc0); //tft
-	REG_LCD_DA1 = virt_to_phys(dma1_desc0);	/* set Dma-chan1's Descripter Addrress */
-	dma_cache_wback_inv((unsigned int)(dma_desc_base), (DMA_DESC_NUM)*sizeof(struct jz4750_lcd_dma_desc));
-#endif
 }
 
 static void jz4750fb_set_panel_mode(struct jz4750lcd_info *lcd_info)
