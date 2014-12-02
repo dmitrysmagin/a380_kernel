@@ -832,61 +832,6 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 	return 0;
 }
 
-static struct fb_info *jz4750fb_alloc_fb_info(struct platform_device *pdev)
-{
-	struct jzfb *jzfb;
-	struct fb_info *fb;
-
-	fb = framebuffer_alloc(sizeof(struct jzfb), &pdev->dev);
-	if (!fb) {
-		return NULL;
-	}
-
-	jz4750fb_info = jzfb = fb->par;
-	jzfb->pdev = pdev;
-	//jzfb->pdata = pdata;
-	jzfb->bpp = 32;
-
-	strcpy(fb->fix.id, "jz-lcd");
-	fb->fix.type		= FB_TYPE_PACKED_PIXELS;
-	fb->fix.type_aux	= 0;
-	fb->fix.xpanstep	= 1;
-	fb->fix.ypanstep	= 1;
-	fb->fix.ywrapstep	= 0;
-	fb->fix.accel		= FB_ACCEL_NONE;
-
-	fb->var.nonstd		= 0;
-	fb->var.activate	= FB_ACTIVATE_NOW;
-	fb->var.height		= -1;
-	fb->var.width		= -1;
-	fb->var.accel_flags	= FB_ACCELF_TEXT;
-
-	fb->fbops		= &jz4750fb_ops;
-	fb->flags		= FBINFO_FLAG_DEFAULT;
-
-	fb->pseudo_palette	= jzfb->pseudo_palette;
-
-	switch (jz4750_lcd_info->osd.fg0.bpp) {
-	case 1:
-		fb_alloc_cmap(&fb->cmap, 4, 0);
-		break;
-	case 2:
-		fb_alloc_cmap(&fb->cmap, 8, 0);
-		break;
-	case 4:
-		fb_alloc_cmap(&fb->cmap, 32, 0);
-		break;
-	case 8:
-	default:
-		fb_alloc_cmap(&fb->cmap, 256, 0);
-		break;
-	}
-
-	D("fb_alloc_cmap,fb.cmap.len:%d....\n", fb->cmap.len);
-
-	return fb;
-}
-
 static inline int bpp_to_data_bpp(int bpp)
 {
 	switch (bpp) {
@@ -1716,17 +1661,56 @@ static void slcd_init(void)
 
 static int jz4750_fb_probe(struct platform_device *pdev)
 {
+	struct jzfb *jzfb;
 	struct fb_info *fb;
 	int err = 0;
 
-	fb = jz4750fb_alloc_fb_info(pdev);
+	fb = framebuffer_alloc(sizeof(struct jzfb), &pdev->dev);
 	if (!fb) {
-
 		dev_err(&pdev->dev, "Failed to allocate framebuffer device\n");
 		err = -ENOMEM;
 		goto fb_alloc_failed;
 	}
 
+	jz4750fb_info = jzfb = fb->par;
+	jzfb->pdev = pdev;
+	//jzfb->pdata = pdata;
+	jzfb->bpp = 16;
+
+	strcpy(fb->fix.id, "jz-lcd");
+	fb->fix.type		= FB_TYPE_PACKED_PIXELS;
+	fb->fix.type_aux	= 0;
+	fb->fix.xpanstep	= 1;
+	fb->fix.ypanstep	= 1;
+	fb->fix.ywrapstep	= 0;
+	fb->fix.accel		= FB_ACCEL_NONE;
+
+	fb->var.nonstd		= 0;
+	fb->var.activate	= FB_ACTIVATE_NOW;
+	fb->var.height		= -1;
+	fb->var.width		= -1;
+	fb->var.accel_flags	= FB_ACCELF_TEXT;
+
+	fb->fbops		= &jz4750fb_ops;
+	fb->flags		= FBINFO_FLAG_DEFAULT;
+
+	fb->pseudo_palette	= jzfb->pseudo_palette;
+
+	switch (jz4750_lcd_info->osd.fg0.bpp) {
+	case 1:
+		fb_alloc_cmap(&fb->cmap, 4, 0);
+		break;
+	case 2:
+		fb_alloc_cmap(&fb->cmap, 8, 0);
+		break;
+	case 4:
+		fb_alloc_cmap(&fb->cmap, 32, 0);
+		break;
+	case 8:
+	default:
+		fb_alloc_cmap(&fb->cmap, 256, 0);
+		break;
+	}
 
 	ctrl_disable();
 
