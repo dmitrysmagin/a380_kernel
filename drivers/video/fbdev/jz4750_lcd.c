@@ -52,13 +52,80 @@
 #include <asm/mach-jz4750d/jz4750d_tcu.h>
 #include <asm/mach-jz4750d/irq.h>
 
-#include "jz4750_lcd.h"
 #include "jz4750_tve.h"
 
 /* choose LCD panel */
 #include "jz_rzx50_panel.h"
 #include "jz_a380_panel.h"
 #include "jz_a320e_panel.h"
+
+#define NR_PALETTE	256
+#define PALETTE_SIZE	(NR_PALETTE*2)
+
+/* use new descriptor(8 words) */
+struct jz4750_lcd_dma_desc {
+	unsigned int next_desc; 	/* LCDDAx */
+	unsigned int databuf;   	/* LCDSAx */
+	unsigned int frame_id;  	/* LCDFIDx */
+	unsigned int cmd; 		/* LCDCMDx */
+	unsigned int offsize;       	/* Stride Offsize(in word) */
+	unsigned int page_width; 	/* Stride Pagewidth(in word) */
+	unsigned int cmd_num; 		/* Command Number(for SLCD) */
+	unsigned int desc_size; 	/* Foreground Size */
+};
+
+struct jz4750lcd_panel_t {
+	unsigned int cfg;	/* panel mode and pin usage etc. */
+	unsigned int slcd_cfg;	/* Smart lcd configurations */
+	unsigned int ctrl;	/* lcd controll register */
+	unsigned int w;		/* Panel Width(in pixel) */
+	unsigned int h;		/* Panel Height(in line) */
+	unsigned int fclk;	/* frame clk */
+	unsigned int hsw;	/* hsync width, in pclk */
+	unsigned int vsw;	/* vsync width, in line count */
+	unsigned int elw;	/* end of line, in pclk */
+	unsigned int blw;	/* begin of line, in pclk */
+	unsigned int efw;	/* end of frame, in line count */
+	unsigned int bfw;	/* begin of frame, in line count */
+};
+
+
+struct jz4750lcd_fg_t {
+	int bpp;	/* foreground bpp */
+	int x;		/* foreground start position x */
+	int y;		/* foreground start position y */
+	int w;		/* foreground width */
+	int h;		/* foreground height */
+};
+
+#define FG_NOCHANGE 		0x0000
+#define FG0_CHANGE_SIZE 	0x0001
+#define FG0_CHANGE_POSITION 	0x0002
+#define FG1_CHANGE_SIZE 	0x0010
+#define FG1_CHANGE_POSITION 	0x0020
+#define FG_CHANGE_ALL 		( FG0_CHANGE_SIZE | FG0_CHANGE_POSITION | \
+				  FG1_CHANGE_SIZE | FG1_CHANGE_POSITION )
+
+struct jz4750lcd_osd_t {
+	unsigned int osd_cfg;	/* OSDEN, ALHPAEN, F0EN, F1EN, etc */
+	unsigned int osd_ctrl;	/* IPUEN, OSDBPP, etc */
+	unsigned int rgb_ctrl;	/* RGB Dummy, RGB sequence, RGB to YUV */
+	unsigned int bgcolor;	/* background color(RGB888) */
+	unsigned int colorkey0;	/* foreground0's Colorkey enable/value */
+	unsigned int colorkey1; /* foreground1's Colorkey enable/value */
+	unsigned int alpha;	/* ALPHAEN, alpha value */
+	unsigned int ipu_restart; /* IPU Restart enable, ipu restart time */
+
+	int fg_change;
+	struct jz4750lcd_fg_t fg0;	/* foreground 0 */
+	struct jz4750lcd_fg_t fg1;	/* foreground 1 */
+};
+
+struct jz4750lcd_info {
+	struct jz4750lcd_panel_t panel;
+	struct jz4750lcd_osd_t osd;
+};
+
 
 #if defined(CONFIG_JZ4750D_A380) || defined(CONFIG_JZ4750D_A320E)
  #define SCREEN_WIDTH 400
@@ -161,9 +228,7 @@ struct jz4750lcd_info jz4750_lcd_panel = {
 	},
 	.osd = {
 		.osd_cfg =	LCD_OSDC_OSDEN | /* Use OSD mode */
-				LCD_OSDC_F0EN | /* enable Foreground0 */
-				LCD_OSDC_F1EN | /* enable Foreground0 */
-				LCD_OSDC_ALPHAEN, /* enable Foreground0 */
+				LCD_OSDC_F0EN, /* enable Foreground0 */
 		.osd_ctrl = 0,		/* disable ipu,  */
 		.rgb_ctrl = 0,
 		.bgcolor = 0x000000, /* set background color Black */
@@ -609,6 +674,7 @@ static struct fb_ops jz4750fb_ops = {
 static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 			    struct fb_info *fb)
 {
+	struct jzfb *jzfb = fb->par;
 	struct jz4750lcd_info *lcd_info = jz4750_lcd_info;
 	int chgvar = 0;
 
@@ -779,7 +845,7 @@ static struct fb_info *jz4750fb_alloc_fb_info(struct platform_device *pdev)
 	jz4750fb_info = jzfb = fb->par;
 	jzfb->pdev = pdev;
 	//jzfb->pdata = pdata;
-	//jzfb->bpp = 32;
+	jzfb->bpp = 32;
 
 	strcpy(fb->fix.id, "jz-lcd");
 	fb->fix.type		= FB_TYPE_PACKED_PIXELS;
@@ -902,10 +968,6 @@ static int jz4750fb_map_smem(struct fb_info *fb)
 			ptr[i] = data;
 		}
 	}
-#endif
-
-#if defined(CONFIG_FB_JZ4750_LCD_USE_2LAYER_FRAMEBUFFER)
-	lcd_frame1 = lcd_frame0 + needroom1;
 #endif
 
 	/*
