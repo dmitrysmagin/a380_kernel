@@ -1617,17 +1617,6 @@ static void gpio_init(void)
 #endif
 }
 
-static void slcd_init(void)
-{
-	/* Configure SLCD module for setting smart lcd control registers */
-#if defined(CONFIG_FB_JZ4750_SLCD)
-	__lcd_as_smart_lcd();
-	__slcd_disable_dma();
-	//__init_slcd_bus();	/* Note: modify this depend on you lcd */
-
-#endif
-}
-
 static int jz4750_fb_probe(struct platform_device *pdev)
 {
 	struct jzfb *jzfb;
@@ -1685,7 +1674,6 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 	ctrl_disable();
 
 	gpio_init();
-	slcd_init();
 
 	/* init clk */
 	jz4750fb_change_clock(jz4750_lcd_info);
