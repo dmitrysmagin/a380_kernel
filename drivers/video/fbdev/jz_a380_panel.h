@@ -48,20 +48,6 @@ void Mcupanel_SetAddr(u32 x, u32 y) //u32
 	LCD_Config_Command(0x00,0x2c);
 }
 
-#define __lcd_special_pin_init()			\
-do {							\
-	__gpio_as_output(PIN_CS_N);			\
-	__gpio_as_output(PIN_RESET_N);			\
-	__gpio_clear_pin(PIN_CS_N); /* Clear CS */	\
-	mdelay(100);					\
-	__gpio_set_pin(PIN_RESET_N);			\
-	mdelay(50);					\
-	__gpio_clear_pin(PIN_RESET_N);			\
-	mdelay(50);					\
-	__gpio_set_pin(PIN_RESET_N);			\
-	mdelay(100);					\
-} while(0)
-
 #define SlcdInit()                     \
 do {                                   \
 	mdelay(50);                    \
@@ -133,34 +119,19 @@ do {                                   \
 	LCD_Config_Command(0x00,0x2c); \
 } while(0);
 
-/*---- LCD Initial ----*/
-#define __lcd_slcd_special_on()						\
-do {									\
-	REG_LCD_CTRL &= ~(LCD_CTRL_ENA|LCD_CTRL_DIS); /* disable lcdc */ \
-	REG_LCD_CFG = LCD_CFG_LCDPIN_SLCD | 0x0D; /* LCM */		\
-	REG_SLCD_CTRL &= ~SLCD_CTRL_DMA_EN; /* disable slcd dma */	\
-	REG_SLCD_CFG = SLCD_CFG_DWIDTH_8BIT_x1 | SLCD_CFG_CWIDTH_8BIT |	\
-			SLCD_CFG_CS_ACTIVE_LOW | SLCD_CFG_RS_CMD_LOW |	\
-			SLCD_CFG_CLK_ACTIVE_FALLING | SLCD_CFG_TYPE_PARALLEL; \
-	REG_LCD_REV = 0x04;	/* lcd clock??? */			\
-	SlcdInit();							\
-	/*alterac add*/							\
-	Mcupanel_SetAddr(0, 0);						\
-	REG_SLCD_CFG = SLCD_CFG_DWIDTH_8BIT_x2 | SLCD_CFG_CWIDTH_8BIT |	\
-			SLCD_CFG_CS_ACTIVE_LOW | SLCD_CFG_RS_CMD_LOW | 	\
-			SLCD_CFG_CLK_ACTIVE_FALLING | SLCD_CFG_TYPE_PARALLEL; \
-	/*Mcupanel_Command(0x22);*/					\
-	/*while ((REG_SLCD_STATE)&(1 << 0));*/				\
-	/*__slcd_enable_dma();	*/					\
-	REG_SLCD_CTRL |= SLCD_CTRL_DMA_EN; /* slcdc dma enable */	\
-	REG_LCD_CTRL  |= (LCD_CTRL_ENA|LCD_CTRL_DIS); /* disable lcdc */ \
-} while (0)
-
-
 static int a380_panel_init(void **out_panel, struct device *dev,
 			   void *panel_pdata)
 {
-	__lcd_special_pin_init();
+	__gpio_as_output(PIN_CS_N);
+	__gpio_as_output(PIN_RESET_N);
+	__gpio_clear_pin(PIN_CS_N); /* Clear CS */
+	mdelay(100);
+	__gpio_set_pin(PIN_RESET_N);
+	mdelay(50);
+	__gpio_clear_pin(PIN_RESET_N);
+	mdelay(50);
+	__gpio_set_pin(PIN_RESET_N);
+	mdelay(100);
 
 	return 0;
 }
@@ -171,7 +142,21 @@ static void a380_panel_exit(void *panel)
 
 static void a380_panel_enable(void *panel)
 {
-	__lcd_slcd_special_on();
+	/* FIXME: Remove redundant reg setting */
+	REG_LCD_CTRL &= ~(LCD_CTRL_ENA|LCD_CTRL_DIS); /* disable lcdc */
+	REG_SLCD_CTRL &= ~SLCD_CTRL_DMA_EN; /* disable slcd dma */
+	REG_SLCD_CFG = SLCD_CFG_DWIDTH_8BIT_x1 | SLCD_CFG_CWIDTH_8BIT |
+			SLCD_CFG_CS_ACTIVE_LOW | SLCD_CFG_RS_CMD_LOW |
+			SLCD_CFG_CLK_ACTIVE_FALLING | SLCD_CFG_TYPE_PARALLEL;
+
+	SlcdInit();
+
+	REG_SLCD_CFG = SLCD_CFG_DWIDTH_8BIT_x2 | SLCD_CFG_CWIDTH_8BIT |
+			SLCD_CFG_CS_ACTIVE_LOW | SLCD_CFG_RS_CMD_LOW |
+			SLCD_CFG_CLK_ACTIVE_FALLING | SLCD_CFG_TYPE_PARALLEL;
+
+	REG_SLCD_CTRL |= SLCD_CTRL_DMA_EN; /* slcdc dma enable */
+	REG_LCD_CTRL  |= (LCD_CTRL_ENA|LCD_CTRL_DIS); /* enable lcdc */
 }
 
 static void a380_panel_disable(void *panel)
