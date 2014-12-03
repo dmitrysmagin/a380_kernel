@@ -52,6 +52,24 @@
 #include <asm/mach-jz4750d/jz4750d_tcu.h>
 #include <asm/mach-jz4750d/irq.h>
 
+/* later move to include/video/jzpanel.h */
+#ifndef __JZPANEL_H
+#define __JZPANEL_H
+
+struct panel_ops {
+	int (*init)(void **out_panel, struct device *dev, void *panel_pdata);
+	void (*exit)(void *panel);
+	void (*enable)(void *panel);
+	void (*disable)(void *panel);
+};
+
+#endif /* __JZPANEL_H */
+
+struct jzfb_platform_data {
+	struct panel_ops *panel_ops;
+	void *panel_pdata;
+};
+
 #include "jz4750_tve.h"
 
 /* choose LCD panel */
@@ -283,12 +301,13 @@ static unsigned long tvout_flag  = 0;
 struct jzfb {
 	struct fb_info *fb;
 	struct platform_device *pdev;
+	void *panel;
 
-	struct {
-		u16 red, green, blue;
-	} palette[NR_PALETTE];
+	struct { u16 red, green, blue; } palette[NR_PALETTE];
 	uint32_t pseudo_palette[16];
 	unsigned int bpp;
+
+	bool is_enabled;
 };
 
 #define DMA_DESC_NUM		6
@@ -302,9 +321,6 @@ static struct jz4750_lcd_dma_desc *dma0_desc_cmd0, *dma0_desc_cmd;
 #ifdef CONFIG_FB_JZ4750_SLCD
 static unsigned char *lcd_cmdbuf;
 #endif
-
-static void jz4750fb_set_mode(struct jz4750lcd_info * lcd_info);
-static void jz4750fb_deep_set_mode(struct jz4750lcd_info * lcd_info);
 
 static void ctrl_enable(void)
 {

@@ -157,12 +157,6 @@ void Mcupanel_SetAddr_Reset(u32 x, u32 y) //u32
 	} while(0)
 
 /*---- LCD Initial ----*/
-#undef __lcd_slcd_pin_init
-#define __lcd_slcd_pin_init()						\
-	do {								\
-		__lcd_special_pin_init();				\
-	}while (0)
-
 #undef __lcd_slcd_special_on
 #define __lcd_slcd_special_on()						\
 	do {	\
@@ -177,15 +171,37 @@ void Mcupanel_SetAddr_Reset(u32 x, u32 y) //u32
 		REG_SLCD_CTRL |= SLCD_CTRL_DMA_EN; /* slcdc dma enable */ \
 	} while (0)
 
-#define __init_slcd_bus()\
-	do{\
-		__slcd_set_data_16bit();\
-		__slcd_set_cmd_16bit();\
-		__slcd_set_cs_low();\
-		__slcd_set_rs_low();\
-		__slcd_set_clk_falling();\
-		__slcd_set_parallel_type();\
-	}while(0)
+static int a320e_panel_init(void **out_panel, struct device *dev,
+			   void *panel_pdata)
+{
+	__lcd_special_pin_init();
+
+	return 0;
+}
+
+static void a320e_panel_exit(void *panel)
+{
+}
+
+static void a320e_panel_enable(void *panel)
+{
+	__lcd_slcd_special_on();
+}
+
+static void a320e_panel_disable(void *panel)
+{
+}
+
+/* TODO: Find out the real lcd model name */
+struct panel_ops a320e_panel_ops = {
+	.init		= a320e_panel_init,
+	.exit		= a320e_panel_exit,
+	.enable		= a320e_panel_enable,
+	.disable	= a320e_panel_disable,
+};
+
+/* FIXME: this will be gone when panel code is moved to separate .c file */
+struct panel_ops *jzpanel_ops = &a320e_panel_ops;
 
 #endif  /* CONFIG_JZ4750_SLCD_400X240_8352B */
 

@@ -88,7 +88,39 @@ do { \
 	__spi_write_reg(0x00, 0x03); \
 } while (0)
 
-#endif /* CONFIG_JZ4750_LCD_INNOLUX_PT035TN01_SERIAL */
+static int rzx50_panel_init(void **out_panel, struct device *dev,
+			   void *panel_pdata)
+{
+	__lcd_special_pin_init();
 
+	return 0;
+}
+
+static void rzx50_panel_exit(void *panel)
+{
+}
+
+static void rzx50_panel_enable(void *panel)
+{
+	__lcd_special_on();
+}
+
+static void rzx50_panel_disable(void *panel)
+{
+	__lcd_special_off();
+}
+
+/* TODO: Find out the real lcd model name */
+struct panel_ops rzx50_panel_ops = {
+	.init		= rzx50_panel_init,
+	.exit		= rzx50_panel_exit,
+	.enable		= rzx50_panel_enable,
+	.disable	= rzx50_panel_disable,
+};
+
+/* FIXME: this will be gone when panel code is moved to separate .c file */
+struct panel_ops *jzpanel_ops = &rzx50_panel_ops;
+
+#endif /* CONFIG_JZ4750_LCD_INNOLUX_PT035TN01_SERIAL */
 
 #endif /* __JZ_PT035TN01_H__ */

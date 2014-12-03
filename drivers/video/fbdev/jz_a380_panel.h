@@ -134,26 +134,8 @@ do {                                   \
 } while(0);
 
 /*---- LCD Initial ----*/
-#define __lcd_slcd_pin_init()					\
-do {								\
-	__gpio_as_slcd_8bit();					\
-	mdelay(10);						\
-	__lcd_special_pin_init();				\
-}while (0)
-
-#define __init_slcd_bus()\
-do{\
-	__slcd_set_data_8bit_x2();\
-	__slcd_set_cmd_8bit();\
-	__slcd_set_cs_low();\
-	__slcd_set_rs_low();\
-	__slcd_set_clk_falling();\
-	__slcd_set_parallel_type();\
-} while(0)
-
 #define __lcd_slcd_special_on()						\
 do {									\
-	__lcd_slcd_pin_init();						\
 	REG_LCD_CTRL &= ~(LCD_CTRL_ENA|LCD_CTRL_DIS); /* disable lcdc */ \
 	REG_LCD_CFG = LCD_CFG_LCDPIN_SLCD | 0x0D; /* LCM */		\
 	REG_SLCD_CTRL &= ~SLCD_CTRL_DMA_EN; /* disable slcd dma */	\
@@ -173,6 +155,39 @@ do {									\
 	REG_SLCD_CTRL |= SLCD_CTRL_DMA_EN; /* slcdc dma enable */	\
 	REG_LCD_CTRL  |= (LCD_CTRL_ENA|LCD_CTRL_DIS); /* disable lcdc */ \
 } while (0)
+
+
+static int a380_panel_init(void **out_panel, struct device *dev,
+			   void *panel_pdata)
+{
+	__lcd_special_pin_init();
+
+	return 0;
+}
+
+static void a380_panel_exit(void *panel)
+{
+}
+
+static void a380_panel_enable(void *panel)
+{
+	__lcd_slcd_special_on();
+}
+
+static void a380_panel_disable(void *panel)
+{
+}
+
+/* TODO: Find out the real lcd model name */
+struct panel_ops a380_panel_ops = {
+	.init		= a380_panel_init,
+	.exit		= a380_panel_exit,
+	.enable		= a380_panel_enable,
+	.disable	= a380_panel_disable,
+};
+
+/* FIXME: this will be gone when panel code is moved to separate .c file */
+struct panel_ops *jzpanel_ops = &a380_panel_ops;
 
 #endif	/* CONFIG_JZ4750_SLCD_A380_ILI9331 */
 
