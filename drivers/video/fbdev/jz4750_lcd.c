@@ -325,11 +325,6 @@ static unsigned char *lcd_cmdbuf;
 static void ctrl_enable(void)
 {
 	REG_LCD_STATE = 0; /* clear lcdc status */
-#ifdef CONFIG_FB_JZ4750_SLCD
-	__lcd_slcd_special_on();
-#else
-	__lcd_special_on();
-#endif
 	__lcd_clr_dis();
 	__lcd_set_ena(); /* enable lcdc */
 }
@@ -1577,8 +1572,6 @@ static const struct file_operations tvout_fops = {
 
 static void gpio_init(void)
 {
-	__lcd_special_pin_init();
-
 #ifdef CONFIG_FB_JZ4750_SLCD
 	__gpio_as_slcd_8bit();
 #else
@@ -1675,8 +1668,8 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 
 	gpio_init();
 
-	/* init clk */
-	jz4750fb_change_clock(jz4750_lcd_info);
+	jzpanel_ops->init(&jzfb->panel, &pdev->dev,
+			  0/*pdata->panel_pdata*/);
 
 	err = jz4750fb_map_smem(fb);
 	if (err)
@@ -1699,6 +1692,9 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 		err = -EBUSY;
 		goto failed;
 	}
+
+	jzpanel_ops->enable(jzfb->panel);
+	jzfb->is_enabled = true;
 
 	ctrl_enable();
 
