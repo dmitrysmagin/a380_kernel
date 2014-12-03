@@ -1693,6 +1693,8 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 		goto failed;
 	}
 
+	platform_set_drvdata(pdev, jzfb);
+
 	jzpanel_ops->enable(jzfb->panel);
 	jzfb->is_enabled = true;
 
@@ -1713,10 +1715,12 @@ fb_alloc_failed:
 
 static int jz4750_fb_remove(struct platform_device *pdev)
 {
-	struct jzfb *jzfb = jz4750fb_info;
+	struct jzfb *jzfb = platform_get_drvdata(pdev);
 
 	jz4750fb_unmap_smem(jzfb->fb);
 	jz4750fb_free_fb_info(jzfb->fb);
+
+	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }
