@@ -307,6 +307,7 @@ struct jzfb {
 	uint32_t pseudo_palette[16];
 	unsigned int bpp;
 
+	struct mutex lock;
 	bool is_enabled;
 };
 
@@ -324,7 +325,6 @@ static unsigned char *lcd_cmdbuf;
 
 static void ctrl_enable(void)
 {
-	REG_LCD_STATE = 0; /* clear lcdc status */
 	__lcd_clr_dis();
 	__lcd_set_ena(); /* enable lcdc */
 }
@@ -620,30 +620,47 @@ static int jz4750fb_set_par(struct fb_info *fb)
 	return 0;
 }
 
+static void jzfb_enable(struct jzfb *jzfb)
+{
+	__cpm_start_lcd();
+	ctrl_enable();
+}
+
+static void jzfb_disable(struct jzfb *jzfb)
+{
+	ctrl_disable();
+	__cpm_stop_lcd();
+}
+
 /*
  * (Un)Blank the display.
  * Fix me: should we use VESA value?
  */
 static int jz4750fb_blank(int blank_mode, struct fb_info *fb)
 {
-	D("jz4750 fb_blank %d %p", blank_mode, fb);
-	switch (blank_mode) {
-	case FB_BLANK_UNBLANK:
-	//case FB_BLANK_NORMAL:
-		/* Turn on panel */
-		__lcd_set_ena();
+	struct jzfb *jzfb = fb->par;
 
-		break;
+/* NOTE: doesn't work good for smart lcd: after blank the whole image shifts.
+ * Check dma later? Disable for smart lcd for now
+ */
+#ifndef CONFIG_FB_JZ4750_SLCD
+	mutex_lock(&jzfb->lock);
 
-	case FB_BLANK_NORMAL:
-	case FB_BLANK_VSYNC_SUSPEND:
-	case FB_BLANK_HSYNC_SUSPEND:
-	case FB_BLANK_POWERDOWN:
-		break;
-	default:
-		break;
-
+	if (blank_mode == FB_BLANK_UNBLANK) {
+		if (!jzfb->is_enabled) {
+			jzfb_enable(jzfb);
+			jzfb->is_enabled = true;
+		}
+	} else {
+		if (jzfb->is_enabled) {
+			jzfb_disable(jzfb);
+			jzfb->is_enabled = false;
+		}
 	}
+
+	mutex_unlock(&jzfb->lock);
+#endif
+
 	return 0;
 }
 
@@ -1496,38 +1513,6 @@ static irqreturn_t jz4750fb_interrupt_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_PM
-/*
- * Suspend the LCDC.
- */
-static int jz4750_fb_suspend(struct platform_device *pdev, pm_message_t state)
-{
-	ctrl_disable();
-
-	__cpm_stop_lcd();
-
-	return 0;
-}
-
-/*
- * Resume the LCDC.
- */
-static int jz4750_fb_resume(struct platform_device *pdev)
-{
-	__cpm_start_lcd();
-
-	ctrl_enable();
-
-	return 0;
-}
-
-#else
-
-#define jz4750_fb_suspend	NULL
-#define jz4750_fb_resume	NULL
-
-#endif /* CONFIG_PM */
-
 static int tvout_show(struct seq_file *m, void *v)
 {
 	seq_printf(m, "%lu\n", tvout_flag);
@@ -1675,13 +1660,18 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 	if (err)
 		goto map_smem_failed;
 
+	REG_LCD_STATE = 0; /* clear lcdc status */
 	jz4750fb_deep_set_mode(jz4750_lcd_info);
+
+	ctrl_enable();
 
 	err = register_framebuffer(fb);
 	if (err < 0) {
 		dev_err(&pdev->dev, "Failed to register framebuffer device\n");
 		goto failed;
 	}
+
+	mutex_init(&jzfb->lock);
 
 	printk("fb%d: %s frame buffer device, using %dK of video memory\n",
 		fb->node, fb->fix.id, fb->fix.smem_len>>10);
@@ -1697,8 +1687,6 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 
 	jzpanel_ops->enable(jzfb->panel);
 	jzfb->is_enabled = true;
-
-	ctrl_enable();
 
 	proc_create("jz/tvout", 0644, 0, &tvout_fops);
 
@@ -1717,6 +1705,13 @@ static int jz4750_fb_remove(struct platform_device *pdev)
 {
 	struct jzfb *jzfb = platform_get_drvdata(pdev);
 
+	if (jzfb->is_enabled) {
+		jzfb_disable(jzfb);
+		jzpanel_ops->disable(jzfb->panel);
+	}
+
+	jzpanel_ops->exit(jzfb->panel);
+
 	jz4750fb_unmap_smem(jzfb->fb);
 	jz4750fb_free_fb_info(jzfb->fb);
 
@@ -1724,6 +1719,48 @@ static int jz4750_fb_remove(struct platform_device *pdev)
 
 	return 0;
 }
+
+#ifdef CONFIG_PM
+/*
+ * Suspend the LCDC.
+ */
+static int jz4750_fb_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct jzfb *jzfb = platform_get_drvdata(pdev);
+
+	dev_dbg(&pdev->dev, "Suspending\n");
+
+	if (jzfb->is_enabled) {
+		jzfb_disable(jzfb);
+		jzpanel_ops->disable(jzfb->panel);
+	}
+
+	return 0;
+}
+
+/*
+ * Resume the LCDC.
+ */
+static int jz4750_fb_resume(struct platform_device *pdev)
+{
+	struct jzfb *jzfb = platform_get_drvdata(pdev);
+
+	dev_dbg(&pdev->dev, "Resuming\n");
+
+	if (jzfb->is_enabled) {
+		jzpanel_ops->enable(jzfb->panel);
+		jzfb_enable(jzfb);
+	}
+
+	return 0;
+}
+
+#else
+
+#define jz4750_fb_suspend	NULL
+#define jz4750_fb_resume	NULL
+
+#endif /* CONFIG_PM */
 
 static struct platform_driver jz4750_fb_driver = {
 	.probe		= jz4750_fb_probe,
