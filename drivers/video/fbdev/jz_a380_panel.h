@@ -44,7 +44,7 @@ static void Mcupanel_SetAddr(u32 x, u32 y) //u32
 	LCD_Config_Command(0x00,0x2c);
 }
 
-static void SlcdInit()
+static void SlcdInit(void)
 {
 	mdelay(50);
 	LCD_Config_Command(0x00,0xE9);

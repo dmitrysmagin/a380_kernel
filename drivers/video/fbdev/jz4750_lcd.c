@@ -349,7 +349,6 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 			  u_int transp, struct fb_info *fb)
 {
 	struct jzfb *jzfb = fb->par;
-	unsigned short *ptr, ctmp;
 
 	if (regno >= ARRAY_SIZE(jzfb->pseudo_palette))
 		return 1;

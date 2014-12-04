@@ -41,7 +41,7 @@ static void Mcupanel_SetAddr(u32 x, u32 y) //u32
 
 }
 
-static void SlcdInit()
+static void SlcdInit(void)
 {
 	Mcupanel_RegSet(0xE5,0x18);
 	Mcupanel_RegSet(0xE7,0x18);
