@@ -1155,25 +1155,32 @@ static void jz4750fb_set_panel_mode(struct jz4750lcd_info *lcd_info)
 
 	/* set bpp */
 	lcd_info->panel.ctrl &= ~LCD_CTRL_BPP_MASK;
-	if (jzfb->bpp == 1)
+
+	switch (jzfb->bpp) {
+	case 1:
 		lcd_info->panel.ctrl |= LCD_CTRL_BPP_1;
-	else if (jzfb->bpp == 2)
+		break;
+	case 2:
 		lcd_info->panel.ctrl |= LCD_CTRL_BPP_2;
-	else if (jzfb->bpp == 4)
+		break;
+	case 4:
 		lcd_info->panel.ctrl |= LCD_CTRL_BPP_4;
-	else if (jzfb->bpp == 8)
+		break;
+	case 8:
 		lcd_info->panel.ctrl |= LCD_CTRL_BPP_8;
-	else if (jzfb->bpp == 15)
+		break;
+	case 15:
 		lcd_info->panel.ctrl |= LCD_CTRL_BPP_16 | LCD_CTRL_RGB555;
-	else if (jzfb->bpp == 16)
+		break;
+	case 16:
 		lcd_info->panel.ctrl |= LCD_CTRL_BPP_16 | LCD_CTRL_RGB565;
-	else if (jzfb->bpp > 16 && jzfb->bpp < 32 + 1) {
+		break;
+	case 24:
+	case 32:
+	default:
 		jzfb->bpp = 32;
 		lcd_info->panel.ctrl |= LCD_CTRL_BPP_18_24;
-	} else {
-		printk("The BPP %d is not supported\n", lcd_info->osd.fg0.bpp);
-		jzfb->bpp = 32;
-		lcd_info->panel.ctrl |= LCD_CTRL_BPP_18_24;
+		break;
 	}
 
 	lcd_info->panel.cfg |= LCD_CFG_NEWDES; /* use 8words descriptor always */
@@ -1199,15 +1206,25 @@ static void jz4750fb_set_panel_mode(struct jz4750lcd_info *lcd_info)
 
 static void jz4750fb_set_osd_mode(struct jz4750lcd_info *lcd_info)
 {
-	D("%s, %d\n", __FILE__, __LINE__ );
+	struct jzfb *jzfb = jz4750fb_info;
+
 	lcd_info->osd.osd_ctrl &= ~(LCD_OSDCTRL_OSDBPP_MASK);
-	if ( lcd_info->osd.fg1.bpp == 15 )
-		lcd_info->osd.osd_ctrl |= LCD_OSDCTRL_OSDBPP_15_16|LCD_OSDCTRL_RGB555;
-	else if ( lcd_info->osd.fg1.bpp == 16 )
-		lcd_info->osd.osd_ctrl |= LCD_OSDCTRL_OSDBPP_15_16|LCD_OSDCTRL_RGB565;
-	else {
+
+	switch (jzfb->bpp) {
+	case 15:
+		lcd_info->osd.osd_ctrl |= LCD_OSDCTRL_OSDBPP_15_16 |
+					  LCD_OSDCTRL_RGB555;
+		break;
+	case 16:
+		lcd_info->osd.osd_ctrl |= LCD_OSDCTRL_OSDBPP_15_16 |
+					  LCD_OSDCTRL_RGB565;
+		break;
+	case 24:
+	case 32:
+	default:
 		lcd_info->osd.fg1.bpp = 32;
 		lcd_info->osd.osd_ctrl |= LCD_OSDCTRL_OSDBPP_18_24;
+		break;
 	}
 
 	REG_LCD_OSDC	= lcd_info->osd.osd_cfg; /* F0, F1, alpha, */
@@ -1428,25 +1445,14 @@ static void jz4750fb_change_clock(struct jz4750lcd_info *lcd_info)
 }
 
 /*
- * jz4750fb_set_mode(), set osd configure, resize foreground
+ * jz4750fb_deep_set_mode,
  *
  */
-static void jz4750fb_set_mode(struct jz4750lcd_info *lcd_info)
+static void jz4750fb_deep_set_mode(struct jz4750lcd_info *lcd_info)
 {
 	struct jzfb *jzfb = jz4750fb_info;
 	struct fb_info *fb = jzfb->fb;
 
-	jz4750fb_set_osd_mode(lcd_info);
-	jz4750fb_foreground_resize(lcd_info);
-	jz4750fb_set_var(&fb->var, -1, fb);
-}
-
-/*
- * jz4750fb_deep_set_mode,
- *
- */
-static void jz4750fb_deep_set_mode(struct jz4750lcd_info * lcd_info)
-{
 	/* configurate sequence:
 	 * 1. disable lcdc.
 	 * 2. init frame descriptor.
@@ -1458,6 +1464,7 @@ static void jz4750fb_deep_set_mode(struct jz4750lcd_info * lcd_info)
 
 	printk("In jz4750fb_deep_set_mode  \n");
 
+	// use ctrl_disable() ??
 #ifdef CONFIG_FB_JZ4750_SLCD
 	__lcd_clr_ena();	/* quick disable */
 	__slcd_disable_dma();
@@ -1465,11 +1472,16 @@ static void jz4750fb_deep_set_mode(struct jz4750lcd_info * lcd_info)
 	__lcd_set_dis();	/* regular disable */
 	mdelay(50);
 #endif
+
 	lcd_info->osd.fg_change = FG_CHANGE_ALL;
 	jz4750fb_descriptor_init(lcd_info);
-	jz4750fb_set_panel_mode(lcd_info);
-	jz4750fb_set_mode(lcd_info);
+	jz4750fb_set_panel_mode(lcd_info);	// fg0
+	jz4750fb_set_osd_mode(lcd_info);	// fg1
+	jz4750fb_foreground_resize(lcd_info);
+	jz4750fb_set_var(&fb->var, -1, fb);
 	jz4750fb_change_clock(lcd_info);
+
+	// use ctrl_enable() ??
 #ifdef CONFIG_FB_JZ4750_SLCD
 	__slcd_enable_dma();
 	REG_SLCD_CTRL |= SLCD_CTRL_DMA_EN;
