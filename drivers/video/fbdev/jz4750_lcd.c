@@ -77,9 +77,6 @@ struct jzfb_platform_data {
 #include "jz_a380_panel.h"
 #include "jz_a320e_panel.h"
 
-#define NR_PALETTE	256
-#define PALETTE_SIZE	(NR_PALETTE*2)
-
 /* use new descriptor(8 words) */
 struct jz4750_lcd_dma_desc {
 	unsigned int next_desc; 	/* LCDDAx */
@@ -293,7 +290,7 @@ struct jz4750lcd_info jz4750_info_tve = {
 struct jz4750lcd_info *jz4750_lcd_info = &jz4750_lcd_panel;
 static struct jzfb *jz4750fb_info;
 static struct jz4750_lcd_dma_desc *dma_desc_base;
-static struct jz4750_lcd_dma_desc *dma0_desc_palette, *dma0_desc0, *dma0_desc1, *dma1_desc0, *dma1_desc1;
+static struct jz4750_lcd_dma_desc *dma0_desc0, *dma0_desc1, *dma1_desc0, *dma1_desc1;
 
 // 0 - lcd, 1 - tvout
 static unsigned long tvout_flag  = 0;
@@ -303,7 +300,6 @@ struct jzfb {
 	struct platform_device *pdev;
 	void *panel;
 
-	struct { u16 red, green, blue; } palette[NR_PALETTE];
 	uint32_t pseudo_palette[16];
 	unsigned int bpp;
 
@@ -313,7 +309,6 @@ struct jzfb {
 
 #define DMA_DESC_NUM		6
 
-static unsigned char *lcd_palette;
 static unsigned char *lcd_frame0;
 static unsigned char *lcd_frame1;
 
@@ -350,27 +345,16 @@ static void ctrl_disable(void)
 	}
 }
 
-static inline u_int chan_to_field(u_int chan, struct fb_bitfield *bf)
-{
-	chan &= 0xffff;
-	chan >>= 16 - bf->length;
-	return chan << bf->offset;
-}
-
 static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 			  u_int transp, struct fb_info *fb)
 {
 	struct jzfb *jzfb = fb->par;
 	unsigned short *ptr, ctmp;
 
-	if (regno >= NR_PALETTE)
+	if (regno >= ARRAY_SIZE(jzfb->pseudo_palette))
 		return 1;
 
-	jzfb->palette[regno].red	= red ;
-	jzfb->palette[regno].green	= green;
-	jzfb->palette[regno].blue	= blue;
-
-	if (fb->var.bits_per_pixel <= 16) {
+	if (fb->var.bits_per_pixel == 16) {
 		red	>>= 8;
 		green	>>= 8;
 		blue	>>= 8;
@@ -380,57 +364,13 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 		blue	&= 0xff;
 	}
 
-	switch (fb->var.bits_per_pixel) {
-	case 1:
-	case 2:
-	case 4:
-	case 8:
-		if (((jz4750_lcd_info->panel.cfg & LCD_CFG_MODE_MASK) ==
-						LCD_CFG_MODE_SINGLE_MSTN ) ||
-		    ((jz4750_lcd_info->panel.cfg & LCD_CFG_MODE_MASK) ==
-						LCD_CFG_MODE_DUAL_MSTN )) {
-			ctmp = (77L * red + 150L * green + 29L * blue) >> 8;
-			ctmp = ((ctmp >> 3) << 11) | ((ctmp >> 2) << 5) |
-				(ctmp >> 3);
-		} else {
-			/* RGB 565 */
-			if (((red >> 3) == 0) && ((red >> 2) != 0))
-			red = 1 << 3;
-			if (((blue >> 3) == 0) && ((blue >> 2) != 0))
-				blue = 1 << 3;
-			ctmp = ((red >> 3) << 11)
-				| ((green >> 2) << 5) | (blue >> 3);
-		}
+	if (fb->var.bits_per_pixel == 16)
+		((u32 *)fb->pseudo_palette)[regno] =
+			((red >> 3) << 11) | ((green >> 2) << 5) | (blue >> 3);
+	else
+		((u32 *)fb->pseudo_palette)[regno] =
+		(red << 16) | (green << 8) | (blue << 0);
 
-		ptr = (unsigned short *)lcd_palette;
-		ptr = (unsigned short *)(((u32)ptr)|0xa0000000);
-		ptr[regno] = ctmp;
-
-		break;
-
-	case 15:
-		if (regno < 16)
-			((u32 *)fb->pseudo_palette)[regno] =
-				((red >> 3) << 10) |
-				((green >> 3) << 5) |
-				(blue >> 3);
-		break;
-	case 16:
-		if (regno < 16) {
-			((u32 *)fb->pseudo_palette)[regno] =
-				((red >> 3) << 11) |
-				((green >> 2) << 5) |
-				(blue >> 3);
-		}
-		break;
-	case 17 ... 32:
-		if (regno < 16)
-			((u32 *)fb->pseudo_palette)[regno] =
-				(red << 16) |
-				(green << 8) |
-				(blue << 0);
-		break;
-	}
 	return 0;
 }
 
@@ -761,58 +701,7 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 	var->green.msb_right	= 0;
 	var->blue.msb_right	= 0;
 
-	switch(var->bits_per_pixel){
-	case 1:	/* Mono */
-		fb->fix.visual		= FB_VISUAL_MONO01;
-		fb->fix.line_length	= (var->xres * var->bits_per_pixel) / 8;
-		break;
-	case 2:	/* Mono */
-		var->red.offset		= 0;
-		var->red.length		= 2;
-		var->green.offset	= 0;
-		var->green.length	= 2;
-		var->blue.offset	= 0;
-		var->blue.length	= 2;
-
-		fb->fix.visual		= FB_VISUAL_PSEUDOCOLOR;
-		fb->fix.line_length	= (var->xres * var->bits_per_pixel) / 8;
-		break;
-	case 4:	/* PSEUDOCOLOUR*/
-		var->red.offset		= 0;
-		var->red.length		= 4;
-		var->green.offset	= 0;
-		var->green.length	= 4;
-		var->blue.offset	= 0;
-		var->blue.length	= 4;
-
-		fb->fix.visual		= FB_VISUAL_PSEUDOCOLOR;
-		fb->fix.line_length	= var->xres / 2;
-		break;
-	case 8:	/* PSEUDOCOLOUR, 256 */
-		var->red.offset		= 0;
-		var->red.length		= 8;
-		var->green.offset	= 0;
-		var->green.length	= 8;
-		var->blue.offset	= 0;
-		var->blue.length	= 8;
-
-		fb->fix.visual		= FB_VISUAL_PSEUDOCOLOR;
-		fb->fix.line_length	= var->xres;
-		break;
-	case 15: /* DIRECTCOLOUR, 32k */
-		var->bits_per_pixel	= 15;
-		var->red.offset		= 10;
-		var->red.length		= 5;
-		var->green.offset	= 5;
-		var->green.length	= 5;
-		var->blue.offset	= 0;
-		var->blue.length	= 5;
-
-		fb->fix.visual		= FB_VISUAL_DIRECTCOLOR;
-		fb->fix.line_length	= var->xres_virtual * 2;
-		break;
-	case 16: /* DIRECTCOLOUR, 64k */
-		var->bits_per_pixel	= 16;
+	if (var->bits_per_pixel == 16) {
 		var->red.offset		= 11;
 		var->red.length		= 5;
 		var->green.offset	= 5;
@@ -822,10 +711,12 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 
 		fb->fix.visual		= FB_VISUAL_TRUECOLOR;
 		fb->fix.line_length	= var->xres_virtual * 2;
-		break;
-	case 17 ... 32:
-		/* DIRECTCOLOUR, 256 */
-		var->bits_per_pixel	= 32;
+	} else {
+		if (var->bits_per_pixel != 32) {
+			dev_warn(&jzfb->pdev->dev, "%s: don't support for %dbpp\n",
+				fb->fix.id, var->bits_per_pixel);
+			var->bits_per_pixel = 32;
+		}
 
 		var->red.offset		= 16;
 		var->red.length		= 8;
@@ -838,44 +729,12 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 
 		fb->fix.visual		= FB_VISUAL_TRUECOLOR;
 		fb->fix.line_length	= var->xres_virtual * 4;
-		break;
-
-	default: /* in theory this should never happen */
-		printk(KERN_WARNING "%s: don't support for %dbpp\n",
-		       fb->fix.id, var->bits_per_pixel);
-		break;
 	}
 
 	fb->var = *var;
 	fb->var.activate &= ~FB_ACTIVATE_ALL;
 
-	//display->var = fb->var;
-
-	/*
-	 * If we are setting all the virtual consoles, also set the
-	 * defaults used to create new consoles.
-	 */
-	fb_set_cmap(&fb->cmap, fb);
-
 	return 0;
-}
-
-static inline int bpp_to_data_bpp(int bpp)
-{
-	switch (bpp) {
-		case 32:
-		case 16:
-			break;
-
-		case 15:
-			bpp = 16;
-			break;
-
-		default:
-			bpp = -EINVAL;
-	}
-
-	return bpp;
 }
 
 /*
@@ -885,9 +744,7 @@ static int jz4750fb_map_smem(struct fb_info *fb)
 {
 	struct jzfb *jzfb = fb->par;
 	unsigned long page;
-	unsigned int page_shift, needroom, bpp;
-
-	bpp = bpp_to_data_bpp(jzfb->bpp);
+	unsigned int page_shift, needroom;
 
 	/*
 	 * Problem: there could be two panels (lcd/tv) with different sizes.
@@ -895,20 +752,25 @@ static int jz4750fb_map_smem(struct fb_info *fb)
 	 */
 	needroom = 640 * 480 * 4 * 2;
 
-	printk("FrameBuffer bpp = %d\n", bpp);
+	printk("FrameBuffer bpp = %d\n", jzfb->bpp);
 
 	for (page_shift = 0; page_shift < 12; page_shift++)
 		if ((PAGE_SIZE << page_shift) >= needroom)
 			break;
-	lcd_palette = (unsigned char *)__get_free_pages(GFP_KERNEL, 0);
+
 	lcd_frame0 = (unsigned char *)__get_free_pages(GFP_KERNEL, page_shift);
 
-	if ((!lcd_palette) || (!lcd_frame0))
+	if (!lcd_frame0)
 		return -ENOMEM;
-	memset((void *)lcd_palette, 0, PAGE_SIZE);
-	memset((void *)lcd_frame0, 0, PAGE_SIZE << page_shift);
 
-	dma_desc_base = (struct jz4750_lcd_dma_desc *)((void*)lcd_palette + ((PALETTE_SIZE+3)/4)*4);
+	dma_desc_base =
+		(struct jz4750_lcd_dma_desc *)__get_free_pages(GFP_KERNEL, 0);
+
+	if (!dma_desc_base)
+		return -ENOMEM;
+
+	memset((void *)lcd_frame0, 0, PAGE_SIZE << page_shift);
+	memset((void *)dma_desc_base, 0, PAGE_SIZE);
 
 #if defined(CONFIG_FB_JZ4750_SLCD)
 	lcd_cmdbuf = (unsigned char *)__get_free_pages(GFP_KERNEL, 0);
@@ -922,14 +784,15 @@ static int jz4750fb_map_smem(struct fb_info *fb)
 			ptr[i] = data;
 		}
 	}
+
+	SetPageReserved(virt_to_page((void*)lcd_cmdbuf));
 #endif
 
 	/*
 	 * Set page reserved so that mmap will work. This is necessary
 	 * since we'll be remapping normal memory.
 	 */
-	page = (unsigned long)lcd_palette;
-	SetPageReserved(virt_to_page((void*)page));
+	SetPageReserved(virt_to_page((void*)dma_desc_base));
 
 	for (page = (unsigned long)lcd_frame0;
 	     page < PAGE_ALIGN((unsigned long)lcd_frame0 + (PAGE_SIZE<<page_shift));
@@ -955,13 +818,7 @@ static void jz4750fb_unmap_smem(struct fb_info *fb)
 	struct jzfb *jzfb = fb->par;
 	struct page *map = NULL;
 	unsigned char *tmp;
-	unsigned int page_shift, needroom, bpp;
-
-	bpp = jzfb->bpp;
-	if (bpp == 18 || bpp == 24)
-		bpp = 32;
-	if (bpp == 15)
-		bpp = 16;
+	unsigned int page_shift, needroom;
 
 	needroom = 640 * 480 * 4 * 2;
 
@@ -974,12 +831,6 @@ static void jz4750fb_unmap_smem(struct fb_info *fb)
 		fb->screen_base = NULL;
 		release_mem_region(fb->fix.smem_start,
 				   fb->fix.smem_len);
-	}
-
-	if (lcd_palette) {
-		map = virt_to_page(lcd_palette);
-		clear_bit(PG_reserved, &map->flags);
-		free_pages((int)lcd_palette, 0);
 	}
 
 	if (lcd_frame0) {
@@ -999,58 +850,12 @@ static void jz4750fb_descriptor_init(struct jz4750lcd_info *lcd_info)
 	struct jzfb *jzfb = jz4750fb_info;
 	unsigned int pal_size;
 
-	switch (jzfb->bpp) {
-	case 1:
-		pal_size = 4;
-		break;
-	case 2:
-		pal_size = 8;
-		break;
-	case 4:
-		pal_size = 32;
-		break;
-	case 8:
-	default:
-		pal_size = 512;
-	}
-
-	pal_size /= 4;
-
-	dma0_desc_palette	= dma_desc_base + 0;
 	dma0_desc0		= dma_desc_base + 1;
 	dma0_desc1		= dma_desc_base + 2;
 	dma0_desc_cmd0		= dma_desc_base + 3; /* use only once */
 	dma0_desc_cmd		= dma_desc_base + 4;
 	dma1_desc0		= dma_desc_base + 5;
 	dma1_desc1		= dma_desc_base + 6;
-
-/*
- * Normal TFT panel's DMA Chan0:
- *	TO LCD Panel:
- *		no palette:	dma0_desc0 <<==>> dma0_desc0
- *		palette :	dma0_desc_palette <<==>> dma0_desc0
- *	TO TV Encoder:
- *		no palette:	dma0_desc0 <<==>> dma0_desc1
- *		palette:	dma0_desc_palette --> dma0_desc0
- *				--> dma0_desc1 --> dma0_desc_palette --> ...
- *
- * SMART LCD TFT panel(dma0_desc_cmd)'s DMA Chan0:
- *	TO LCD Panel:
- *		no palette:	dma0_desc_cmd <<==>> dma0_desc0
- *		palette :	dma0_desc_palette --> dma0_desc_cmd
- *				--> dma0_desc0 --> dma0_desc_palette --> ...
- *	TO TV Encoder:
- *		no palette:	dma0_desc_cmd --> dma0_desc0
- *				--> dma0_desc1 --> dma0_desc_cmd --> ...
- *		palette:	dma0_desc_palette --> dma0_desc_cmd
- *				--> dma0_desc0 --> dma0_desc1
- *				--> dma0_desc_palette --> ...
- * DMA Chan1:
- *	TO LCD Panel:
- *		dma1_desc0 <<==>> dma1_desc0
- *	TO TV Encoder:
- *		dma1_desc0 <<==>> dma1_desc1
- */
 
 #if defined(CONFIG_FB_JZ4750_SLCD)
 	/* First CMD descriptors, use only once, cmd_num isn't 0 */
@@ -1070,19 +875,10 @@ static void jz4750fb_descriptor_init(struct jz4750lcd_info *lcd_info)
 	dma0_desc_cmd->cmd_num		= 0;
 	dma0_desc_cmd->offsize		= 0;
 	dma0_desc_cmd->page_width	= 0;
-
-	/* Palette Descriptor */
-	dma0_desc_palette->next_desc	= (unsigned int)virt_to_phys(dma0_desc_cmd0);
-#else
-	/* Palette Descriptor */
-	dma0_desc_palette->next_desc	= (unsigned int)virt_to_phys(dma0_desc0);
 #endif
-	dma0_desc_palette->databuf	= (unsigned int)virt_to_phys((void *)lcd_palette);
-	dma0_desc_palette->frame_id	= (unsigned int)0xaaaaaaaa;
-	dma0_desc_palette->cmd		= LCD_CMD_PAL | pal_size; /* Palette Descriptor */
 
 	/* DMA0 Descriptor0 */
-	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) /* TVE mode */
+	if (lcd_info->panel.cfg & LCD_CFG_TVEN) /* TVE mode */
 		dma0_desc0->next_desc	= (unsigned int)virt_to_phys(dma0_desc1);
 	else {			/* Normal TFT LCD */
 #if defined(CONFIG_FB_JZ4750_SLCD)
@@ -1096,32 +892,24 @@ static void jz4750fb_descriptor_init(struct jz4750lcd_info *lcd_info)
 	dma0_desc0->frame_id = (unsigned int)0x0000da00; /* DMA0'0 */
 
 	/* DMA0 Descriptor1 */
-	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) { /* TVE mode */
-
+	if ( lcd_info->panel.cfg & LCD_CFG_TVEN ) {
 		printk("TV Enable Mode...\n");
-		if (jzfb->bpp <= 8) /* load palette only once at setup */
-			dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc_palette);
-		else
-#if defined(CONFIG_FB_JZ4750_SLCD)  /* for smatlcd */
-			dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd);
+#if defined(CONFIG_FB_JZ4750_SLCD)
+		dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc_cmd);
 #else
-			dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc0);
+		dma0_desc1->next_desc = (unsigned int)virt_to_phys(dma0_desc0);
 #endif
 		dma0_desc1->frame_id = (unsigned int)0x0000da01; /* DMA0'1 */
 	}
 
-	if (jzfb->bpp <= 8) /* load palette only once at setup */
-		REG_LCD_DA0 = virt_to_phys(dma0_desc_palette);
-	else {
-#if defined(CONFIG_FB_JZ4750_SLCD)  /* for smartlcd */
-		REG_LCD_DA0 = virt_to_phys(dma0_desc_cmd0); //smart lcd
+#if defined(CONFIG_FB_JZ4750_SLCD)
+	REG_LCD_DA0 = virt_to_phys(dma0_desc_cmd0);
 #else
-		REG_LCD_DA0 = virt_to_phys(dma0_desc0); //tft
+	REG_LCD_DA0 = virt_to_phys(dma0_desc0);
 #endif
-	}
 
 	/* DMA1 Descriptor0 */
-	if (lcd_info->panel.cfg & LCD_CFG_TVEN) /* TVE mode */
+	if (lcd_info->panel.cfg & LCD_CFG_TVEN)
 		dma1_desc0->next_desc = (unsigned int)virt_to_phys(dma1_desc1);
 	else			/* Normal TFT LCD */
 		dma1_desc0->next_desc = (unsigned int)virt_to_phys(dma1_desc0);
@@ -1135,8 +923,9 @@ static void jz4750fb_descriptor_init(struct jz4750lcd_info *lcd_info)
 		dma1_desc1->frame_id = (unsigned int)0x0000da11; /* DMA1'1 */
 	}
 
-	REG_LCD_DA1 = virt_to_phys(dma1_desc0);	/* set Dma-chan1's Descripter Addrress */
-	dma_cache_wback_inv((unsigned int)(dma_desc_base), (DMA_DESC_NUM)*sizeof(struct jz4750_lcd_dma_desc));
+	REG_LCD_DA1 = virt_to_phys(dma1_desc0);
+	dma_cache_wback_inv((unsigned int)(dma_desc_base),
+			    (DMA_DESC_NUM)*sizeof(struct jz4750_lcd_dma_desc));
 }
 
 static void jz4750fb_set_panel_mode(struct jz4750lcd_info *lcd_info)
@@ -1147,31 +936,12 @@ static void jz4750fb_set_panel_mode(struct jz4750lcd_info *lcd_info)
 	/* set bpp */
 	lcd_info->panel.ctrl &= ~LCD_CTRL_BPP_MASK;
 
-	switch (jzfb->bpp) {
-	case 1:
-		lcd_info->panel.ctrl |= LCD_CTRL_BPP_1;
-		break;
-	case 2:
-		lcd_info->panel.ctrl |= LCD_CTRL_BPP_2;
-		break;
-	case 4:
-		lcd_info->panel.ctrl |= LCD_CTRL_BPP_4;
-		break;
-	case 8:
-		lcd_info->panel.ctrl |= LCD_CTRL_BPP_8;
-		break;
-	case 15:
-		lcd_info->panel.ctrl |= LCD_CTRL_BPP_16 | LCD_CTRL_RGB555;
-		break;
-	case 16:
+	if (jzfb->bpp == 16) {
 		lcd_info->panel.ctrl |= LCD_CTRL_BPP_16 | LCD_CTRL_RGB565;
-		break;
-	case 24:
-	case 32:
-	default:
-		jzfb->bpp = 32;
+	} else {
+		if (WARN_ON(jzfb->bpp != 32))
+			jzfb->bpp = 32;
 		lcd_info->panel.ctrl |= LCD_CTRL_BPP_18_24;
-		break;
 	}
 
 	lcd_info->panel.cfg |= LCD_CFG_NEWDES; /* use 8words descriptor always */
@@ -1201,21 +971,13 @@ static void jz4750fb_set_osd_mode(struct jz4750lcd_info *lcd_info)
 
 	lcd_info->osd.osd_ctrl &= ~(LCD_OSDCTRL_OSDBPP_MASK);
 
-	switch (jzfb->bpp) {
-	case 15:
-		lcd_info->osd.osd_ctrl |= LCD_OSDCTRL_OSDBPP_15_16 |
-					  LCD_OSDCTRL_RGB555;
-		break;
-	case 16:
+	if (jzfb->bpp == 16) {
 		lcd_info->osd.osd_ctrl |= LCD_OSDCTRL_OSDBPP_15_16 |
 					  LCD_OSDCTRL_RGB565;
-		break;
-	case 24:
-	case 32:
-	default:
-		lcd_info->osd.fg1.bpp = 32;
+	} else {
+		if (WARN_ON(jzfb->bpp != 32))
+			lcd_info->osd.fg1.bpp = 32;
 		lcd_info->osd.osd_ctrl |= LCD_OSDCTRL_OSDBPP_18_24;
-		break;
 	}
 
 	REG_LCD_OSDC	= lcd_info->osd.osd_cfg; /* F0, F1, alpha, */
@@ -1636,22 +1398,6 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 
 	fb->pseudo_palette	= jzfb->pseudo_palette;
 
-	switch (jzfb->bpp) {
-	case 1:
-		fb_alloc_cmap(&fb->cmap, 4, 0);
-		break;
-	case 2:
-		fb_alloc_cmap(&fb->cmap, 8, 0);
-		break;
-	case 4:
-		fb_alloc_cmap(&fb->cmap, 32, 0);
-		break;
-	case 8:
-	default:
-		fb_alloc_cmap(&fb->cmap, 256, 0);
-		break;
-	}
-
 	ctrl_disable();
 
 	gpio_init();
@@ -1698,7 +1444,6 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 failed:
 	jz4750fb_unmap_smem(fb);
 map_smem_failed:
-	fb_dealloc_cmap(&fb->cmap);
 	framebuffer_release(fb);
 fb_alloc_failed:
 
@@ -1717,7 +1462,6 @@ static int jz4750_fb_remove(struct platform_device *pdev)
 	jzpanel_ops->exit(jzfb->panel);
 
 	jz4750fb_unmap_smem(jzfb->fb);
-	fb_dealloc_cmap(&jzfb->fb->cmap);
 	framebuffer_release(jzfb->fb);
 
 	platform_set_drvdata(pdev, NULL);
