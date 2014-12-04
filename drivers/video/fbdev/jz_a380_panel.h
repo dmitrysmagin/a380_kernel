@@ -5,12 +5,8 @@
 #if defined (CONFIG_JZ4750_SLCD_A380_ILI9331)
 #define WR_GRAM_CMD	0x22
 
-#if defined(CONFIG_JZ4750D_A380)
 #define PIN_CS_N	(32*3+22)		/* GPD22 */
 #define PIN_RESET_N	(32*3+23)		/* GPD23 */
-#else
-#error "Define special lcd pins for your platform."
-#endif
 
 static void LCD_Config_Data(unsigned int data_h,unsigned int data_l)
 {
@@ -25,7 +21,7 @@ static void LCD_Config_Command(unsigned int cmd_h,unsigned int cmd_l)
 }
 
 /* Set the start address of screen, for example (0, 0) */
-void Mcupanel_SetAddr(u32 x, u32 y) //u32
+static void Mcupanel_SetAddr(u32 x, u32 y) //u32
 {
 	int x1 = x + 32;
 	//Mcupanel_RegSet(0x20,x) ;
@@ -48,76 +44,76 @@ void Mcupanel_SetAddr(u32 x, u32 y) //u32
 	LCD_Config_Command(0x00,0x2c);
 }
 
-#define SlcdInit()                     \
-do {                                   \
-	mdelay(50);                    \
-	LCD_Config_Command(0x00,0xE9); \
-	LCD_Config_Data(0x00,0x20);    \
-	LCD_Config_Command(0x00,0x11); \
-	mdelay(100);                   \
-	LCD_Config_Command(0x00,0xd0); \
-	LCD_Config_Data(0x00,0x07);    \
-	LCD_Config_Data(0x00,0x01);    \
-	LCD_Config_Data(0x00,0x88);    \
-	LCD_Config_Command(0x00,0xd1); \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Data(0x00,0x71);    \
-	LCD_Config_Data(0x00,0x19);    \
-	LCD_Config_Command(0x00,0x36); \
-	LCD_Config_Data(0x00,0xe8);    \
-	LCD_Config_Command(0x00,0x3a); \
-	LCD_Config_Data(0x00,0x55);    \
-	LCD_Config_Command(0x00,0xc1); \
-	LCD_Config_Data(0x00,0x10);    \
-	LCD_Config_Data(0x00,0x10);    \
-	LCD_Config_Data(0x00,0x02);    \
-	LCD_Config_Data(0x00,0x02);    \
-	LCD_Config_Command(0x00,0xc0); \
-	LCD_Config_Data(0x00,0x10);    \
-	LCD_Config_Data(0x00,0x35);    \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Data(0x00,0x01);    \
-	LCD_Config_Data(0x00,0x02);    \
-	LCD_Config_Command(0x00,0xc5); \
-	LCD_Config_Data(0x00,0x02);    \
-	LCD_Config_Command(0x00,0xd2); \
-	LCD_Config_Data(0x00,0x01);    \
-	LCD_Config_Data(0x00,0x44);    \
-	LCD_Config_Command(0x00,0xc8); \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Data(0x00,0x40);    \
-	LCD_Config_Data(0x00,0x24);    \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Data(0x00,0x0c);    \
-	LCD_Config_Data(0x00,0x02);    \
-	LCD_Config_Data(0x00,0x35);    \
-	LCD_Config_Data(0x00,0x73);    \
-	LCD_Config_Data(0x00,0x77);    \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Data(0x00,0x02);    \
-	LCD_Config_Data(0x00,0x0c);    \
-	LCD_Config_Data(0x00,0x08);    \
-	LCD_Config_Data(0x00,0x80);    \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Command(0x00,0xea); \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Data(0x00,0xc0);    \
-	LCD_Config_Command(0x00,0x21); \
-	LCD_Config_Command(0x00,0x29); \
-	LCD_Config_Data(0x00,0x80);    \
-	LCD_Config_Command(0x00,0x2a); \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Data(0x00,0x20);    \
-	LCD_Config_Data(0x00,0x01);    \
-	LCD_Config_Data(0x00,0xaf);    \
-	LCD_Config_Command(0x00,0x2b); \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Data(0x00,0x00);    \
-	LCD_Config_Data(0x00,0xef);    \
-	LCD_Config_Command(0x00,0x2c); \
-} while(0);
+static void SlcdInit()
+{
+	mdelay(50);
+	LCD_Config_Command(0x00,0xE9);
+	LCD_Config_Data(0x00,0x20);
+	LCD_Config_Command(0x00,0x11);
+	mdelay(100);
+	LCD_Config_Command(0x00,0xd0);
+	LCD_Config_Data(0x00,0x07);   
+	LCD_Config_Data(0x00,0x01);
+	LCD_Config_Data(0x00,0x88);
+	LCD_Config_Command(0x00,0xd1);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Data(0x00,0x71);
+	LCD_Config_Data(0x00,0x19);
+	LCD_Config_Command(0x00,0x36);
+	LCD_Config_Data(0x00,0xe8);
+	LCD_Config_Command(0x00,0x3a);
+	LCD_Config_Data(0x00,0x55);
+	LCD_Config_Command(0x00,0xc1);
+	LCD_Config_Data(0x00,0x10);
+	LCD_Config_Data(0x00,0x10);
+	LCD_Config_Data(0x00,0x02);
+	LCD_Config_Data(0x00,0x02);
+	LCD_Config_Command(0x00,0xc0);
+	LCD_Config_Data(0x00,0x10);
+	LCD_Config_Data(0x00,0x35);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Data(0x00,0x01);
+	LCD_Config_Data(0x00,0x02);
+	LCD_Config_Command(0x00,0xc5);
+	LCD_Config_Data(0x00,0x02);
+	LCD_Config_Command(0x00,0xd2);
+	LCD_Config_Data(0x00,0x01);
+	LCD_Config_Data(0x00,0x44);
+	LCD_Config_Command(0x00,0xc8);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Data(0x00,0x40);
+	LCD_Config_Data(0x00,0x24);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Data(0x00,0x0c);
+	LCD_Config_Data(0x00,0x02);
+	LCD_Config_Data(0x00,0x35);
+	LCD_Config_Data(0x00,0x73);
+	LCD_Config_Data(0x00,0x77);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Data(0x00,0x02);
+	LCD_Config_Data(0x00,0x0c);
+	LCD_Config_Data(0x00,0x08);
+	LCD_Config_Data(0x00,0x80);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Command(0x00,0xea);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Data(0x00,0xc0);
+	LCD_Config_Command(0x00,0x21);
+	LCD_Config_Command(0x00,0x29);
+	LCD_Config_Data(0x00,0x80);
+	LCD_Config_Command(0x00,0x2a);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Data(0x00,0x20);
+	LCD_Config_Data(0x00,0x01);
+	LCD_Config_Data(0x00,0xaf);
+	LCD_Config_Command(0x00,0x2b);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Data(0x00,0x00);
+	LCD_Config_Data(0x00,0xef);
+	LCD_Config_Command(0x00,0x2c);
+}
 
 static int a380_panel_init(void **out_panel, struct device *dev,
 			   void *panel_pdata)
@@ -150,6 +146,8 @@ static void a380_panel_enable(void *panel)
 			SLCD_CFG_CLK_ACTIVE_FALLING | SLCD_CFG_TYPE_PARALLEL;
 
 	SlcdInit();
+
+	Mcupanel_SetAddr(0, 0);
 
 	REG_SLCD_CFG = SLCD_CFG_DWIDTH_8BIT_x2 | SLCD_CFG_CWIDTH_8BIT |
 			SLCD_CFG_CS_ACTIVE_LOW | SLCD_CFG_RS_CMD_LOW |
