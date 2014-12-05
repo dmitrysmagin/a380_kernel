@@ -229,6 +229,9 @@ static void ctrl_enable(void)
 {
 	__lcd_clr_dis();
 	__lcd_set_ena(); /* enable lcdc */
+#ifdef CONFIG_FB_JZ4750_SLCD
+	__slcd_enable_dma();
+#endif
 }
 
 static void ctrl_disable(void)
@@ -237,6 +240,7 @@ static void ctrl_disable(void)
 			jz_panel->cfg & LCD_CFG_TVEN ) {
 		/* Smart lcd and TVE mode only support quick disable */
 		__lcd_clr_ena();
+		__slcd_disable_dma();
 	} else {
 		int cnt;
 		/* when CPU main freq is 336MHz,wait for 16ms */
@@ -823,7 +827,9 @@ static void jz4750fb_set_panel_mode(struct jzfb *jzfb,
 	REG_LCD_OSDCTRL = osdctrl;
 
 	if (panel->cfg & LCD_CFG_TVEN) {
-		REG_LCD_RGBC = LCD_RGBC_YCC; /* enable RGB => YUV */
+		REG_LCD_RGBC |= LCD_RGBC_YCC; /* enable RGB => YUV */
+	} else {
+		REG_LCD_RGBC &= ~LCD_RGBC_YCC; /* enable RGB => YUV */
 	}
 
 	/* yellow background helps debugging */
@@ -1023,30 +1029,15 @@ static void jz4750fb_deep_set_mode(struct jzfb *jzfb)
 
 	printk("In jz4750fb_deep_set_mode  \n");
 
-	// use ctrl_disable() ??
-#ifdef CONFIG_FB_JZ4750_SLCD
-	__lcd_clr_ena();	/* quick disable */
-	__slcd_disable_dma();
-#else
-	__lcd_set_dis();	/* regular disable */
-	mdelay(50);
-#endif
-
+	ctrl_disable();
 	jz4750fb_descriptor_init(jzfb);
 	jz4750fb_set_panel_mode(jzfb, jz_panel);
 	jz4750fb_foreground_resize(jzfb, jz_panel,
 				   FG0_CHANGE_SIZE | FG0_CHANGE_POSITION);
 	jz4750fb_set_var(&fb->var, -1, fb);
 	jz4750fb_change_clock(jzfb);
+	ctrl_enable();
 
-	// use ctrl_enable() ??
-#ifdef CONFIG_FB_JZ4750_SLCD
-	__slcd_enable_dma();
-	REG_SLCD_CTRL |= SLCD_CTRL_DMA_EN;
-#else
-	__lcd_clr_dis();
-#endif
-	__lcd_set_ena();	/* enable lcdc */
 	printk("Out jz4750fb_deep_set_mode  \n");
 }
 
@@ -1218,8 +1209,6 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 
 	REG_LCD_STATE = 0; /* clear lcdc status */
 	jz4750fb_deep_set_mode(jzfb);
-
-	ctrl_enable();
 
 	err = register_framebuffer(fb);
 	if (err < 0) {
