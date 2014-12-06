@@ -1233,16 +1233,7 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 	REG_LCD_STATE = 0; /* clear lcdc status */
 	jz4750fb_deep_set_mode(jzfb);
 
-	err = register_framebuffer(fb);
-	if (err < 0) {
-		dev_err(&pdev->dev, "Failed to register framebuffer device\n");
-		goto failed;
-	}
-
 	mutex_init(&jzfb->lock);
-
-	printk("fb%d: %s frame buffer device, using %dK of video memory\n",
-		fb->node, fb->fix.id, fb->fix.smem_len>>10);
 
 	if (request_irq(JZ4750D_IRQ_LCD, jz4750fb_interrupt_handler,
 			IRQF_DISABLED, "lcd", 0)) {
@@ -1255,6 +1246,15 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 
 	jzpanel_ops->enable(jzfb->panel);
 	jzfb->is_enabled = true;
+
+	err = register_framebuffer(fb);
+	if (err < 0) {
+		dev_err(&pdev->dev, "Failed to register framebuffer device\n");
+		goto failed;
+	}
+
+	printk("fb%d: %s frame buffer device, using %dK of video memory\n",
+		fb->node, fb->fix.id, fb->fix.smem_len>>10);
 
 	proc_create("jz/tvout", 0644, 0, &tvout_fops);
 
