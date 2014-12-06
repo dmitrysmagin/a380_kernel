@@ -464,10 +464,6 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *fb)
 {
 	struct jzfb *jzfb = fb->par;
 
-/* NOTE: doesn't work good for smart lcd: after blank the whole image shifts.
- * Check dma later? Disable for smart lcd for now
- */
-#ifndef CONFIG_FB_JZ4750_SLCD
 	mutex_lock(&jzfb->lock);
 
 	if (blank_mode == FB_BLANK_UNBLANK) {
@@ -483,7 +479,6 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *fb)
 	}
 
 	mutex_unlock(&jzfb->lock);
-#endif
 
 	return 0;
 }
