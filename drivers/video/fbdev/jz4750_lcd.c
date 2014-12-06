@@ -412,12 +412,34 @@ static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *fb)
 	return 0;
 }
 
+static void jz4750fb_set_panel_mode(struct jzfb *jzfb,
+			const struct jz4750lcd_panel_t *panel);
+static void jz4750fb_foreground_resize(struct jzfb *jzfb,
+			  const struct jz4750lcd_panel_t *panel, int fg_change);
+static void jz4750fb_change_clock(struct jzfb *jzfb);
+
 /*
  * set the video mode according to info->var
  */
 static int jz4750fb_set_par(struct fb_info *fb)
 {
-	//printk("jz4750fb_set_par, not implemented\n");
+	struct fb_var_screeninfo *var = &fb->var;
+	struct fb_fix_screeninfo *fix = &fb->fix;
+	struct jzfb *jzfb = fb->par;
+
+	ctrl_disable();
+
+	jzfb->bpp = var->bits_per_pixel;
+	jz4750fb_set_panel_mode(jzfb, jz_panel);
+	jz4750fb_foreground_resize(jzfb, jz_panel,
+				   FG0_CHANGE_SIZE | FG0_CHANGE_POSITION);
+	jz4750fb_change_clock(jzfb);
+
+	ctrl_enable();
+
+	fix->visual = FB_VISUAL_TRUECOLOR;
+	fix->line_length = var->xres_virtual * (var->bits_per_pixel >> 3);
+
 	return 0;
 }
 
@@ -1031,12 +1053,7 @@ static void jz4750fb_deep_set_mode(struct jzfb *jzfb)
 
 	ctrl_disable();
 	jz4750fb_descriptor_init(jzfb);
-	jz4750fb_set_panel_mode(jzfb, jz_panel);
-	jz4750fb_foreground_resize(jzfb, jz_panel,
-				   FG0_CHANGE_SIZE | FG0_CHANGE_POSITION);
-	jz4750fb_set_var(&fb->var, -1, fb);
-	jz4750fb_change_clock(jzfb);
-	ctrl_enable();
+	jz4750fb_set_par(fb);
 
 	printk("Out jz4750fb_deep_set_mode  \n");
 }
@@ -1190,6 +1207,7 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 	fb->var.height		= -1;
 	fb->var.width		= -1;
 	fb->var.accel_flags	= FB_ACCELF_TEXT;
+	fb->var.bits_per_pixel	= jzfb->bpp;
 
 	fb->fbops		= &jz4750fb_ops;
 	fb->flags		= FBINFO_FLAG_DEFAULT;
@@ -1206,6 +1224,9 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 	err = jz4750fb_map_smem(fb);
 	if (err)
 		goto map_smem_failed;
+
+	jz4750fb_set_var(&fb->var, -1, fb);
+	jz4750fb_check_var(&fb->var, fb);
 
 	REG_LCD_STATE = 0; /* clear lcdc status */
 	jz4750fb_deep_set_mode(jzfb);
