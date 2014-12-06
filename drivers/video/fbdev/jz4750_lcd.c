@@ -230,7 +230,7 @@ static void ctrl_enable(void)
 	__lcd_clr_dis();
 	__lcd_set_ena(); /* enable lcdc */
 #ifdef CONFIG_FB_JZ4750_SLCD
-	__slcd_enable_dma();
+	jzpanel_ops->enable(jz4750fb_info->panel);
 #endif
 }
 
@@ -240,18 +240,19 @@ static void ctrl_disable(void)
 			jz_panel->cfg & LCD_CFG_TVEN ) {
 		/* Smart lcd and TVE mode only support quick disable */
 		__lcd_clr_ena();
-		__slcd_disable_dma();
 	} else {
 		int cnt;
-		/* when CPU main freq is 336MHz,wait for 16ms */
-		cnt = 336000 * 16;
-		__lcd_set_dis(); /* regular disable */
-		while(!__lcd_disable_done() && cnt) {
-			cnt--;
-		}
-		if (cnt == 0)
+
+		/* Use regular disable: finishes current frame, then stops. */
+		__lcd_set_dis();
+
+		/* Wait 20 ms for frame to end (at 60 Hz, one frame is 17 ms). */
+		for (cnt = 20; cnt > 0 && !__lcd_disable_done(); cnt -= 4)
+			msleep(4);
+		if (cnt <= 0)
 			printk("LCD disable timeout! REG_LCD_STATE=0x%08xx\n",
 				REG_LCD_STATE);
+
 		REG_LCD_STATE &= ~LCD_STATE_LDD;
 	}
 }
@@ -851,7 +852,7 @@ static void jz4750fb_set_panel_mode(struct jzfb *jzfb,
 	if (panel->cfg & LCD_CFG_TVEN) {
 		REG_LCD_RGBC |= LCD_RGBC_YCC; /* enable RGB => YUV */
 	} else {
-		REG_LCD_RGBC &= ~LCD_RGBC_YCC; /* enable RGB => YUV */
+		REG_LCD_RGBC &= ~LCD_RGBC_YCC;
 	}
 
 	/* yellow background helps debugging */
@@ -1052,6 +1053,7 @@ static void jz4750fb_deep_set_mode(struct jzfb *jzfb)
 	printk("In jz4750fb_deep_set_mode  \n");
 
 	ctrl_disable();
+
 	jz4750fb_descriptor_init(jzfb);
 	jz4750fb_set_par(fb);
 
