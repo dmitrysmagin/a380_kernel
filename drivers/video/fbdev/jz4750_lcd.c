@@ -230,7 +230,8 @@ static void ctrl_enable(void)
 	__lcd_clr_dis();
 	__lcd_set_ena(); /* enable lcdc */
 #ifdef CONFIG_FB_JZ4750_SLCD
-	jzpanel_ops->enable(jz4750fb_info->panel);
+	if (!(jz_panel->cfg & LCD_CFG_TVEN))
+		jzpanel_ops->enable(jz4750fb_info->panel);
 #endif
 }
 
