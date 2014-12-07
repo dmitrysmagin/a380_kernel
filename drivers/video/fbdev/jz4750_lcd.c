@@ -522,7 +522,6 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 			    struct fb_info *fb)
 {
 	struct jzfb *jzfb = fb->par;
-	int chgvar = 0;
 
 	var->height                 = jz_panel->h;
 	var->width                  = jz_panel->w;
@@ -561,19 +560,6 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 
 	if ((var->activate & FB_ACTIVATE_MASK) != FB_ACTIVATE_NOW)
 		return -EINVAL;
-
-	if (fb->var.xres != var->xres)
-		chgvar = 1;
-	if (fb->var.yres != var->yres)
-		chgvar = 1;
-	if (fb->var.xres_virtual != var->xres_virtual)
-		chgvar = 1;
-	if (fb->var.yres_virtual != var->yres_virtual)
-		chgvar = 1;
-	if (fb->var.bits_per_pixel != var->bits_per_pixel)
-		chgvar = 1;
-
-	//display = fb_display + con;
 
 	var->red.msb_right	= 0;
 	var->green.msb_right	= 0;
