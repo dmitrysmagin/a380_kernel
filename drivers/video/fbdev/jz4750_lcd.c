@@ -1063,26 +1063,43 @@ static irqreturn_t jz4750fb_interrupt_handler(int irq, void *dev_id)
 	state = REG_LCD_STATE;
 	D("In the lcd interrupt handler, state=0x%x\n", state);
 
+	if (state & LCD_STATE_SOF) /* Start of frame */
+		state &= ~LCD_STATE_SOF;
+
 	if (state & LCD_STATE_EOF) /* End of frame */
-		REG_LCD_STATE = state & ~LCD_STATE_EOF;
+		state &= ~LCD_STATE_EOF;
 
 	if (state & LCD_STATE_IFU0) {
 		printk("%s, InFiFo0 underrun\n", __FUNCTION__);
-		REG_LCD_STATE = state & ~LCD_STATE_IFU0;
+		state &= ~LCD_STATE_IFU0;
 	}
 
 	if (state & LCD_STATE_IFU1) {
 		printk("%s, InFiFo1 underrun\n", __FUNCTION__);
-		REG_LCD_STATE = state & ~LCD_STATE_IFU1;
+		state &= ~LCD_STATE_IFU1;
 	}
 
 	if (state & LCD_STATE_OFU) { /* Out fifo underrun */
-		REG_LCD_STATE = state & ~LCD_STATE_OFU;
-		if ( irqcnt++ > 100 ) {
+		state &= ~LCD_STATE_OFU;
+		if (irqcnt++ > 100) {
 			__lcd_disable_ofu_intr();
 			printk("disable Out FiFo underrun irq.\n");
 		}
 		printk("%s, Out FiFo underrun.\n", __FUNCTION__);
+	}
+
+	REG_LCD_STATE = state;
+
+	state = REG_LCD_OSDS;
+
+	if (state & LCD_OSDS_SOF1) {
+		/* Add vsync later */
+		REG_LCD_OSDS &= ~LCD_OSDS_SOF1;
+	}
+
+	if (state & LCD_OSDS_EOF1) {
+		/* Add vsync later */
+		REG_LCD_OSDS &= ~LCD_OSDS_EOF1;
 	}
 
 	return IRQ_HANDLED;
