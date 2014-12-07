@@ -621,38 +621,27 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 static int jz4750fb_map_smem(struct fb_info *fb)
 {
 	struct jzfb *jzfb = fb->par;
-	unsigned long page;
-	unsigned int page_shift, needroom;
+	unsigned int size;
+	void *page_virt;
 
-	/*
-	 * Problem: there could be two panels (lcd/tv) with different sizes.
-	 * This code allocates maximum memory, fix it later.
-	 */
-	needroom = 640 * 480 * 4 * 2;
+	/* Compute space for max res at 32bpp, double buffered. */
+	size = PAGE_ALIGN(640 * 480 * 4 * 2);
 
 	printk("FrameBuffer bpp = %d\n", jzfb->bpp);
 
-	for (page_shift = 0; page_shift < 12; page_shift++)
-		if ((PAGE_SIZE << page_shift) >= needroom)
-			break;
-
-	lcd_frame0 = (unsigned char *)__get_free_pages(GFP_KERNEL, page_shift);
-
-	if (!lcd_frame0)
+	lcd_frame0 = alloc_pages_exact(size, GFP_KERNEL);
+	if (!lcd_frame0) {
+		printk("jz4750fb, %s: unable to map screen memory\n", fb->fix.id);
 		return -ENOMEM;
+	}
 
-	dma_desc_base =
-		(struct jz4750_lcd_dma_desc *)__get_free_pages(GFP_KERNEL, 0);
-
+	dma_desc_base = alloc_pages_exact(PAGE_SIZE, GFP_KERNEL);
 	if (!dma_desc_base)
 		return -ENOMEM;
 
-	memset((void *)lcd_frame0, 0, PAGE_SIZE << page_shift);
-	memset((void *)dma_desc_base, 0, PAGE_SIZE);
-
 #if defined(CONFIG_FB_JZ4750_SLCD)
-	lcd_cmdbuf = (unsigned char *)__get_free_pages(GFP_KERNEL, 0);
-	memset((void *)lcd_cmdbuf, 0, PAGE_SIZE);
+	lcd_cmdbuf = alloc_pages_exact(PAGE_SIZE, GFP_KERNEL);
+	clear_page(lcd_cmdbuf);
 
 	{	int data, i, *ptr;
 		ptr = (unsigned int *)lcd_cmdbuf;
@@ -663,28 +652,27 @@ static int jz4750fb_map_smem(struct fb_info *fb)
 		}
 	}
 
-	SetPageReserved(virt_to_page((void*)lcd_cmdbuf));
+	SetPageReserved(virt_to_page(lcd_cmdbuf));
 #endif
 
 	/*
 	 * Set page reserved so that mmap will work. This is necessary
 	 * since we'll be remapping normal memory.
 	 */
-	SetPageReserved(virt_to_page((void*)dma_desc_base));
+	SetPageReserved(virt_to_page(dma_desc_base));
+	clear_page(dma_desc_base);
 
-	for (page = (unsigned long)lcd_frame0;
-	     page < PAGE_ALIGN((unsigned long)lcd_frame0 + (PAGE_SIZE<<page_shift));
-	     page += PAGE_SIZE) {
-		SetPageReserved(virt_to_page((void*)page));
+	for (page_virt = lcd_frame0;
+	     page_virt < lcd_frame0 + size; page_virt += PAGE_SIZE) {
+		SetPageReserved(virt_to_page(page_virt));
+		clear_page(page_virt);
 	}
 
-	fb->fix.smem_start = virt_to_phys((void *)lcd_frame0);
-	fb->fix.smem_len = (PAGE_SIZE << page_shift); /* page_shift/2 ??? */
-	fb->screen_base =
-		(unsigned char *)(((unsigned int)lcd_frame0&0x1fffffff) | 0xa0000000);
+	fb->fix.smem_start = virt_to_phys(lcd_frame0);
+	fb->fix.smem_len = size;
+	fb->screen_base = (void *)KSEG1ADDR(lcd_frame0);
 
 	if (!fb->screen_base) {
-		printk("jz4750fb, %s: unable to map screen memory\n", fb->fix.id);
 		return -ENOMEM;
 	}
 
@@ -694,31 +682,27 @@ static int jz4750fb_map_smem(struct fb_info *fb)
 static void jz4750fb_unmap_smem(struct fb_info *fb)
 {
 	struct jzfb *jzfb = fb->par;
-	struct page *map = NULL;
-	unsigned char *tmp;
-	unsigned int page_shift, needroom;
-
-	needroom = 640 * 480 * 4 * 2;
-
-	for (page_shift = 0; page_shift < 12; page_shift++)
-		if ((PAGE_SIZE << page_shift) >= needroom)
-			break;
-
-	if (fb && fb->screen_base) {
-		iounmap(fb->screen_base);
-		fb->screen_base = NULL;
-		release_mem_region(fb->fix.smem_start,
-				   fb->fix.smem_len);
-	}
 
 	if (lcd_frame0) {
-		for (tmp=(unsigned char *)lcd_frame0;
-		     tmp < lcd_frame0 + (PAGE_SIZE << page_shift);
-		     tmp += PAGE_SIZE) {
-			map = virt_to_page(tmp);
-			clear_bit(PG_reserved, &map->flags);
+		void *end = lcd_frame0 + fb->fix.smem_len;
+		void *page_virt;
+
+		for (page_virt = lcd_frame0; page_virt < end;
+					      page_virt += PAGE_SIZE) {
+			ClearPageReserved(virt_to_page(page_virt));
 		}
-		free_pages((int)lcd_frame0, page_shift);
+
+		free_pages_exact(lcd_frame0, fb->fix.smem_len);
+	}
+
+#if defined(CONFIG_FB_JZ4750_SLCD)
+	ClearPageReserved(virt_to_page(lcd_cmdbuf));
+	free_pages_exact(lcd_cmdbuf, PAGE_SIZE);
+#endif
+
+	if (dma_desc_base) {
+		ClearPageReserved(virt_to_page(dma_desc_base));
+		free_pages_exact(dma_desc_base, PAGE_SIZE);
 	}
 }
 
