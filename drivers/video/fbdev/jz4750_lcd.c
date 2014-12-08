@@ -112,14 +112,6 @@ struct jz4750lcd_panel_t {
 #define FG_CHANGE_ALL 		( FG0_CHANGE_SIZE | FG0_CHANGE_POSITION | \
 				  FG1_CHANGE_SIZE | FG1_CHANGE_POSITION )
 
-#if defined(CONFIG_JZ4750D_A380) || defined(CONFIG_JZ4750D_A320E)
- #define SCREEN_WIDTH 400
- #define SCREEN_HEIGHT 240
-#elif defined(CONFIG_JZ4750D_RZX50)
- #define SCREEN_WIDTH 480
- #define SCREEN_HEIGHT 272
-#endif
-
 //#define JZ_FB_DEBUG
 
 #ifdef JZ_FB_DEBUG
@@ -360,36 +352,24 @@ static int jz4750fb_mmap(struct fb_info *fb, struct vm_area_struct *vma)
 	return 0;
 }
 
-#define MAKENAME(X,Y) #X "x" #Y
-
-static struct fb_videomode video_modes[] = {
-	{
-		.name = MAKENAME(SCREEN_WIDTH, SCREEN_HEIGHT),
-		.xres = SCREEN_WIDTH,
-		.yres = SCREEN_HEIGHT,
-		.vmode = FB_VMODE_NONINTERLACED,
-	},
-};
-
 /* checks var and eventually tweaks it to something supported,
  * DO NOT MODIFY PAR */
 static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *fb)
 {
-	struct fb_videomode *mode = &video_modes[0];
-
-	if (var->xres != mode->xres)
+	if (var->xres != jz_panel->w)
 		return -EINVAL;
 
-	if (var->yres != mode->yres)
+	if (var->yres != jz_panel->h)
 		return -EINVAL;
 
-	D("Found working mode: %dx%d\n", mode->xres, mode->yres);
-
-	fb_videomode_to_var(var, mode);
-
+	var->xres = jz_panel->w;
+	var->yres = jz_panel->h;
+	var->xres_virtual = var->xres;
 	/* Reserve space for double buffering. */
-	/* FIXME: strange behavior when yres_virtual == yres */
 	var->yres_virtual = var->yres * 2;
+	var->xoffset = 0;
+	var->yoffset = 0;
+	var->vmode = FB_VMODE_NONINTERLACED;
 
 	if (var->bits_per_pixel != 32 && var->bits_per_pixel != 16)
 		var->bits_per_pixel = 32;
@@ -410,6 +390,9 @@ static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *fb)
 		var->transp.length = var->red.length =
 		var->green.length = var->blue.length = 8;
 	}
+
+	D("Found working mode: %dx%d, %d bpp\n", var->xres, var->yres,
+						 var->bits_per_pixel);
 
 	return 0;
 }
@@ -828,90 +811,98 @@ static void jz4750fb_set_panel_mode(struct jzfb *jzfb,
 static void jz4750fb_foreground_resize(struct jzfb *jzfb,
 			  const struct jz4750lcd_panel_t *panel, int fg_change)
 {
+	struct fb_var_screeninfo *var = &jzfb->fb->var;
 	int fg0_line_size, fg0_frm_size, fg1_line_size, fg1_frm_size;
-	int x = 0, y = 0;
+	int x = 0, y = 0, w = 0, h = 0;
 
-	fg0_line_size = panel->w * ((jzfb->bpp + 7) / 8);
+	if (!fg_change)
+		return;
+
+	/* NOTE: x, y, w, h should be correct already */
+	w = var->xres;
+	h = var->yres;
+	x = (panel->w - w) / 2;
+	y = (panel->h - h) / 2;
+
+	fg0_line_size = w * ((jzfb->bpp + 7) / 8);
 	fg0_line_size = ((fg0_line_size + 3) >> 2) << 2; /* word aligned */
-	fg0_frm_size = fg0_line_size * panel->h;
+	fg0_frm_size = fg0_line_size * h;
 
 	printk("fg0_frm_size = 0x%x\n", fg0_frm_size);
 
-	fg1_line_size = panel->w * ((jzfb->bpp + 7) / 8);
+	fg1_line_size = w * ((jzfb->bpp + 7) / 8);
 	fg1_line_size = ((fg1_line_size + 3) >> 2) << 2; /* word aligned */
-	fg1_frm_size = fg1_line_size * panel->h;
+	fg1_frm_size = fg1_line_size * h;
 
-	if (fg_change) {
-		if (fg_change & FG0_CHANGE_POSITION) { /* F0 change position */
-			REG_LCD_XYP0 = (y << 16) | x;
-		}
-
-		if (fg_change & FG1_CHANGE_POSITION) { /* F1 change position */
-			REG_LCD_XYP1 = (y << 16) | x;
-		}
-
-		/* set change */
-		if (/*!(panel->osd_ctrl & LCD_OSDCTRL_IPU) &&*/
-		     (fg_change != FG_CHANGE_ALL) )
-			REG_LCD_OSDCTRL |= LCD_OSDCTRL_CHANGES;
-
-		/* wait change ready??? */
-		while (REG_LCD_OSDS & LCD_OSDS_READY);
-
-		if (fg_change & FG0_CHANGE_SIZE) { /* change FG0 size */
-			if (panel->cfg & LCD_CFG_TVEN) { /* output to TV */
-				dma0_desc0->cmd = dma0_desc1->cmd =
-						  (fg0_frm_size / 4) / 2;
-				dma0_desc0->offsize = dma0_desc1->offsize =
-						  fg0_line_size / 4;
-				dma0_desc0->page_width = dma0_desc1->page_width
-						  =  fg0_line_size/4;
-				dma0_desc1->databuf = virt_to_phys((void *)
-						  (lcd_frame0 + fg0_line_size));
-				REG_LCD_DA0 = virt_to_phys(dma0_desc0); //tft
-			} else {
-				dma0_desc0->cmd = dma0_desc1->cmd =
-						  fg0_frm_size / 4;
-				dma0_desc0->offsize = 0;
-				dma0_desc1->offsize = 0;
-				dma0_desc0->page_width = 0;
-				dma0_desc1->page_width = 0;
-			}
-
-			dma0_desc0->desc_size = dma0_desc1->desc_size
-				= (panel->h << 16) | panel->w;
-			REG_LCD_SIZE0 = (panel->h << 16) | panel->w;
-
-		}
-
-		if (fg_change & FG1_CHANGE_SIZE) { /* change FG1 size*/
-			if (panel->cfg & LCD_CFG_TVEN) { /* output to TV */
-				dma1_desc0->cmd = dma1_desc1->cmd =
-						  (fg1_frm_size / 4) / 2;
-				dma1_desc0->offsize = dma1_desc1->offsize =
-						      fg1_line_size / 4;
-				dma1_desc0->page_width = dma1_desc1->page_width
-						      = fg1_line_size / 4;
-				dma1_desc1->databuf = virt_to_phys((void *)
-						  (lcd_frame1 + fg1_line_size));
-				REG_LCD_DA1 = virt_to_phys(dma0_desc1); //tft
-			} else {
-				dma1_desc0->cmd = dma1_desc1->cmd =
-						  fg1_frm_size / 4;
-				dma1_desc0->offsize = 0;
-				dma1_desc1->offsize = 0;
-				dma1_desc0->page_width = 0;
-				dma1_desc1->page_width = 0;
-			}
-
-			dma1_desc0->desc_size = dma1_desc1->desc_size
-				= (panel->h << 16) | panel->w;
-			REG_LCD_SIZE1 = (panel->h << 16) | panel->w;;
-		}
-
-		dma_cache_wback((unsigned int)(dma_desc_base),
-				(DMA_DESC_NUM)*sizeof(struct jz4750_lcd_dma_desc));
+	if (fg_change & FG0_CHANGE_POSITION) { /* F0 change position */
+		REG_LCD_XYP0 = (y << 16) | x;
 	}
+
+	if (fg_change & FG1_CHANGE_POSITION) { /* F1 change position */
+		REG_LCD_XYP1 = (y << 16) | x;
+	}
+
+	/* set change */
+	if (/*!(panel->osd_ctrl & LCD_OSDCTRL_IPU) &&*/
+	      (fg_change != FG_CHANGE_ALL) )
+		REG_LCD_OSDCTRL |= LCD_OSDCTRL_CHANGES;
+
+	/* wait change ready??? */
+	while (REG_LCD_OSDS & LCD_OSDS_READY);
+
+	if (fg_change & FG0_CHANGE_SIZE) { /* change FG0 size */
+		if (panel->cfg & LCD_CFG_TVEN) { /* output to TV */
+			dma0_desc0->cmd =
+			dma0_desc1->cmd = (fg0_frm_size / 4) / 2;
+			dma0_desc0->offsize =
+			dma0_desc1->offsize = fg0_line_size / 4;
+			dma0_desc0->page_width =
+			dma0_desc1->page_width =  fg0_line_size / 4;
+			dma0_desc1->databuf = virt_to_phys((void *)
+					  (lcd_frame0 + fg0_line_size));
+			REG_LCD_DA0 = virt_to_phys(dma0_desc0); //tft
+		} else {
+			dma0_desc0->cmd =
+			dma0_desc1->cmd = fg0_frm_size / 4;
+			dma0_desc0->offsize = 0;
+			dma0_desc1->offsize = 0;
+			dma0_desc0->page_width = 0;
+			dma0_desc1->page_width = 0;
+		}
+
+		dma0_desc0->desc_size =
+		dma0_desc1->desc_size = (h << 16) | w;
+		REG_LCD_SIZE0 = (h << 16) | w;
+
+	}
+
+	if (fg_change & FG1_CHANGE_SIZE) { /* change FG1 size*/
+		if (panel->cfg & LCD_CFG_TVEN) { /* output to TV */
+			dma1_desc0->cmd =
+			dma1_desc1->cmd = (fg1_frm_size / 4) / 2;
+			dma1_desc0->offsize =
+			dma1_desc1->offsize = fg1_line_size / 4;
+			dma1_desc0->page_width =
+			dma1_desc1->page_width = fg1_line_size / 4;
+			dma1_desc1->databuf = virt_to_phys((void *)
+					  (lcd_frame1 + fg1_line_size));
+			REG_LCD_DA1 = virt_to_phys(dma0_desc1); //tft
+		} else {
+			dma1_desc0->cmd =
+			dma1_desc1->cmd = fg1_frm_size / 4;
+			dma1_desc0->offsize = 0;
+			dma1_desc1->offsize = 0;
+			dma1_desc0->page_width = 0;
+			dma1_desc1->page_width = 0;
+		}
+
+		dma1_desc0->desc_size =
+		dma1_desc1->desc_size = (h << 16) | w;
+		REG_LCD_SIZE1 = (h << 16) | w;
+	}
+
+	dma_cache_wback((unsigned int)(dma_desc_base),
+			(DMA_DESC_NUM)*sizeof(struct jz4750_lcd_dma_desc));
 }
 
 static void jz4750fb_change_clock(struct jzfb *jzfb)
