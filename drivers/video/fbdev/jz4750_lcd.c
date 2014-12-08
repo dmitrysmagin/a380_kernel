@@ -356,14 +356,20 @@ static int jz4750fb_mmap(struct fb_info *fb, struct vm_area_struct *vma)
  * DO NOT MODIFY PAR */
 static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *fb)
 {
-	if (var->xres != jz_panel->w)
+	D("Requesting mode %i x %i x %i\n",
+		var->xres,
+		var->yres,
+		var->bits_per_pixel);
+
+	if (var->xres > jz_panel->w)
 		return -EINVAL;
 
-	if (var->yres != jz_panel->h)
+	if (var->yres > jz_panel->h)
 		return -EINVAL;
 
-	var->xres = jz_panel->w;
-	var->yres = jz_panel->h;
+	/* Make sure w/h are divisible by 2 */
+	var->xres = (var->xres + 1) & ~1;
+	var->yres = (var->yres + 1) & ~1;
 	var->xres_virtual = var->xres;
 	/* Reserve space for double buffering. */
 	var->yres_virtual = var->yres * 2;
@@ -813,16 +819,18 @@ static void jz4750fb_foreground_resize(struct jzfb *jzfb,
 {
 	struct fb_var_screeninfo *var = &jzfb->fb->var;
 	int fg0_line_size, fg0_frm_size, fg1_line_size, fg1_frm_size;
-	int x = 0, y = 0, w = 0, h = 0;
+	int x, y, w, h;
 
 	if (!fg_change)
 		return;
 
-	/* NOTE: x, y, w, h should be correct already */
-	w = var->xres;
-	h = var->yres;
+	w = (var->xres < panel->w ? var->xres : panel->w);
+	h = (var->yres < panel->h ? var->yres : panel->h);
 	x = (panel->w - w) / 2;
 	y = (panel->h - h) / 2;
+
+	printk("OSD: %d x %d, panel: %d x %d\n",
+		w, h, panel->w, panel->h);
 
 	fg0_line_size = w * ((jzfb->bpp + 7) / 8);
 	fg0_line_size = ((fg0_line_size + 3) >> 2) << 2; /* word aligned */
