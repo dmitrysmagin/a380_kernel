@@ -936,11 +936,10 @@ static void jz4750fb_change_clock(struct jzfb *jzfb)
 
 	/********* In TVE mode PCLK = 27MHz ***********/
 	if (jz_panel->cfg & LCD_CFG_TVEN) {		/* LCDC output to TVE */
-		REG_CPM_LPCDR  &= (~CPM_LPCDR_LSCS);   //maddrone add
-		REG_CPM_LPCDR  |= CPM_LPCDR_LTCS;
+		__cpm_select_tveclk_pll();
+
 		pclk = 27000000;
-		//val = __cpm_get_pllout2() / pclk; /* pclk */
-		val = 432000000 / pclk; /* pclk */
+		val = __cpm_get_pllout2() / pclk; /* pclk */
 		printk("maddrone tve: pllout2 = 0x%x\n", __cpm_get_pllout2());
 		val--;
 		__cpm_set_pixdiv(val);
@@ -957,8 +956,6 @@ static void jz4750fb_change_clock(struct jzfb *jzfb)
 		__cpm_set_ldiv( val );
 #endif
 		__cpm_select_pixclk_tve();
-
-		REG_CPM_LPCDR |= CPM_LPCDR_LTCS;  //maddrone add
 		REG_CPM_CPCCR |= CPM_CPCCR_CE ; /* update divide */
 	} else {		/* LCDC output to  LCD panel */
 		val = __cpm_get_pllout2() / pclk; /* pclk */
@@ -981,6 +978,7 @@ static void jz4750fb_change_clock(struct jzfb *jzfb)
 		}
 		__cpm_set_ldiv(val);
 #endif
+		__cpm_select_pixclk_lcd();
 		REG_CPM_CPCCR |= CPM_CPCCR_CE ; /* update divide */
 	}
 
