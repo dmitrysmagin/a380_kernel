@@ -204,6 +204,13 @@ struct jzfb {
 
 	struct mutex lock;
 	bool is_enabled;
+
+	/*
+	* Number of frames to wait until doing a forced foreground flush.
+	* If it looks like we are double buffering, we can flush on vertical
+	* panning instead.
+	*/
+	unsigned int delay_flush;
 };
 
 #define DMA_DESC_NUM		6
@@ -225,6 +232,8 @@ static void ctrl_enable(void)
 	if (!(jz_panel->cfg & LCD_CFG_TVEN))
 		jzpanel_ops->enable(jz4750fb_info->panel);
 #endif
+
+	jz4750fb_info->delay_flush = 0;
 }
 
 static void ctrl_disable(void)
@@ -341,7 +350,7 @@ static int jz4750fb_mmap(struct fb_info *fb, struct vm_area_struct *vma)
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
 	pgprot_val(vma->vm_page_prot) &= ~_CACHE_MASK;
-	pgprot_val(vma->vm_page_prot) |= _CACHE_CACHABLE_NO_WA;
+	pgprot_val(vma->vm_page_prot) |= _CACHE_CACHABLE_NONCOHERENT;
 
 	if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
 			       vma->vm_end - vma->vm_start,
@@ -478,12 +487,21 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *fb)
 static int jz4750fb_pan_display(struct fb_var_screeninfo *var,
 				struct fb_info *fb)
 {
+	struct jzfb *jzfb = fb->par;
+
 	if (var->xoffset != fb->var.xoffset) {
 		/* No support for X panning for now! */
 		return -EINVAL;
 	}
 
 	D("var.yoffset: %d\n", var->yoffset);
+
+	jzfb->delay_flush = 8;
+
+	dma_cache_wback_inv((unsigned long)(lcd_frame0 +
+			    fb->fix.line_length * var->yoffset),
+			    fb->fix.line_length * var->yres);
+
 	dma0_desc0->databuf = (unsigned int)virt_to_phys((void *)lcd_frame0
 			+ (fb->fix.line_length * var->yoffset));
 	dma_cache_wback((unsigned int)(dma0_desc0),
@@ -724,6 +742,7 @@ static void jz4750fb_descriptor_init(struct jzfb *jzfb)
 
 	dma0_desc0->databuf = virt_to_phys((void *)lcd_frame0);
 	dma0_desc0->frame_id = (unsigned int)0x0000da00; /* DMA0'0 */
+	dma0_desc0->cmd = LCD_CMD_SOFINT | LCD_CMD_EOFINT;
 
 	/* DMA0 Descriptor1 */
 	if (jz_panel->cfg & LCD_CFG_TVEN) {
@@ -750,6 +769,7 @@ static void jz4750fb_descriptor_init(struct jzfb *jzfb)
 
 	dma1_desc0->databuf = virt_to_phys((void *)lcd_frame1);
 	dma1_desc0->frame_id = (unsigned int)0x0000da10; /* DMA1'0 */
+	dma1_desc0->cmd = LCD_CMD_SOFINT | LCD_CMD_EOFINT;
 
 	/* DMA1 Descriptor1 */
 	if ( jz_panel->cfg & LCD_CFG_TVEN ) { /* TVE mode */
@@ -800,7 +820,8 @@ static void jz4750fb_set_panel_mode(struct jzfb *jzfb,
 	__lcd_hsync_set_hpe(panel->hsw);
 	__lcd_vsync_set_vpe(panel->vsw);
 
-	REG_LCD_OSDC = LCD_OSDC_F0EN | LCD_OSDC_OSDEN;
+	REG_LCD_OSDC = LCD_OSDC_F0EN | LCD_OSDC_OSDEN |
+		       LCD_OSDC_SOFM0 | LCD_OSDC_EOFM0;
 	REG_LCD_OSDCTRL = osdctrl;
 
 	if (panel->cfg & LCD_CFG_TVEN) {
@@ -1024,6 +1045,7 @@ static void jz4750fb_deep_set_mode(struct jzfb *jzfb)
 
 static irqreturn_t jz4750fb_interrupt_handler(int irq, void *dev_id)
 {
+	struct jzfb *jzfb = dev_id;
 	unsigned int state;
 	static int irqcnt = 0;
 
@@ -1059,14 +1081,23 @@ static irqreturn_t jz4750fb_interrupt_handler(int irq, void *dev_id)
 
 	state = REG_LCD_OSDS;
 
-	if (state & LCD_OSDS_SOF1) {
-		/* Add vsync later */
-		REG_LCD_OSDS &= ~LCD_OSDS_SOF1;
+	if (state & LCD_OSDS_SOF0) {
+		if (jzfb->delay_flush == 0) {
+			struct fb_info *fb = jzfb->fb;
+
+			dma_cache_wback_inv((unsigned long)(lcd_frame0 +
+					    fb->fix.line_length * fb->var.yoffset),
+					    fb->fix.line_length * fb->var.yres);
+		} else {
+			jzfb->delay_flush--;
+		}
+
+		REG_LCD_OSDS &= ~LCD_OSDS_SOF0;
 	}
 
-	if (state & LCD_OSDS_EOF1) {
+	if (state & LCD_OSDS_EOF0) {
 		/* Add vsync later */
-		REG_LCD_OSDS &= ~LCD_OSDS_EOF1;
+		REG_LCD_OSDS &= ~LCD_OSDS_EOF0;
 	}
 
 	return IRQ_HANDLED;
@@ -1201,7 +1232,7 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 	mutex_init(&jzfb->lock);
 
 	if (request_irq(JZ4750D_IRQ_LCD, jz4750fb_interrupt_handler,
-			IRQF_DISABLED, "lcd", 0)) {
+			IRQF_DISABLED, "lcd", jzfb)) {
 		dev_err(&pdev->dev, "Failed to request LCD IRQ\n");
 		err = -EBUSY;
 		goto failed;
