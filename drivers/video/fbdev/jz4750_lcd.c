@@ -361,10 +361,10 @@ static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *fb)
 		var->yres,
 		var->bits_per_pixel);
 
-	if (var->xres > jz_panel->w)
+	if (var->xres > jz_panel->w || var->xres > 640)
 		return -EINVAL;
 
-	if (var->yres > jz_panel->h)
+	if (var->yres > jz_panel->h || var->yres > 480)
 		return -EINVAL;
 
 	/* Make sure w/h are divisible by 2 */
