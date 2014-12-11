@@ -180,7 +180,7 @@ static struct resource jz_lcd_resources[] = {
 
 struct platform_device jz_lcd_device = {
 	.name           = "jz-lcd",
-	.id             = 0,
+	.id             = -1,
 	.dev = {
 		.dma_mask = &jz_lcd_device.dev.coherent_dma_mask,
 		.coherent_dma_mask = DMA_BIT_MASK(32),
