@@ -36,8 +36,7 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/pm.h>
-#include <linux/proc_fs.h>
-#include <linux/seq_file.h>
+#include <linux/clk.h>
 #include <linux/kthread.h>
 
 #include <asm/irq.h>
@@ -187,7 +186,6 @@ struct jz4750lcd_panel_t jz4750_info_tve = {
 /* default output to lcd panel */
 static struct jz4750lcd_panel_t *jz_panel = &jz4750_lcd_panel;
 
-static struct jzfb *jz4750fb_info;
 static struct jz4750_lcd_dma_desc *dma_desc_base;
 static struct jz4750_lcd_dma_desc *dma0_desc0, *dma0_desc1, *dma1_desc0, *dma1_desc1;
 
@@ -198,6 +196,9 @@ struct jzfb {
 
 	uint32_t pseudo_palette[16];
 	unsigned int bpp;
+
+	struct clk *lpclk; /* both jz4750 and jz4755 */
+	struct clk *ldclk; /* only on jz4750 */
 
 	struct mutex lock;
 	bool is_enabled;
@@ -222,19 +223,21 @@ static struct jz4750_lcd_dma_desc *dma0_desc_cmd0, *dma0_desc_cmd;
 static unsigned char *lcd_cmdbuf;
 #endif
 
-static void ctrl_enable(void)
+static void ctrl_enable(struct jzfb *jzfb)
 {
+	jzfb->delay_flush = 0;
+
+	REG_LCD_STATE = 0; /* clear lcdc status */
+
 	__lcd_clr_dis();
 	__lcd_set_ena(); /* enable lcdc */
 #ifdef CONFIG_FB_JZ4750_SLCD
 	if (!(jz_panel->cfg & LCD_CFG_TVEN))
-		jzpanel_ops->enable(jz4750fb_info->panel);
+		jzpanel_ops->enable(jzfb->panel);
 #endif
-
-	jz4750fb_info->delay_flush = 0;
 }
 
-static void ctrl_disable(void)
+static void ctrl_disable(struct jzfb *jzfb)
 {
 	if (jz_panel->cfg & LCD_CFG_LCDPIN_SLCD ||
 			jz_panel->cfg & LCD_CFG_TVEN ) {
@@ -246,15 +249,36 @@ static void ctrl_disable(void)
 		/* Use regular disable: finishes current frame, then stops. */
 		__lcd_set_dis();
 
-		/* Wait 20 ms for frame to end (at 60 Hz, one frame is 17 ms). */
+		/* Wait 20 ms for frame to end (at 60Hz, one frame is 17ms). */
 		for (cnt = 20; cnt > 0 && !__lcd_disable_done(); cnt -= 4)
 			msleep(4);
 		if (cnt <= 0)
-			printk("LCD disable timeout! REG_LCD_STATE=0x%08xx\n",
+			dev_err(&jzfb->pdev->dev,
+				"LCD disable timeout! REG_LCD_STATE=0x%08xx\n",
 				REG_LCD_STATE);
 
 		REG_LCD_STATE &= ~LCD_STATE_LDD;
 	}
+}
+
+static void jzfb_power_up(struct jzfb *jzfb)
+{
+	// TODO: Configure GPIO pins via pinctrl.
+
+	ctrl_enable(jzfb);
+
+	/* Enable panel AFTER enabling lcdc otherwise slcd may hang up */
+	if (!(jz_panel->cfg & LCD_CFG_TVEN)) /* temp workaround */
+		jzpanel_ops->enable(jzfb->panel);
+}
+
+static void jzfb_power_down(struct jzfb *jzfb)
+{
+	ctrl_disable(jzfb);
+
+	jzpanel_ops->disable(jzfb->panel);
+
+	// TODO: Configure GPIO pins via pinctrl.
 }
 
 static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
@@ -424,32 +448,22 @@ static int jz4750fb_set_par(struct fb_info *fb)
 	struct fb_fix_screeninfo *fix = &fb->fix;
 	struct jzfb *jzfb = fb->par;
 
-	ctrl_disable();
+	ctrl_disable(jzfb);
 
 	jzfb->bpp = var->bits_per_pixel;
 	jz4750fb_set_panel_mode(jzfb, jz_panel);
 	jz4750fb_foreground_resize(jzfb, jz_panel,
 				   FG0_CHANGE_SIZE | FG0_CHANGE_POSITION);
+
 	jz4750fb_change_clock(jzfb);
 
-	ctrl_enable();
+	if (jzfb->is_enabled)
+		ctrl_enable(jzfb);
 
 	fix->visual = FB_VISUAL_TRUECOLOR;
 	fix->line_length = var->xres_virtual * (var->bits_per_pixel >> 3);
 
 	return 0;
-}
-
-static void jzfb_enable(struct jzfb *jzfb)
-{
-	__cpm_start_lcd();
-	ctrl_enable();
-}
-
-static void jzfb_disable(struct jzfb *jzfb)
-{
-	ctrl_disable();
-	__cpm_stop_lcd();
 }
 
 /*
@@ -464,12 +478,12 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *fb)
 
 	if (blank_mode == FB_BLANK_UNBLANK) {
 		if (!jzfb->is_enabled) {
-			jzfb_enable(jzfb);
+			jzfb_power_up(jzfb);
 			jzfb->is_enabled = true;
 		}
 	} else {
 		if (jzfb->is_enabled) {
-			jzfb_disable(jzfb);
+			jzfb_power_down(jzfb);
 			jzfb->is_enabled = false;
 		}
 	}
@@ -933,84 +947,52 @@ static void jz4750fb_foreground_resize(struct jzfb *jzfb,
 
 static void jz4750fb_change_clock(struct jzfb *jzfb)
 {
-	unsigned int val = 0;
 	unsigned int pclk;
-	/* Timing setting */
-	__cpm_stop_lcd();
 
-	val = jz_panel->fclk; /* frame clk */
+	clk_disable(jzfb->lpclk);
 
-	/* Pixclk */
 	if ((jz_panel->cfg & LCD_CFG_MODE_MASK) != LCD_CFG_MODE_SERIAL_TFT) {
-		pclk = val *
+		pclk = jz_panel->fclk *
 		      (jz_panel->w + jz_panel->elw + jz_panel->blw) *
 		      (jz_panel->h + jz_panel->efw + jz_panel->bfw);
 	} else {
 		/* serial mode: Hsync period = 3*Width_Pixel */
-		pclk = val *
+		pclk = jz_panel->fclk *
 		      (jz_panel->w * 3 + jz_panel->elw + jz_panel->blw) *
 		      (jz_panel->h + jz_panel->efw + jz_panel->bfw);
 	}
 
-	/********* In TVE mode PCLK = 27MHz ***********/
-	if (jz_panel->cfg & LCD_CFG_TVEN) {		/* LCDC output to TVE */
+	if (jz_panel->cfg & LCD_CFG_TVEN) {
 		__cpm_select_tveclk_pll();
-
-		pclk = 27000000;
-		val = __cpm_get_pllout2() / pclk; /* pclk */
-		printk("maddrone tve: pllout2 = 0x%x\n", __cpm_get_pllout2());
-		val--;
-		__cpm_set_pixdiv(val);
-
-		D("REG_CPM_LPCDR = 0x%08x\n", REG_CPM_LPCDR);
-#if defined(CONFIG_SOC_JZ4750) /* Jz4750D don't use LCLK */
-		val = pclk * 3 ;	/* LCDClock > 2.5*Pixclock */
-
-		val = __cpm_get_pllout() / val;
-		if (val > 0x1f) {
-			printk("lcd clock divide is too large, set it to 0x1f\n");
-			val = 0x1f;
-		}
-		__cpm_set_ldiv( val );
-#endif
 		__cpm_select_pixclk_tve();
-		REG_CPM_CPCCR |= CPM_CPCCR_CE ; /* update divide */
-	} else {		/* LCDC output to  LCD panel */
-		val = __cpm_get_pllout2() / pclk; /* pclk */
-		val--;
-		D("ratio: val = %d\n", val);
-		if (val > 0x7ff) {
-			printk("pixel clock divid is too large, set it to 0x7ff\n");
-			val = 0x7ff;
-		}
 
-		__cpm_set_pixdiv(val);
+		/* In TVE mode PCLK = 27MHz */
+		clk_set_rate(jzfb->lpclk, 27000000);
 
-		D("REG_CPM_LPCDR = 0x%08x\n", REG_CPM_LPCDR);
-#if defined(CONFIG_SOC_JZ4750) /* Jz4750D don't use LCLK */
-		val = pclk * 3 ;	/* LCDClock > 2.5*Pixclock */
-		val = __cpm_get_pllout2() / val;
-		if (val > 0x1f) {
-			printk("lcd clock divide is too large, set it to 0x1f\n");
-			val = 0x1f;
-		}
-		__cpm_set_ldiv(val);
+#if defined(CONFIG_SOC_JZ4750)
+		/* LCDClock > 2.5*Pixclock */
+		clk_set_rate(jzfb->ldclk, 27000000 * 3);
 #endif
+	} else {
 		__cpm_select_pixclk_lcd();
-		REG_CPM_CPCCR |= CPM_CPCCR_CE ; /* update divide */
-	}
 
-	D("REG_CPM_LPCDR=0x%08x\n", REG_CPM_LPCDR);
-	D("REG_CPM_CPCCR=0x%08x\n", REG_CPM_CPCCR);
+		clk_set_rate(jzfb->lpclk, pclk);
+
+#if defined(CONFIG_SOC_JZ4750)
+		/* LCDClock > 2.5*Pixclock */
+		clk_set_rate(jzfb->ldclk, pclk * 3);
+#endif
+	}
 
 	jz_clocks.pixclk = __cpm_get_pixclk();
 	printk("LCDC: PixClock:%d\n", jz_clocks.pixclk);
 
-#if defined(CONFIG_SOC_JZ4750) /* Jz4750D don't use LCLK */
+#if defined(CONFIG_SOC_JZ4750)
 	jz_clocks.lcdclk = __cpm_get_lcdclk();
 	printk("LCDC: LcdClock:%d\n", jz_clocks.lcdclk);
 #endif
-	__cpm_start_lcd();
+
+	clk_enable(jzfb->lpclk);
 	udelay(1000);
 }
 
@@ -1033,7 +1015,7 @@ static void jz4750fb_deep_set_mode(struct jzfb *jzfb)
 
 	printk("In jz4750fb_deep_set_mode  \n");
 
-	ctrl_disable();
+	ctrl_disable(jzfb);
 
 	jz4750fb_descriptor_init(jzfb);
 	jz4750fb_set_par(fb);
@@ -1218,7 +1200,7 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 		goto fb_alloc_failed;
 	}
 
-	jz4750fb_info = jzfb = fb->par;
+	jzfb = fb->par;
 	jzfb->fb = fb;
 	jzfb->pdev = pdev;
 	//jzfb->pdata = pdata;
@@ -1244,7 +1226,7 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 
 	fb->pseudo_palette	= jzfb->pseudo_palette;
 
-	ctrl_disable();
+	ctrl_disable(jzfb);
 
 	gpio_init();
 
@@ -1254,6 +1236,17 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 	err = jz4750fb_map_smem(fb);
 	if (err)
 		goto map_smem_failed;
+
+	/* Init pixel clock. */
+	jzfb->lpclk = devm_clk_get(&pdev->dev, "lpclk");
+	if (IS_ERR(jzfb->lpclk)) {
+		err = PTR_ERR(jzfb->lpclk);
+		dev_err(&pdev->dev, "Failed to get pixel clock: %d\n", err);
+		goto failed;
+	}
+
+	/* If no ldclk, we are on jz4755, go on without it */
+	jzfb->ldclk = devm_clk_get(&pdev->dev, "ldclk");
 
 	jz4750fb_set_var(&fb->var, -1, fb);
 	jz4750fb_check_var(&fb->var, fb);
@@ -1272,7 +1265,7 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, jzfb);
 
-	jzpanel_ops->enable(jzfb->panel);
+	jzfb_power_up(jzfb);
 	jzfb->is_enabled = true;
 
 	err = register_framebuffer(fb);
@@ -1305,10 +1298,10 @@ static int jz4750_fb_remove(struct platform_device *pdev)
 
 	device_remove_file(&pdev->dev, &dev_attr_tv_out);
 
-	if (jzfb->is_enabled) {
-		jzfb_disable(jzfb);
-		jzpanel_ops->disable(jzfb->panel);
-	}
+	if (jzfb->is_enabled)
+		jzfb_power_down(jzfb);
+
+	clk_disable(jzfb->lpclk);
 
 	jzpanel_ops->exit(jzfb->panel);
 
@@ -1330,10 +1323,10 @@ static int jz4750_fb_suspend(struct platform_device *pdev, pm_message_t state)
 
 	dev_dbg(&pdev->dev, "Suspending\n");
 
-	if (jzfb->is_enabled) {
-		jzfb_disable(jzfb);
-		jzpanel_ops->disable(jzfb->panel);
-	}
+	if (jzfb->is_enabled)
+		jzfb_power_down(jzfb);
+
+	clk_disable(jzfb->lpclk);
 
 	return 0;
 }
@@ -1347,10 +1340,10 @@ static int jz4750_fb_resume(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "Resuming\n");
 
-	if (jzfb->is_enabled) {
-		jzpanel_ops->enable(jzfb->panel);
-		jzfb_enable(jzfb);
-	}
+	clk_enable(jzfb->lpclk);
+
+	if (jzfb->is_enabled)
+		jzfb_power_up(jzfb);
 
 	return 0;
 }
