@@ -191,9 +191,6 @@ static struct jzfb *jz4750fb_info;
 static struct jz4750_lcd_dma_desc *dma_desc_base;
 static struct jz4750_lcd_dma_desc *dma0_desc0, *dma0_desc1, *dma1_desc0, *dma1_desc1;
 
-// 0 - lcd, 1 - tvout
-static unsigned long tvout_flag  = 0;
-
 struct jzfb {
 	struct fb_info *fb;
 	struct platform_device *pdev;
@@ -204,6 +201,7 @@ struct jzfb {
 
 	struct mutex lock;
 	bool is_enabled;
+	int tv_out; /* 0 - off, 1 - ntsc, 2 - pal */
 
 	/*
 	* Number of frames to wait until doing a forced foreground flush.
@@ -1103,49 +1101,83 @@ static irqreturn_t jz4750fb_interrupt_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int tvout_show(struct seq_file *m, void *v)
+#define FB_TVOUT_OFF 0
+#define FB_TVOUT_NTSC 1
+#define FB_TVOUT_PAL 2
+#define FB_TVOUT_LAST 2
+
+static const char *jzfb_tv_out_norm[] = {
+	"off", "ntsc", "pal",
+};
+
+static void jzfb_tv_out(struct jzfb *jzfb, int mode)
 {
-	seq_printf(m, "%lu\n", tvout_flag);
+	if (mode > FB_TVOUT_LAST)
+		return;
 
-	return 0;
-}
+	if (jzfb->tv_out == mode)
+		return;
 
-static ssize_t tvout_write(struct file *file, const char __user *buffer,
-			size_t count, loff_t *pos)
-{
-	struct jzfb *jzfb = jz4750fb_info;
+	jzfb->tv_out = mode;
 
-	tvout_flag = simple_strtoul(buffer, 0, 10);
-
-	if(tvout_flag == 1) { // lcd to tvout
-		jz4750lcd_info_switch_to_TVE(PANEL_MODE_TVE_NTSC);
-		jz4750tve_init(PANEL_MODE_TVE_NTSC); /* tve controller init */
-		udelay(100);
-		jz4750tve_enable_tve();
-		jz4750fb_deep_set_mode(jzfb);
-	} else if(tvout_flag == 0) { // tvout to lcd
+	switch (mode) {
+	case FB_TVOUT_OFF:
 		jz4750tve_disable_tve();
 		udelay(100);
 		jz_panel = &jz4750_lcd_panel;
 		jz4750fb_deep_set_mode(jzfb);
+		break;
+	case FB_TVOUT_NTSC:
+		jz4750tve_disable_tve();
+		jz4750lcd_info_switch_to_TVE(PANEL_MODE_TVE_NTSC);
+		jz4750tve_init(PANEL_MODE_TVE_NTSC);
+		udelay(100);
+		jz4750tve_enable_tve();
+		jz4750fb_deep_set_mode(jzfb);
+		break;
+	case FB_TVOUT_PAL:
+		jz4750tve_disable_tve();
+		jz4750lcd_info_switch_to_TVE(PANEL_MODE_TVE_PAL);
+		jz4750tve_init(PANEL_MODE_TVE_PAL);
+		udelay(100);
+		jz4750tve_enable_tve();
+		jz4750fb_deep_set_mode(jzfb);
+		break;
+	}
+}
+
+static ssize_t jzfb_tv_out_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	struct jzfb *jzfb = dev_get_drvdata(dev);
+
+	if (jzfb->tv_out > FB_TVOUT_LAST) {
+		dev_err(dev, "Unknown norm for TV-out\n");
+		return -1;
 	}
 
-	return count;
+	return sprintf(buf, "%s\n", jzfb_tv_out_norm[jzfb->tv_out]);
 }
 
-static int tvout_open(struct inode *inode, struct file *file)
+static ssize_t jzfb_tv_out_store(struct device *dev,
+				 struct device_attribute *attr,
+				 const char *buf, size_t n)
 {
-	return single_open(file, tvout_show, NULL);
+	size_t i;
+	struct jzfb *jzfb = dev_get_drvdata(dev);
+
+	for (i = 0; i <= FB_TVOUT_LAST; i++) {
+		if (sysfs_streq(jzfb_tv_out_norm[i], buf)) {
+			jzfb_tv_out(jzfb, i);
+			return n;
+		}
+	}
+
+	return -EINVAL;
 }
 
-static const struct file_operations tvout_fops = {
-	.open		= tvout_open,
-	.read		= seq_read,
-	.write		= tvout_write,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
+static DEVICE_ATTR(tv_out, 0644, jzfb_tv_out_show, jzfb_tv_out_store);
 
 static void gpio_init(void)
 {
@@ -1252,7 +1284,9 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 	printk("fb%d: %s frame buffer device, using %dK of video memory\n",
 		fb->node, fb->fix.id, fb->fix.smem_len>>10);
 
-	proc_create("jz/tvout", 0644, 0, &tvout_fops);
+	err = device_create_file(&pdev->dev, &dev_attr_tv_out);
+	if (err)
+		goto failed;
 
 	return 0;
 
@@ -1268,6 +1302,8 @@ fb_alloc_failed:
 static int jz4750_fb_remove(struct platform_device *pdev)
 {
 	struct jzfb *jzfb = platform_get_drvdata(pdev);
+
+	device_remove_file(&pdev->dev, &dev_attr_tv_out);
 
 	if (jzfb->is_enabled) {
 		jzfb_disable(jzfb);
