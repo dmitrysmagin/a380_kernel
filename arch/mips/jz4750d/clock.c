@@ -341,7 +341,8 @@ static const struct clk_ops jz_clk_main_ops = {
 	.round_rate = jz_clk_main_round_rate,
 };
 
-static struct main_clk jz4750d_clock_main_clks[] = {
+/* System clocks connected to pll */
+static struct main_clk jz_pll_clks[] = {
 	{
 		.clk = {
 			.name = "cclk",
@@ -540,10 +541,11 @@ static const struct clk_ops jz_clk_divided_ops = {
 	.is_enabled = jz_clk_is_enabled_gating,
 };
 
-static struct divided_clk jz4750d_clock_divided_clks[] = {
+/* Clocks connected to pll_half */
+static struct divided_clk jz_pll_half_clks[] = {
 	[0] = {
 		.clk = {
-			.name = "i2s",
+			.name = "i2s",		/* also pll_half */
 			.parent = &jz_clk_ext_half,
 			.gate_bit = JZ_CLOCK_GATE_AIC,
 			.ops = &jz_clk_i2s_ops,
@@ -554,7 +556,7 @@ static struct divided_clk jz4750d_clock_divided_clks[] = {
 	[1] = {
 		.clk = {
 			.name = "spi",
-			.parent = &jz_clk_ext.clk,
+			.parent = &jz_clk_pll_half,
 			.gate_bit = JZ_CLOCK_GATE_SPI,
 			.ops = &jz_clk_spi_ops,
 		},
@@ -563,7 +565,17 @@ static struct divided_clk jz4750d_clock_divided_clks[] = {
 	},
 	[2] = {
 		.clk = {
-			.name = "lcd_pclk",
+			.name = "tve",			/* also ext */
+			.parent = &jz_clk_pll_half,
+			.gate_bit = JZ_CLOCK_GATE_TVE,
+			.ops = &jz_clk_divided_ops,
+		},
+		.reg = JZ_REG_CLOCK_LCD,
+		.mask = JZ_CLOCK_LCD_DIV_MASK,
+	},
+	[3] = {
+		.clk = {
+			.name = "lpclk",
 			.parent = &jz_clk_pll_half,
 			.gate_bit = JZ_CLOCK_GATE_LCD,
 			.ops = &jz_clk_divided_ops,
@@ -571,7 +583,7 @@ static struct divided_clk jz4750d_clock_divided_clks[] = {
 		.reg = JZ_REG_CLOCK_LCD,
 		.mask = JZ_CLOCK_LCD_DIV_MASK,
 	},
-	[3] = {
+	[4] = {
 		.clk = {
 			.name = "mmc0",
 			.parent = &jz_clk_pll_half,
@@ -581,7 +593,7 @@ static struct divided_clk jz4750d_clock_divided_clks[] = {
 		.reg = JZ_REG_CLOCK_MMC,
 		.mask = JZ_CLOCK_MMC_DIV_MASK,
 	},
-	[4] = {
+	[5] = {
 		.clk = {
 			.name = "mmc1",
 			.parent = &jz_clk_pll_half,
@@ -608,39 +620,41 @@ static const struct clk_ops jz_clk_simple_ops = {
 	.is_enabled = jz_clk_is_enabled_gating,
 };
 
-static struct clk jz4750d_clock_simple_clks[] = {
+/* Clocks connected to ext_half */
+static struct clk jz_ext_half_clks[] = {
 	[0] = {
-		.name = "udc",
+		.name = "udc",			/* could use pll/2 */
 		.parent = &jz_clk_ext_half,
+		.gate_bit = JZ_CLOCK_GATE_UDC,
 		.ops = &jz_clk_udc_ops,
 	},
 	[1] = {
 		.name = "uart0",
-		.parent = &jz_clk_ext.clk,
+		.parent = &jz_clk_ext_half,
 		.gate_bit = JZ_CLOCK_GATE_UART0,
 		.ops = &jz_clk_simple_ops,
 	},
 	[2] = {
 		.name = "uart1",
-		.parent = &jz_clk_ext.clk,
+		.parent = &jz_clk_ext_half,
 		.gate_bit = JZ_CLOCK_GATE_UART1,
 		.ops = &jz_clk_simple_ops,
 	},
 	[3] = {
 		.name = "uart2",
-		.parent = &jz_clk_ext.clk,
+		.parent = &jz_clk_ext_half,
 		.gate_bit = JZ_CLOCK_GATE_UART2,
 		.ops = &jz_clk_simple_ops,
 	},
 	[4] = {
 		.name = "ipu",
-		.parent = &jz_clk_ext.clk,
+		.parent = &jz_clk_ext_half, /* H0CLK !! */
 		.gate_bit = JZ_CLOCK_GATE_IPU,
 		.ops = &jz_clk_simple_ops,
 	},
 	[5] = {
 		.name = "adc",
-		.parent = &jz_clk_ext.clk,
+		.parent = &jz_clk_ext_half,
 		.gate_bit = JZ_CLOCK_GATE_ADC,
 		.ops = &jz_clk_simple_ops,
 	},
@@ -774,14 +788,14 @@ static void clk_register_clks(void)
 	clk_add(&jz_clk_pll);
 	clk_add(&jz_clk_pll_half);
 
-	for (i = 0; i < ARRAY_SIZE(jz4750d_clock_main_clks); ++i)
-		clk_add(&jz4750d_clock_main_clks[i].clk);
+	for (i = 0; i < ARRAY_SIZE(jz_pll_clks); ++i)
+		clk_add(&jz_pll_clks[i].clk);
 
-	for (i = 0; i < ARRAY_SIZE(jz4750d_clock_divided_clks); ++i)
-		clk_add(&jz4750d_clock_divided_clks[i].clk);
+	for (i = 0; i < ARRAY_SIZE(jz_pll_half_clks); ++i)
+		clk_add(&jz_pll_half_clks[i].clk);
 
-	for (i = 0; i < ARRAY_SIZE(jz4750d_clock_simple_clks); ++i)
-		clk_add(&jz4750d_clock_simple_clks[i]);
+	for (i = 0; i < ARRAY_SIZE(jz_ext_half_clks); ++i)
+		clk_add(&jz_ext_half_clks[i]);
 }
 
 void jz4750d_clock_set_wait_mode(enum jz4750d_wait_mode mode)
@@ -843,18 +857,23 @@ static int jz4750d_clock_init(void)
 	jz_clk_ext.rate = jz4750d_clock_bdata.ext_rate;
 	jz_clk_rtc.rate = jz4750d_clock_bdata.rtc_rate;
 
+	jz_clk_reg_set_bits(JZ_REG_CLOCK_CTRL,
+		JZ_CLOCK_CTRL_ECS |	/* enable ext half */
+		JZ_CLOCK_CTRL_PLL_HALF	/* disable pll half */
+	);
+
 	val = jz_clk_reg_read(JZ_REG_CLOCK_SPI);
 
 	if (val & JZ_CLOCK_SPI_SRC_PLL)
-		jz4750d_clock_divided_clks[1].clk.parent = &jz_clk_pll_half;
+		jz_pll_half_clks[1].clk.parent = &jz_clk_pll_half;
 
 	val = jz_clk_reg_read(JZ_REG_CLOCK_CTRL);
 
 	if (val & JZ_CLOCK_CTRL_I2S_SRC_PLL)
-		jz4750d_clock_divided_clks[0].clk.parent = &jz_clk_pll_half;
+		jz_pll_half_clks[0].clk.parent = &jz_clk_pll_half;
 
 	if (val & JZ_CLOCK_CTRL_UDC_SRC_PLL)
-		jz4750d_clock_simple_clks[0].parent = &jz_clk_pll_half;
+		jz_ext_half_clks[0].parent = &jz_clk_pll_half;
 
 	jz4750d_clock_debugfs_init();
 
