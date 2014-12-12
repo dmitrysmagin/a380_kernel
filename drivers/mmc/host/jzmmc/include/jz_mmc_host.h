@@ -33,7 +33,8 @@
 #define MMC_CLOCK_SLOW    400000      /* 400 kHz for initial setup */
 #define MMC_CLOCK_FAST  20000000      /* 20 MHz for maximum for normal operation */
 #define SD_CLOCK_FAST   24000000      /* 24 MHz for SD Cards */
-#define SD_CLOCK_HIGH   48000000      /* 48 MHz for SD Cards */
+#define SD_CLOCK_HIGH   SD_CLOCK_FAST
+//#define SD_CLOCK_HIGH   48000000      /* 48 MHz for SD Cards */
 #define MMC_NO_ERROR  0
 
 #define NR_SG	1
