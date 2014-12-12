@@ -35,7 +35,6 @@
 #define JZ_REG_CLOCK_I2S	0x60
 #define JZ_REG_CLOCK_LCD	0x64
 #define JZ_REG_CLOCK_MMC	0x68
-#define JZ_REG_CLOCK_UHC	0x6C
 #define JZ_REG_CLOCK_SPI	0x74
 #define JZ_REG_CLOCK_CIM	0x7C
 
@@ -83,8 +82,6 @@
 #define JZ_CLOCK_LCD_DIV_MASK		0x01ff
 
 #define JZ_CLOCK_MMC_DIV_MASK		0x001f
-
-#define JZ_CLOCK_UHC_DIV_MASK		0x000f
 
 #define JZ_CLOCK_SPI_SRC_PLL		BIT(31)
 #define JZ_CLOCK_SPI_DIV_MASK		0x000f
@@ -593,16 +590,6 @@ static struct divided_clk jz4750d_clock_divided_clks[] = {
 		},
 		.reg = JZ_REG_CLOCK_MMC,
 		.mask = JZ_CLOCK_MMC_DIV_MASK,
-	},
-	[5] = {
-		.clk = {
-			.name = "uhc",
-			.parent = &jz_clk_pll_half,
-			.gate_bit = JZ4750D_CLK_NOT_GATED, //JZ_CLOCK_GATE_UHC,
-			.ops = &jz_clk_divided_ops,
-		},
-		.reg = JZ_REG_CLOCK_UHC,
-		.mask = JZ_CLOCK_UHC_DIV_MASK,
 	},
 };
 
