@@ -37,7 +37,6 @@ struct jz4750tve_info {
 	unsigned int wsscfg3;
 };
 
-#if 0
 struct jz4750tve_info jz4750_tve_info_PAL = {
 	.ctrl		= (4 << TVE_CTRL_YCDLY_BIT) |
 			  TVE_CTRL_SYNCT |
@@ -71,42 +70,6 @@ struct jz4750tve_info jz4750_tve_info_PAL = {
 	.wsscfg2	= 0x0,
 	.wsscfg3	= 0x0,
 };
-#else
-struct jz4750tve_info jz4750_tve_info_PAL = {
-	.ctrl		= (4 << TVE_CTRL_YCDLY_BIT) |
-			  TVE_CTRL_SYNCT |
-			  TVE_CTRL_PAL |
-			  TVE_CTRL_SWRST |
-			  TVE_CTRL_ECVBS,	/* PAL, CVBS */
-	.frcfg		= (23 << TVE_FRCFG_L1ST_BIT) |
-			  (625 << TVE_FRCFG_NLINE_BIT),
-	.slcfg1		= (528 << TVE_SLCFG1_WHITEL_BIT) |
-			  (272 << TVE_SLCFG1_BLACKL_BIT),
-	.slcfg2		= (296 << TVE_SLCFG2_VBLANKL_BIT) |
-			  (240 << TVE_SLCFG2_BLANKL_BIT),
-	.slcfg3		= (72 << TVE_SLCFG3_SYNCL_BIT),
-	.ltcfg1		= (20 << TVE_LTCFG1_FRONTP_BIT) |
-			  (63 << TVE_LTCFG1_HSYNCW_BIT) |
-			  (78 << TVE_LTCFG1_BACKP_BIT),
-	.ltcfg2		= (1440 << TVE_LTCFG2_ACTLIN_BIT) |
-			  (24 << TVE_LTCFG2_PREBW_BIT) |
-			  (68 << TVE_LTCFG2_BURSTW_BIT),
-	.cfreq		= 0x2a098800,
-	.cphase		= (0 << TVE_CPHASE_INITPH_BIT) |
-			  (0 << TVE_CPHASE_ACTPH_BIT) |
-			  (1 << TVE_CPHASE_CCRSTP_BIT),
-	.cbcrcfg 	= (30 << TVE_CBCRCFG_CBBA_BIT) |
-			  (33 << TVE_CBCRCFG_CRBA_BIT) |
-			  (100 << TVE_CBCRCFG_CBGAIN_BIT) |
-			  (100 << TVE_CBCRCFG_CRGAIN_BIT),
-			  /* CBGAIN CRGAIN??? */
-	.wsscr		= 0x00000070,	/* default value */
-	.wsscfg1	= 0x0,
-	.wsscfg2	= 0x0,
-	.wsscfg3	= 0x0,
-};
-#endif
-
 
 struct jz4750tve_info jz4750_tve_info_NTSC = {
 	.ctrl		= (4 << TVE_CTRL_YCDLY_BIT) |
@@ -158,7 +121,7 @@ void jz4750tve_disable_tve(void)
 	REG_TVE_CTRL = jz4750_tve_info->ctrl;
 }
 
-void jz4750tve_set_tve_mode( struct jz4750tve_info *tve )
+void jz4750tve_set_tve_mode(struct jz4750tve_info *tve)
 {
 	REG_TVE_CTRL 		= tve->ctrl;
 	REG_TVE_FRCFG 		= tve->frcfg;
