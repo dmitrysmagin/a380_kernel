@@ -1,25 +1,20 @@
 /*
- * linux/drivers/video/jz4750_lcd.c -- Ingenic Jz4750 LCD frame buffer device
+ * jz4750_lcd.c -- Ingenic Jz4750 LCD frame buffer device
  *
+ * Copyright (C) 2012, Maarten ter Huurne <maarten@treewalker.org>
+ * Copyright (C) 2014, Dmitry Smagin <dmitry.s.smagin@gmail.com>
+ *
+ * Based on the JZ4750 frame buffer driver:
  * Copyright (C) 2005-2008, Ingenic Semiconductor Inc.
+ * Author: Wolfgang Wang, <lgwang@ingenic.cn>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  *
- *  You should have received a copy of the  GNU General Public License along
- *  with this program; if not, write  to the Free Software Foundation, Inc.,
- *  675 Mass Ave, Cambridge, MA 02139, USA.
- */
-
-/*
- * --------------------------------
- * NOTE:
- * This LCD driver support TFT16 TFT32 LCD, not support STN and Special TFT LCD
- * now.
- *	It seems not necessory to support STN and Special TFT.
- *	If it's necessary, update this driver in the future.
- *	<Wolfgang Wang, Jun 10 2008>
+ * You should have received a copy of the  GNU General Public License along
+ * with this program; if not, write  to the Free Software Foundation, Inc.,
+ * 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/module.h>
@@ -299,12 +294,6 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 	return 0;
 }
 
-/*
- * switch to tve mode from lcd mode
- * mode:
- *	PANEL_MODE_TVE_PAL: switch to TVE_PAL mode
- *	PANEL_MODE_TVE_NTSC: switch to TVE_NTSC mode
- */
 static void jz4750lcd_info_switch_to_TVE(int mode)
 {
 	jz_panel = &jz4750_info_tve;
@@ -345,7 +334,6 @@ static int jz4750fb_ioctl(struct fb_info *fb, unsigned int cmd,
 	return 0;
 }
 
-/* Use mmap /dev/fb can only get a non-cacheable Virtual Address. */
 static int jz4750fb_mmap(struct fb_info *fb, struct vm_area_struct *vma)
 {
 	unsigned long start;
@@ -353,7 +341,6 @@ static int jz4750fb_mmap(struct fb_info *fb, struct vm_area_struct *vma)
 	u32 len;
 
 	off = vma->vm_pgoff << PAGE_SHIFT;
-	//fb->fb_get_fix(&fix, PROC_CONSOLE(info), info);
 
 	/* frame buffer memory */
 	start = fb->fix.smem_start;
@@ -382,8 +369,6 @@ static int jz4750fb_mmap(struct fb_info *fb, struct vm_area_struct *vma)
 	return 0;
 }
 
-/* checks var and eventually tweaks it to something supported,
- * DO NOT MODIFY PAR */
 static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *fb)
 {
 	D("Requesting mode %i x %i x %i\n",
@@ -439,9 +424,6 @@ static void jz4750fb_foreground_resize(struct jzfb *jzfb,
 			  const struct jz4750lcd_panel_t *panel, int fg_change);
 static void jz4750fb_change_clock(struct jzfb *jzfb);
 
-/*
- * set the video mode according to info->var
- */
 static int jz4750fb_set_par(struct fb_info *fb)
 {
 	struct fb_var_screeninfo *var = &fb->var;
@@ -466,10 +448,6 @@ static int jz4750fb_set_par(struct fb_info *fb)
 	return 0;
 }
 
-/*
- * (Un)Blank the display.
- * Fix me: should we use VESA value?
- */
 static int jz4750fb_blank(int blank_mode, struct fb_info *fb)
 {
 	struct jzfb *jzfb = fb->par;
@@ -493,9 +471,6 @@ static int jz4750fb_blank(int blank_mode, struct fb_info *fb)
 	return 0;
 }
 
-/*
- * pan display
- */
 static int jz4750fb_pan_display(struct fb_var_screeninfo *var,
 				struct fb_info *fb)
 {
@@ -522,7 +497,6 @@ static int jz4750fb_pan_display(struct fb_var_screeninfo *var,
 	return 0;
 }
 
-/* use default function cfb_fillrect, cfb_copyarea, cfb_imageblit */
 static struct fb_ops jz4750fb_ops = {
 	.owner			= THIS_MODULE,
 	.fb_setcolreg		= jz4750fb_setcolreg,
@@ -620,9 +594,6 @@ static int jz4750fb_set_var(struct fb_var_screeninfo *var, int con,
 	return 0;
 }
 
-/*
- * Map screen memory
- */
 static int jz4750fb_map_smem(struct fb_info *fb)
 {
 	struct jzfb *jzfb = fb->par;
@@ -660,10 +631,6 @@ static int jz4750fb_map_smem(struct fb_info *fb)
 	SetPageReserved(virt_to_page(lcd_cmdbuf));
 #endif
 
-	/*
-	 * Set page reserved so that mmap will work. This is necessary
-	 * since we'll be remapping normal memory.
-	 */
 	SetPageReserved(virt_to_page(dma_desc_base));
 	clear_page(dma_desc_base);
 
@@ -711,7 +678,6 @@ static void jz4750fb_unmap_smem(struct fb_info *fb)
 	}
 }
 
-/* initial dma descriptors */
 static void jz4750fb_descriptor_init(struct jzfb *jzfb)
 {
 	dma0_desc0		= dma_desc_base + 1;
@@ -996,22 +962,9 @@ static void jz4750fb_change_clock(struct jzfb *jzfb)
 	udelay(1000);
 }
 
-/*
- * jz4750fb_deep_set_mode,
- *
- */
 static void jz4750fb_deep_set_mode(struct jzfb *jzfb)
 {
 	struct fb_info *fb = jzfb->fb;
-
-	/* configurate sequence:
-	 * 1. disable lcdc.
-	 * 2. init frame descriptor.
-	 * 3. set panel mode
-	 * 4. set osd mode
-	 * 5. start lcd clock in CPM
-	 * 6. enable lcdc.
-	 */
 
 	printk("In jz4750fb_deep_set_mode  \n");
 
@@ -1314,9 +1267,6 @@ static int jz4750_fb_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-/*
- * Suspend the LCDC.
- */
 static int jz4750_fb_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct jzfb *jzfb = platform_get_drvdata(pdev);
@@ -1331,9 +1281,6 @@ static int jz4750_fb_suspend(struct platform_device *pdev, pm_message_t state)
 	return 0;
 }
 
-/*
- * Resume the LCDC.
- */
 static int jz4750_fb_resume(struct platform_device *pdev)
 {
 	struct jzfb *jzfb = platform_get_drvdata(pdev);
@@ -1369,5 +1316,5 @@ static struct platform_driver jz4750_fb_driver = {
 module_platform_driver(jz4750_fb_driver);
 
 MODULE_DESCRIPTION("Jz4750 LCD Controller driver");
-MODULE_AUTHOR("Wolfgang Wang, <lgwang@ingenic.cn>");
+MODULE_AUTHOR("Maarten ter Huurne <maarten@treewalker.org>");
 MODULE_LICENSE("GPL");
