@@ -294,30 +294,6 @@ static int jz4750fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 	return 0;
 }
 
-static void jz4750lcd_info_switch_to_TVE(int mode)
-{
-	jz_panel = &jz4750_info_tve;
-
-	switch (mode) {
-	case PANEL_MODE_TVE_PAL:
-		/* TVE PAL enable extra halfline signal */
-		jz_panel->cfg |= LCD_CFG_TVEPEH;
-		jz_panel->w = TVE_WIDTH_PAL;
-		jz_panel->h = TVE_HEIGHT_PAL;
-		jz_panel->fclk = TVE_FREQ_PAL;
-		break;
-	case PANEL_MODE_TVE_NTSC:
-		/* TVE NTSC disable extra halfline signal */
-		jz_panel->cfg &= ~LCD_CFG_TVEPEH;
-		jz_panel->w = TVE_WIDTH_NTSC;
-		jz_panel->h = TVE_HEIGHT_NTSC;
-		jz_panel->fclk = TVE_FREQ_NTSC;
-		break;
-	default:
-		printk("%s, %s: Unknown tve mode\n", __FILE__, __FUNCTION__);
-	}
-}
-
 static int jz4750fb_ioctl(struct fb_info *fb, unsigned int cmd,
 			unsigned long arg)
 {
@@ -1058,13 +1034,19 @@ static void jzfb_tv_out(struct jzfb *jzfb, int mode)
 	switch (mode) {
 	case FB_TVOUT_OFF:
 		jz4750tve_disable_tve();
-		udelay(100);
+
 		jz_panel = &jz4750_lcd_panel;
 		jz4750fb_deep_set_mode(jzfb);
 		break;
 	case FB_TVOUT_NTSC:
 		jz4750tve_disable_tve();
-		jz4750lcd_info_switch_to_TVE(PANEL_MODE_TVE_NTSC);
+
+		jz_panel = &jz4750_info_tve;
+		jz_panel->cfg &= ~LCD_CFG_TVEPEH;
+		jz_panel->w = TVE_WIDTH_NTSC;
+		jz_panel->h = TVE_HEIGHT_NTSC;
+		jz_panel->fclk = TVE_FREQ_NTSC;
+
 		jz4750tve_init(PANEL_MODE_TVE_NTSC);
 		udelay(100);
 		jz4750tve_enable_tve();
@@ -1072,7 +1054,13 @@ static void jzfb_tv_out(struct jzfb *jzfb, int mode)
 		break;
 	case FB_TVOUT_PAL:
 		jz4750tve_disable_tve();
-		jz4750lcd_info_switch_to_TVE(PANEL_MODE_TVE_PAL);
+
+		jz_panel = &jz4750_info_tve;
+		jz_panel->cfg |= LCD_CFG_TVEPEH;
+		jz_panel->w = TVE_WIDTH_PAL;
+		jz_panel->h = TVE_HEIGHT_PAL;
+		jz_panel->fclk = TVE_FREQ_PAL;
+
 		jz4750tve_init(PANEL_MODE_TVE_PAL);
 		udelay(100);
 		jz4750tve_enable_tve();
