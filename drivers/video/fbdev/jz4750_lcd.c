@@ -1023,12 +1023,14 @@ static void jzfb_tv_out(struct jzfb *jzfb, int mode)
 		jz4750tve_disable_tve();
 
 		jzfb->panel = &jz4750_lcd_panel;
+		jzfb->panel_ops = &jz4750_lcd_panel_ops;
 		jz4750fb_deep_set_mode(jzfb);
 		break;
 	case FB_TVOUT_NTSC:
 		jz4750tve_disable_tve();
 
 		jzfb->panel = &jz4750_tve_panel;
+		jzfb->panel_ops = &jz4750_tve_panel_ops;
 		jzfb->panel->cfg &= ~LCD_CFG_TVEPEH;
 		jzfb->panel->w = TVE_WIDTH_NTSC;
 		jzfb->panel->h = TVE_HEIGHT_NTSC;
@@ -1043,6 +1045,7 @@ static void jzfb_tv_out(struct jzfb *jzfb, int mode)
 		jz4750tve_disable_tve();
 
 		jzfb->panel = &jz4750_tve_panel;
+		jzfb->panel_ops = &jz4750_tve_panel_ops;
 		jzfb->panel->cfg |= LCD_CFG_TVEPEH;
 		jzfb->panel->w = TVE_WIDTH_PAL;
 		jzfb->panel->h = TVE_HEIGHT_PAL;

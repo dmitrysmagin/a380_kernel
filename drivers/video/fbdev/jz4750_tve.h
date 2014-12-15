@@ -21,4 +21,6 @@ extern void jz4750tve_disable_tve(void);
 
 extern void jz4750tve_init(int tve_mode);
 
+extern struct panel_ops jz4750_tve_panel_ops;
+
 #endif	/* __JZ4750_TVE_H__ */

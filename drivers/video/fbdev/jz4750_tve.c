@@ -1,7 +1,6 @@
-
 /*
- * linux/drivers/video/jz4750_tve.c -- Ingenic Jz4750 TVE Controller operation
- * interface.
+ * jz4750_tve.c -- Ingenic Jz4750 TVE Controller
+ *
  * Copyright (C) 2005-2008, Ingenic Semiconductor Inc.
  * Author: Wolfgang Wang, <lgwang@ingenic.cn>
  *
@@ -14,8 +13,11 @@
  * 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/platform_device.h>
 
 #include <asm/mach-jz4750d/jz4750d_tve.h>
+
+#include <video/jzpanel.h>
 
 #include "jz4750_tve.h"
 
@@ -156,3 +158,28 @@ void jz4750tve_init( int tve_mode )
 void jz4750tve_deinit(void)
 {
 }
+
+static int jz4750_tve_panel_init(void **out_panel, struct device *dev,
+				 void *panel_pdata)
+{
+	return 0;
+}
+
+static void jz4750_tve_panel_exit(void *panel)
+{
+}
+
+static void jz4750_tve_panel_enable(void *panel)
+{
+}
+
+static void jz4750_tve_panel_disable(void *panel)
+{
+}
+
+struct panel_ops jz4750_tve_panel_ops = {
+	.init		= jz4750_tve_panel_init,
+	.exit		= jz4750_tve_panel_exit,
+	.enable		= jz4750_tve_panel_enable,
+	.disable	= jz4750_tve_panel_disable,
+};
