@@ -386,8 +386,7 @@ static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *fb)
 }
 
 static void jz4750fb_set_panel_mode(struct jzfb *jzfb);
-static void jz4750fb_foreground_resize(struct jzfb *jzfb,
-			  const struct jz4750lcd_panel_t *panel, int fg_change);
+static void jz4750fb_foreground_resize(struct jzfb *jzfb, int fg_change);
 static void jz4750fb_change_clock(struct jzfb *jzfb);
 
 static int jz4750fb_set_par(struct fb_info *fb)
@@ -400,8 +399,7 @@ static int jz4750fb_set_par(struct fb_info *fb)
 
 	jzfb->bpp = var->bits_per_pixel;
 	jz4750fb_set_panel_mode(jzfb);
-	jz4750fb_foreground_resize(jzfb, jzfb->panel,
-				   FG0_CHANGE_SIZE | FG0_CHANGE_POSITION);
+	jz4750fb_foreground_resize(jzfb, FG0_CHANGE_SIZE | FG0_CHANGE_POSITION);
 
 	jz4750fb_change_clock(jzfb);
 
@@ -777,8 +775,7 @@ static void jz4750fb_set_panel_mode(struct jzfb *jzfb)
 	REG_LCD_BGC = 0x00FFFF00;
 }
 
-static void jz4750fb_foreground_resize(struct jzfb *jzfb,
-			  const struct jz4750lcd_panel_t *panel, int fg_change)
+static void jz4750fb_foreground_resize(struct jzfb *jzfb, int fg_change)
 {
 	struct fb_var_screeninfo *var = &jzfb->fb->var;
 	int fg0_line_size, fg0_frm_size, fg1_line_size, fg1_frm_size;
@@ -787,13 +784,13 @@ static void jz4750fb_foreground_resize(struct jzfb *jzfb,
 	if (!fg_change)
 		return;
 
-	w = (var->xres < panel->w ? var->xres : panel->w);
-	h = (var->yres < panel->h ? var->yres : panel->h);
-	x = (panel->w - w) / 2;
-	y = (panel->h - h) / 2;
+	w = (var->xres < jzfb->panel->w ? var->xres : jzfb->panel->w);
+	h = (var->yres < jzfb->panel->h ? var->yres : jzfb->panel->h);
+	x = (jzfb->panel->w - w) / 2;
+	y = (jzfb->panel->h - h) / 2;
 
-	printk("OSD: %d x %d, panel: %d x %d\n",
-		w, h, panel->w, panel->h);
+	printk("OSD: %d x %d, panel: %d x %d x %d bpp\n",
+		w, h, jzfb->panel->w, jzfb->panel->h, jzfb->bpp);
 
 	fg0_line_size = w * ((jzfb->bpp + 7) / 8);
 	fg0_line_size = ((fg0_line_size + 3) >> 2) << 2; /* word aligned */
@@ -814,7 +811,7 @@ static void jz4750fb_foreground_resize(struct jzfb *jzfb,
 	}
 
 	/* set change */
-	if (/*!(panel->osd_ctrl & LCD_OSDCTRL_IPU) &&*/
+	if (/*!(jzfb->panel->osd_ctrl & LCD_OSDCTRL_IPU) &&*/
 	      (fg_change != FG_CHANGE_ALL))
 		REG_LCD_OSDCTRL |= LCD_OSDCTRL_CHANGES;
 
@@ -822,7 +819,7 @@ static void jz4750fb_foreground_resize(struct jzfb *jzfb,
 	while (REG_LCD_OSDS & LCD_OSDS_READY);
 
 	if (fg_change & FG0_CHANGE_SIZE) { /* change FG0 size */
-		if (panel->cfg & LCD_CFG_TVEN) { /* output to TV */
+		if (jzfb->panel->cfg & LCD_CFG_TVEN) { /* output to TV */
 			dma0_desc0->cmd =
 			dma0_desc1->cmd = (fg0_frm_size / 4) / 2;
 			dma0_desc0->offsize =
@@ -848,7 +845,7 @@ static void jz4750fb_foreground_resize(struct jzfb *jzfb,
 	}
 
 	if (fg_change & FG1_CHANGE_SIZE) { /* change FG1 size*/
-		if (panel->cfg & LCD_CFG_TVEN) { /* output to TV */
+		if (jzfb->panel->cfg & LCD_CFG_TVEN) { /* output to TV */
 			dma1_desc0->cmd =
 			dma1_desc1->cmd = (fg1_frm_size / 4) / 2;
 			dma1_desc0->offsize =
