@@ -216,10 +216,6 @@ static void ctrl_enable(struct jzfb *jzfb)
 
 	__lcd_clr_dis();
 	__lcd_set_ena(); /* enable lcdc */
-#ifdef CONFIG_FB_JZ4750_SLCD
-	if (!(jzfb->panel->cfg & LCD_CFG_TVEN))
-		jzfb->panel_ops->enable(jzfb->opaque);
-#endif
 }
 
 static void ctrl_disable(struct jzfb *jzfb)
@@ -253,8 +249,7 @@ static void jzfb_power_up(struct jzfb *jzfb)
 	ctrl_enable(jzfb);
 
 	/* Enable panel AFTER enabling lcdc otherwise slcd may hang up */
-	if (!(jzfb->panel->cfg & LCD_CFG_TVEN)) /* temp workaround */
-		jzfb->panel_ops->enable(jzfb->opaque);
+	jzfb->panel_ops->enable(jzfb->opaque);
 }
 
 static void jzfb_power_down(struct jzfb *jzfb)
@@ -404,8 +399,13 @@ static int jz4750fb_set_par(struct fb_info *fb)
 
 	jz4750fb_change_clock(jzfb);
 
-	if (jzfb->is_enabled)
+	if (jzfb->is_enabled) {
 		ctrl_enable(jzfb);
+
+		/* fix for slcd, otherwise image shifts at random value */
+		if (jzfb->panel->cfg & LCD_CFG_MODE_SLCD)
+			jzfb->panel_ops->enable(jzfb->opaque);
+	}
 
 	fix->visual = FB_VISUAL_TRUECOLOR;
 	fix->line_length = var->xres_virtual * (var->bits_per_pixel >> 3);
