@@ -176,7 +176,7 @@ static struct jz4750_lcd_dma_desc *dma0_desc0, *dma0_desc1, *dma1_desc0, *dma1_d
 struct jzfb {
 	struct fb_info *fb;
 	struct platform_device *pdev;
-	void *panel;
+	void *opaque;		/* holds panel context ptr */
 
 	uint32_t pseudo_palette[16];
 	unsigned int bpp;
@@ -217,7 +217,7 @@ static void ctrl_enable(struct jzfb *jzfb)
 	__lcd_set_ena(); /* enable lcdc */
 #ifdef CONFIG_FB_JZ4750_SLCD
 	if (!(jz_panel->cfg & LCD_CFG_TVEN))
-		jzpanel_ops->enable(jzfb->panel);
+		jzpanel_ops->enable(jzfb->opaque);
 #endif
 }
 
@@ -253,14 +253,14 @@ static void jzfb_power_up(struct jzfb *jzfb)
 
 	/* Enable panel AFTER enabling lcdc otherwise slcd may hang up */
 	if (!(jz_panel->cfg & LCD_CFG_TVEN)) /* temp workaround */
-		jzpanel_ops->enable(jzfb->panel);
+		jzpanel_ops->enable(jzfb->opaque);
 }
 
 static void jzfb_power_down(struct jzfb *jzfb)
 {
 	ctrl_disable(jzfb);
 
-	jzpanel_ops->disable(jzfb->panel);
+	jzpanel_ops->disable(jzfb->opaque);
 
 	// TODO: Configure GPIO pins via pinctrl.
 }
@@ -1160,7 +1160,7 @@ static int jz4750_fb_probe(struct platform_device *pdev)
 
 	gpio_init();
 
-	jzpanel_ops->init(&jzfb->panel, &pdev->dev,
+	jzpanel_ops->init(&jzfb->opaque, &pdev->dev,
 			  0/*pdata->panel_pdata*/);
 
 	err = jz4750fb_map_smem(fb);
@@ -1233,7 +1233,7 @@ static int jz4750_fb_remove(struct platform_device *pdev)
 
 	clk_disable(jzfb->lpclk);
 
-	jzpanel_ops->exit(jzfb->panel);
+	jzpanel_ops->exit(jzfb->opaque);
 
 	jz4750fb_unmap_smem(jzfb->fb);
 	framebuffer_release(jzfb->fb);
