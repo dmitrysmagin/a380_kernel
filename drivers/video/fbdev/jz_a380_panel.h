@@ -170,7 +170,7 @@ struct panel_ops a380_panel_ops = {
 };
 
 /* FIXME: this will be gone when panel code is moved to separate .c file */
-struct panel_ops *jzpanel_ops = &a380_panel_ops;
+#define jz4750_lcd_panel_ops a380_panel_ops
 
 #endif	/* CONFIG_JZ4750_SLCD_A380_ILI9331 */
 
