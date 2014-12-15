@@ -46,18 +46,7 @@
 #include <asm/mach-jz4750d/jz4750d_tcu.h>
 #include <asm/mach-jz4750d/irq.h>
 
-/* later move to include/video/jzpanel.h */
-#ifndef __JZPANEL_H
-#define __JZPANEL_H
-
-struct panel_ops {
-	int (*init)(void **out_panel, struct device *dev, void *panel_pdata);
-	void (*exit)(void *panel);
-	void (*enable)(void *panel);
-	void (*disable)(void *panel);
-};
-
-#endif /* __JZPANEL_H */
+#include <video/jzpanel.h>
 
 struct jzfb_platform_data {
 	struct panel_ops *panel_ops;
