@@ -385,8 +385,7 @@ static int jz4750fb_check_var(struct fb_var_screeninfo *var, struct fb_info *fb)
 	return 0;
 }
 
-static void jz4750fb_set_panel_mode(struct jzfb *jzfb,
-			const struct jz4750lcd_panel_t *panel);
+static void jz4750fb_set_panel_mode(struct jzfb *jzfb);
 static void jz4750fb_foreground_resize(struct jzfb *jzfb,
 			  const struct jz4750lcd_panel_t *panel, int fg_change);
 static void jz4750fb_change_clock(struct jzfb *jzfb);
@@ -400,7 +399,7 @@ static int jz4750fb_set_par(struct fb_info *fb)
 	ctrl_disable(jzfb);
 
 	jzfb->bpp = var->bits_per_pixel;
-	jz4750fb_set_panel_mode(jzfb, jzfb->panel);
+	jz4750fb_set_panel_mode(jzfb);
 	jz4750fb_foreground_resize(jzfb, jzfb->panel,
 				   FG0_CHANGE_SIZE | FG0_CHANGE_POSITION);
 
@@ -727,13 +726,12 @@ static void jz4750fb_descriptor_init(struct jzfb *jzfb)
 			    (DMA_DESC_NUM)*sizeof(struct jz4750_lcd_dma_desc));
 }
 
-static void jz4750fb_set_panel_mode(struct jzfb *jzfb,
-			const struct jz4750lcd_panel_t *panel)
+static void jz4750fb_set_panel_mode(struct jzfb *jzfb)
 {
-	unsigned int ctrl = panel->ctrl;
-	unsigned int osdctrl = 0;
-	unsigned int cfg = panel->cfg;
-	unsigned int slcd_cfg = panel->slcd_cfg;
+	unsigned int ctrl	= jzfb->panel->ctrl;
+	unsigned int osdctrl	= 0;
+	unsigned int cfg	= jzfb->panel->cfg;
+	unsigned int slcd_cfg	= jzfb->panel->slcd_cfg;
 
 	if (jzfb->bpp == 16) {
 		ctrl |= LCD_CTRL_BPP_16 | LCD_CTRL_RGB565;
@@ -755,21 +753,21 @@ static void jz4750fb_set_panel_mode(struct jzfb *jzfb,
 		REG_SLCD_CTRL = SLCD_CTRL_DMA_EN;
 
 	/* only support TFT16 TFT32, not support STN and Special TFT by now(10-06-2008)*/
-	__lcd_vat_set_ht(panel->blw + panel->w + panel->elw);
-	__lcd_vat_set_vt(panel->bfw + panel->h + panel->efw);
-	__lcd_dah_set_hds(panel->blw);
-	__lcd_dah_set_hde(panel->blw + panel->w);
-	__lcd_dav_set_vds(panel->bfw);
-	__lcd_dav_set_vde(panel->bfw + panel->h);
+	__lcd_vat_set_ht(jzfb->panel->blw + jzfb->panel->w + jzfb->panel->elw);
+	__lcd_vat_set_vt(jzfb->panel->bfw + jzfb->panel->h + jzfb->panel->efw);
+	__lcd_dah_set_hds(jzfb->panel->blw);
+	__lcd_dah_set_hde(jzfb->panel->blw + jzfb->panel->w);
+	__lcd_dav_set_vds(jzfb->panel->bfw);
+	__lcd_dav_set_vde(jzfb->panel->bfw + jzfb->panel->h);
 	__lcd_hsync_set_hps(0);
-	__lcd_hsync_set_hpe(panel->hsw);
-	__lcd_vsync_set_vpe(panel->vsw);
+	__lcd_hsync_set_hpe(jzfb->panel->hsw);
+	__lcd_vsync_set_vpe(jzfb->panel->vsw);
 
 	REG_LCD_OSDC = LCD_OSDC_F0EN | LCD_OSDC_OSDEN |
 		       LCD_OSDC_SOFM0 | LCD_OSDC_EOFM0;
 	REG_LCD_OSDCTRL = osdctrl;
 
-	if (panel->cfg & LCD_CFG_TVEN) {
+	if (jzfb->panel->cfg & LCD_CFG_TVEN) {
 		REG_LCD_RGBC |= LCD_RGBC_YCC; /* enable RGB => YUV */
 	} else {
 		REG_LCD_RGBC &= ~LCD_RGBC_YCC;
